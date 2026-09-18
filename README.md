@@ -1,5 +1,7 @@
 # BashLab
 
+Tiếng Việt | [English](README.en.md)
+
 BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và phản hồi theo mục tiêu. Repository hiện chứa bản frontend giới thiệu sản phẩm và tài liệu cho 17 trang thiết kế; chưa có backend hoặc sandbox Bash thật.
 
 ## Trạng thái triển khai

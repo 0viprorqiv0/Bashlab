@@ -1,5 +1,7 @@
 # Quy tắc làm việc BashLab
 
+Tiếng Việt | [English](rule.en.md)
+
 ## 1. Phạm vi và nguồn đối chiếu
 
 Quy tắc này áp dụng cho người đóng góp và công cụ hỗ trợ trong repository. Các từ **phải**, **không được** là yêu cầu bắt buộc; ngoại lệ phải được người phụ trách repository chấp thuận và ghi rõ trong pull request hoặc yêu cầu công việc.
