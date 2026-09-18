@@ -1,153 +1,136 @@
 # BashLab
 
-Learn Bash by doing. Interactive lessons, real browser-based terminal practice, and requirement-level feedback.
+BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và phản hồi theo mục tiêu. Repository hiện chứa bản frontend giới thiệu sản phẩm và tài liệu cho 17 trang thiết kế; chưa có backend hoặc sandbox Bash thật.
 
-## Project Structure
+## Trạng thái triển khai
 
-```
-bash_lab/
-├── frontend/          # Next.js + React frontend
-│   ├── app/           # App Router pages and layouts
-│   ├── components/    # React components
-│   ├── public/        # Static assets
-│   └── package.json
-├── backend/           # Planned backend (documentation only)
-│   └── README.md
-├── README.md          # This file
+| Thành phần | Trạng thái trong mã nguồn |
+| --- | --- |
+| Trang chủ `/` | `app/(site)/page.js` render `components/lookbook/Lookbook.jsx`: giới thiệu, thử lệnh, phương pháp học, Shell 101 và FAQ |
+| Terminal trên trang chủ | Demo mô phỏng với câu trả lời có sẵn; không thực thi lệnh hệ điều hành |
+| Hiệu ứng giao diện | Có Lookbook navigation, terminal thu/phóng và các thành phần hiệu ứng; có script kiểm tra curiosity/backdrop |
+| Trang 404 | Có `app/not-found.js` |
+| Giao diện 403 | Có `app/forbidden.js`; chưa có luồng phân quyền backend hay route riêng được triển khai để sử dụng giao diện này |
+| Xác thực, khóa học, học tập, tài khoản, quản trị | Có mô tả thiết kế; chưa có các route chức năng tương ứng trong cây `app/` |
+| Backend, dữ liệu, email, sandbox | Mới có kế hoạch trong [backend/README.md](backend/README.md) |
+
+Một số nội dung quảng bá trên giao diện nói về sandbox và lưu tiến độ theo định hướng sản phẩm. Chúng chưa chứng minh các dịch vụ này hoạt động. Các liên kết như `/login`, `/courses`, `/courses/shell-101` chưa có trang đích tương ứng.
+
+## Phân nhóm chức năng
+
+| Nhóm | Mục đích | STT trang | Screen Stitch |
+| --- | --- | --- | --- |
+| A — Giới thiệu sản phẩm | Giới thiệu BashLab và dẫn vào khóa học | 01 | 01 |
+| B — Xác thực tài khoản | Đăng nhập, đăng ký, xác minh email và khôi phục mật khẩu | 02–06 | 02–06 |
+| C — Khám phá khóa học | Duyệt khóa học, xem giáo trình và tiến độ trong từng khóa | 07–08 | 07–08 |
+| D — Học tập và thực hành | Theo dõi học tập cá nhân, tiếp tục bài và thực hành Bash | 09–10 | 09–10 |
+| E — Tài khoản cá nhân | Xem thông tin tài khoản, yêu cầu đổi mật khẩu và đăng xuất | 11 | 12 |
+| F — Quản trị nội dung | Quản lý khóa học, chương và soạn bài học | 12–13 | 14, 16 |
+| G — Quản trị vận hành | Quản lý người dùng, phiên thực hành và nhật ký quản trị | 14–15 | 17–18 |
+| H — Trang hệ thống | Thông báo truy cập không đủ quyền hoặc trang không tồn tại | 16–17 | 20–21 |
+
+Các nhóm dùng để tổ chức tài liệu và công việc, không tạo thêm trang hay chức năng. F và G dành cho quản trị viên; H dùng chung theo tình huống truy cập. STT trang khác với mã Screen Stitch từ trang 11 trở đi.
+
+## Danh mục 17 trang và chức năng theo thiết kế
+
+Bảng dưới mô tả phạm vi yêu cầu, không phải danh sách tính năng đã hoàn thành.
+
+| STT | Nhóm | Screen | Trang | Chức năng |
+| --- | --- | --- | --- | --- |
+| 01 | A | 01 | Landing | Giới thiệu sản phẩm; thử lệnh mô phỏng; giới thiệu Shell 101; FAQ; dẫn vào khóa học |
+| 02 | B | 02 | Login | Nhập email/mật khẩu; hiện/ẩn mật khẩu; ghi nhớ thiết bị; trạng thái xử lý và lỗi; liên kết đăng ký/quên mật khẩu |
+| 03 | B | 03 | Register | Nhập email, mật khẩu và xác nhận; kiểm tra dữ liệu; gửi yêu cầu tạo tài khoản; lỗi từng trường |
+| 04 | B | 04 | Verify Email | Hướng dẫn kiểm tra email; gửi lại có thời gian chờ; xử lý xác minh thành công hoặc liên kết hết hạn/không hợp lệ |
+| 05 | B | 05 | Forgot Password | Yêu cầu email đặt lại mật khẩu; thông báo trung lập về tài khoản; gửi lại/thử lại khi lỗi |
+| 06 | B | 06 | Reset Password | Nhập và xác nhận mật khẩu mới; kiểm tra liên kết; xử lý lỗi/thành công; quay lại đăng nhập |
+| 07 | C | 07 | Course Catalog | Danh sách khóa học; lọc All/Core Tracks/Security; cấp độ, thời lượng, tiến độ và trạng thái sắp ra mắt |
+| 08 | C | 08 | Course Overview | Giới thiệu khóa; kết quả học tập; giáo trình theo chương; tiến độ và trạng thái bài; tiếp tục học |
+| 09 | D | 09 | My Learning | Tổng quan học tập; tiếp tục bài; thời gian học, hoạt động, số lệnh và tiến độ kỹ năng |
+| 10 | D | 10 | Interactive Lesson Workspace | Đọc bài; chuyển bài; mục tiêu và gợi ý; terminal sandbox; trạng thái phiên; Check Solution và phản hồi |
+| 11 | E | 12 | Account | Thông tin tài khoản, email, xác minh và vai trò chỉ đọc; yêu cầu đổi mật khẩu qua email; đăng xuất |
+| 12 | F | 14 | Content | Cây khóa/chương/bài; tạo và sửa nội dung; sắp xếp thứ tự; trạng thái xuất bản; mở trình soạn bài |
+| 13 | F | 16 | Lesson Editor | Metadata bài; Markdown và xem trước; mục tiêu bài; mẫu kiểm tra; nháp/xuất bản; lưu/hủy |
+| 14 | G | 17 | Users | Tìm kiếm/phân trang; đổi vai trò; khóa/mở khóa; xác nhận và lý do; bảo vệ quản trị viên hoạt động cuối cùng |
+| 15 | G | 18 | Activity | Tab Sessions quản lý và dừng phiên có lý do; tab Admin log lọc/xem chi tiết nhật ký |
+| 16 | H | 20 | Access Denied | Thông báo người dùng không đủ quyền truy cập |
+| 17 | H | 21 | Page Not Found | Thông báo đường dẫn hoặc trang không tồn tại |
+
+My Learning vẫn là một trang riêng. Hai tab Sessions và Admin log thuộc cùng trang Activity. Terminal thực hành thật chỉ nằm trong phạm vi Workspace; demo Landing là mô phỏng.
+
+Xem diễn giải đầy đủ tại [bashlab-pages.md](bashlab-pages.md). Các liên kết ảnh `exports/stitch-2026-09-12/` trong tài liệu đó chưa có thư mục đính kèm trong repository này.
+
+## Cấu trúc repository
+
+```text
+Bash_lab/
+├── frontend/
+│   ├── app/                 # App Router, layouts và giao diện lỗi
+│   ├── components/
+│   │   ├── lookbook/        # Giao diện trang chủ đang được sử dụng
+│   │   └── landing/         # Các component landing có sẵn
+│   ├── scripts/             # Kiểm tra curiosity và backdrop
+│   ├── package.json
+│   └── package-lock.json
+├── backend/README.md        # Kế hoạch backend, chưa có implementation
+├── bashlab-pages.md         # Đặc tả 17 trang theo Stitch
+├── rule.md                  # Quy tắc làm việc và Git
+├── README.md
 └── .gitignore
 ```
 
-## Frontend Setup
+## Công nghệ hiện có
 
-### Prerequisites
+Phiên bản khai báo trong [frontend/package.json](frontend/package.json):
 
-- Node.js 18.17 or later
-- npm 9 or later
+- Next.js `14.2.5`, App Router.
+- React và React DOM `18.3.1`.
+- JavaScript/JSX, CSS Modules và global CSS.
+- Three.js `^0.170.0`; Tailwind CSS `^3.4.13`, PostCSS, Autoprefixer.
+- ESLint `8.57.0` và cấu hình Next.js.
 
-### Install Dependencies
+Backend dự kiến dùng Node.js/Express, PostgreSQL, REST/WebSocket và Docker sandbox. Đây là định hướng, chưa có dịch vụ chạy trong repository.
+
+## Chạy frontend trên máy
+
+Cần Git, Node.js/npm tương thích với phiên bản Next.js đã khóa và mạng để cài dependencies. Repository chưa khóa phiên bản Node bằng `.nvmrc` hoặc `engines`; khi cộng tác cần thống nhất phiên bản dùng trong môi trường kiểm thử.
 
 ```bash
-cd frontend
-npm install
-```
-
-### Development Server
-
-```bash
+git clone https://github.com/0viprorqiv0/Bashlab.git
+cd Bashlab/frontend
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Mở [localhost:3000](http://localhost:3000). Chạy các lệnh npm trong thư mục `frontend`; thư mục gốc không có `package.json`. Frontend hiện chưa yêu cầu cấu hình database hoặc email để chạy demo.
 
-### Production Build
+| Lệnh | Mục đích |
+| --- | --- |
+| `npm run dev` | Chạy development server |
+| `npm run lint` | Kiểm tra ESLint |
+| `npm run test:curiosity` | Chạy script kiểm tra curiosity |
+| `npm run test:backdrop` | Chạy script kiểm tra backdrop |
+| `npm run build` | Tạo production build |
+| `npm run start` | Chạy production server sau build thành công |
+
+Hai script kiểm tra hiện có không thay thế kiểm thử toàn bộ ứng dụng hoặc kiểm thử end-to-end. Để chạy bản production cục bộ:
 
 ```bash
 npm run build
 npm run start
 ```
 
-### Linting
+## Làm việc theo nhánh
 
-```bash
-npm run lint
-```
+`main` là nhánh tích hợp. Tám nhánh `feature/a-...` đến `feature/h-...` tổ chức công việc theo bảng trong [rule.md](rule.md). Mỗi nhánh chứa toàn bộ cây dự án; phân nhóm không có nghĩa là chia tách hoặc xóa các thư mục của nhóm khác.
 
-## Current Implementation
+Luồng thông thường: nhánh tác vụ → nhánh nhóm → `main`, qua pull request và kiểm tra phù hợp. Đọc [rule.md](rule.md) trước khi sửa, commit hoặc merge.
 
-## Page Catalog
+## Dữ liệu và file không đưa lên Git
 
-The project documents 17 Stitch screens. The groups below organize existing
-design requirements only; they do not add pages or features. Detailed behavior
-is maintained in [bashlab-pages.md](bashlab-pages.md).
+`.gitignore` loại dependencies, build/cache (kể cả `.next-*`), các file môi trường đã liệt kê, log, coverage và file IDE. Giữ `package-lock.json` trong Git để cài đặt tái lập.
 
-| Group | Purpose | Pages | Stitch screens |
-| --- | --- | --- | --- |
-| A — Product introduction | Introduce BashLab and lead into courses | 01 Landing | 01 |
-| B — Account authentication | Login, registration, email verification, password recovery | 02 Login; 03 Register; 04 Verify Email; 05 Forgot Password; 06 Reset Password | 02–06 |
-| C — Course discovery | Browse courses, course curriculum, and progress | 07 Course Catalog; 08 Course Overview | 07–08 |
-| D — Learning and practice | Personal learning progress, lessons, and Bash practice | 09 My Learning; 10 Interactive Lesson Workspace | 09–10 |
-| E — Personal account | Account details, password-reset request, and logout | 11 Account | 12 |
-| F — Content administration | Manage courses, chapters, and lessons | 12 Content; 13 Lesson Editor | 14, 16 |
-| G — Operations administration | Manage users, practice sessions, and admin logs | 14 Users; 15 Activity | 17–18 |
-| H — System pages | Insufficient-access and not-found notices | 16 Access Denied; 17 Page Not Found | 20–21 |
+Không commit mật khẩu, token, khóa riêng, dữ liệu người dùng hoặc bản dump chứa dữ liệu thật. Khi thêm tên file môi trường mới, kiểm tra `git check-ignore -v <file>`; không giả định mọi tên `.env.*` đều đã được bỏ qua.
 
-Groups F and G are for administrators. Group H is shared and shown only when
-the relevant access or routing condition occurs.
+## Quyền sử dụng
 
-### Functional Scope by Group
-
-- **A:** product overview, simulated `pwd`/`ls`/`whoami` demo, course discovery, and FAQ.
-- **B:** account credentials, validation, email verification, and password-reset flows.
-- **C:** course filters, curriculum, lesson state, and course progress.
-- **D:** learning dashboard, lesson navigation, sandbox-terminal workflow, and solution checks.
-- **E:** account information, verification state, password-reset request, and sign-out.
-- **F:** course/chapter/lesson structure, publishing state, and Markdown lesson authoring.
-- **G:** user roles/status, practice-session controls, and auditable admin activity.
-- **H:** denied-access and missing-page feedback.
-
-### Landing Page (`/`)
-
-Complete landing page with 5 sections:
-
-1. **Hero** — Centered headline, dual CTAs, subtle radial glow
-2. **Try Your First Command** — Interactive terminal demo (pwd, ls, whoami, help, clear)
-3. **Learning Method** — Three-step editorial layout (Understand → Practice → Interpret)
-4. **Course Spotlight** — Shell 101 overview with chapter index
-5. **FAQ** — Three accordion questions
-
-### Navigation
-
-- **Navbar**: Logo, Courses, How it works, Log in, Start learning
-- **Mobile**: Collapsible menu with keyboard support
-- **Footer**: Logo, tagline, copyright, links to Courses, How it works, FAQ
-
-### Anchor Links (Current Phase)
-
-Since only the landing page exists, navigation uses anchor links:
-
-- `Start learning` / `Courses` → scrolls to Course Spotlight section
-- `How it works` → scrolls to Learning Method section
-- `Try your first command` → scrolls to Terminal Demo section
-- `FAQ` → scrolls to FAQ section
-
-### Links Requiring Backend Implementation
-
-The following links currently show a temporary notice when clicked (or navigate to non-existent routes):
-
-- `/login` — No auth pages yet
-- `/courses` — No course catalog yet
-- `/courses/shell-101` — No course overview yet
-
-See `backend/README.md` for the planned backend scope and API surface.
-
-## Design Tokens
-
-Defined in `frontend/app/globals.css`:
-
-| Token | Value |
-|-------|-------|
-| `--color-bg` | `#0A0D14` |
-| `--color-surface` | `#1D2027` |
-| `--color-primary` | `#00FF66` |
-| `--color-secondary` | `#00E5FF` |
-| `--color-accent` | `#F59E0B` |
-| `--color-on-surface` | `#E8E9F0` |
-| `--color-on-surface-variant` | `#9BA3B5` |
-| `--font-headline` | `Space Grotesk` |
-| `--font-body` | `Inter` |
-| `--font-code` | `JetBrains Mono` |
-
-## Tech Stack
-
-- **Frontend**: Next.js 14 (App Router), React 18, Vanilla CSS + CSS Modules
-- **Fonts**: Space Grotesk, Inter, JetBrains Mono (Google Fonts)
-- **Icons**: Material Symbols Outlined (Google Fonts)
-- **No**: TypeScript, Tailwind CSS, xterm.js, testing libraries
-
-## Browser Support
-
-Modern browsers with ES2020+ support. No polyfills included.
-
-## License
-
-Proprietary — All rights reserved.
+Proprietary — All rights reserved. Repository hiện chưa có file LICENSE cấp phép riêng.
