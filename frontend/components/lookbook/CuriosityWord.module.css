@@ -1,0 +1,71 @@
+.word {
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--lb-accent, #00ff66);
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  vertical-align: baseline;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.word:focus-visible {
+  outline: 2px solid var(--lb-cyan, #00e5ff);
+  outline-offset: 5px;
+}
+
+/* This text defines the original word's width, baseline, and accessible name. */
+.text { display: inline-block; }
+.word[data-ready="true"] .text { opacity: 0; }
+
+.letters {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+}
+.word[data-ready="true"] .letters { display: block; }
+
+.letter {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transform-origin: 50% 70%;
+  text-align: center;
+}
+.face { display: block; }
+.light {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  color: transparent;
+  background: radial-gradient(ellipse 45px 36px at var(--light-x, 50%) var(--light-y, 50%), #91fff2 0%, #00e5ff 38%, transparent 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.particles {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  width: calc(100% + 24px);
+  height: calc(100% + 24px);
+  pointer-events: none;
+  display: none;
+}
+.word[data-phase="playing"] .particles { display: block; }
+.word[data-phase="highlight"] { color: #91fff2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .word[data-ready="true"] .text { opacity: 1; }
+  .word[data-ready="true"] .letters,
+  .word[data-phase="playing"] .particles { display: none; }
+}
