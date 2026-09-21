@@ -17,11 +17,6 @@ export default function Hero() {
         aria-hidden="true"
       />
       <div className="container text-center flex flex-col items-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 mb-8 rounded-full bg-white/[0.04] border border-white/10" role="status" aria-label="Section indicator">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" aria-hidden="true" />
-          <span className="font-code text-[11px] uppercase tracking-widest text-primary font-semibold">{'// 01 / START'}</span>
-        </div>
-
         <h1
           id="hero-heading"
           className="font-headline font-bold text-4xl sm:text-6xl md:text-[64px] leading-[1.08] tracking-tight text-white mb-6 max-w-[860px]"

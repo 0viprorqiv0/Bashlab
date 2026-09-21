@@ -15,8 +15,7 @@ export default function CourseSpotlight() {
       <div className="container">
         <div className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <span className="section-label section-label-primary">{'// 04 / COURSE'}</span>
-            <h2 id="course-heading" className="heading-lg mt-2">
+            <h2 id="course-heading" className="heading-lg">
               Your next command starts in Shell 101.
             </h2>
           </div>

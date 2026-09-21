@@ -511,18 +511,19 @@ export default function CyberBackdrop() {
           /* ignore teardown errors */
         }
       });
-      while (host.firstChild) host.removeChild(host.firstChild);
-      host.style.opacity = '';
+      if (host) {
+        while (host.firstChild) {
+          host.removeChild(host.firstChild);
+        }
+        host.style.opacity = '';
+      }
     };
   }, []);
 
-  if (mode === 'static') {
-    return (
-      <div ref={hostRef} aria-hidden="true" className={hostStyles.host}>
-        <div className={hostStyles.fallback} />
-      </div>
-    );
-  }
-
-  return <div ref={hostRef} aria-hidden="true" className={hostStyles.host} />;
+  return (
+    <div aria-hidden="true" className={hostStyles.host}>
+      {mode === 'static' && <div className={hostStyles.fallback} />}
+      <div ref={hostRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
+    </div>
+  );
 }

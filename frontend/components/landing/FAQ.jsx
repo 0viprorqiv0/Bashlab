@@ -43,8 +43,7 @@ export default function FAQ() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
           <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
             <div>
-              <span className="section-label section-label-outline">{'// 05 / QUESTIONS'}</span>
-              <h2 id="faq-heading" className="heading-lg mt-3 mb-4">
+              <h2 id="faq-heading" className="heading-lg mb-4">
                 Ready when you are.
               </h2>
               <p className="body-md max-w-[440px]">
@@ -55,9 +54,9 @@ export default function FAQ() {
             <div className="pt-2">
               <a
                 href="/courses"
-                className="inline-flex items-center gap-2 font-code text-xs text-primary hover:underline uppercase tracking-wider font-semibold focus-visible"
+                className="group inline-flex items-center gap-2 font-code text-sm text-primary uppercase tracking-wider font-semibold focus-visible"
               >
-                <span>EXPLORE COURSES</span>
+                <span className="group-hover:underline">EXPLORE COURSES</span>
                 <span className="material-symbols-outlined text-sm">arrow_forward</span>
               </a>
             </div>

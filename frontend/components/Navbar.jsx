@@ -13,21 +13,21 @@ export default function Navbar() {
 
   return (
     <header
-      className="fixed top-0 left-0 w-full z-50 border-b border-[#343a43]/60 bg-[#0a0d14] px-8 py-4"
+      className="fixed top-0 left-0 w-full z-50 border-b border-[#343a43]/60 bg-[#0a0d14] px-6 lg:px-8 py-2.5 transition-all duration-200"
       role="banner"
     >
-      <div className="w-full max-w-[1200px] mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-10">
+      <div className="w-full max-w-[1340px] mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-7">
           <a href="/" className="flex items-center" aria-label="BashLab home">
             <BrandLogo />
           </a>
 
-          <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
+          <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="font-code text-xs text-on-surface-variant hover:text-white transition-colors focus-visible"
+                className="font-code text-xs lg:text-[13px] text-on-surface-variant hover:text-white transition-colors focus-visible"
               >
                 {link.label}
               </a>
@@ -35,28 +35,28 @@ export default function Navbar() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <a
             href="/login"
             className="hidden sm:inline-flex text-xs font-code text-on-surface-variant hover:text-white px-3 py-1.5 transition-colors focus-visible"
           >
-            Log in
+            Sign in
           </a>
           <a
             href="/courses"
-            className="btn-primary btn-primary-sm hidden sm:inline-flex"
+            className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 hidden sm:inline-flex shadow-none"
           >
-            Start learning
+            Get started
           </a>
 
           <button
-            className="md:hidden p-2 text-on-surface-variant hover:text-white transition-colors focus-visible rounded"
+            className="md:hidden p-1.5 text-on-surface-variant hover:text-white transition-colors focus-visible rounded"
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setMobileOpen(!mobileOpen)}
           >
-            <span className="material-symbols-outlined text-xl">
+            <span className="material-symbols-outlined text-lg">
               {mobileOpen ? 'close' : 'menu'}
             </span>
           </button>
@@ -82,14 +82,14 @@ export default function Navbar() {
                 className="text-sm font-code text-on-surface-variant hover:text-white text-center py-2 focus-visible"
                 onClick={() => setMobileOpen(false)}
               >
-                Log in
+                Sign in
               </a>
               <a
                 href="/courses"
                 className="btn-primary text-center"
                 onClick={() => setMobileOpen(false)}
               >
-                Start learning
+                Get started
                 <span className="material-symbols-outlined text-base">arrow_forward</span>
               </a>
             </div>
