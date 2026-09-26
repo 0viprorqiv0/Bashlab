@@ -6,6 +6,7 @@ import { SessionManager } from './services/sessionManager.js';
 import { SandboxRunner } from './services/sandboxRunner.js';
 import { startReaper } from './services/reaperService.js';
 import { verifyTask } from './services/taskVerifier.js';
+import { metrics } from './services/metrics.js';
 import { HttpError } from './errors.js';
 
 function rateLimiter(max, windowMs = 60000) {
@@ -25,6 +26,7 @@ function rateLimiter(max, windowMs = 60000) {
       buckets.set(ip, bucket);
     }
     if (++bucket.count > max) {
+      metrics.recordRateLimit();
       res.set('Retry-After', String(Math.ceil((bucket.reset - now) / 1000)));
       return next(new HttpError(429, 'RATE_LIMIT', 'Too many requests from this IP'));
     }
@@ -42,11 +44,32 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   const origins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000').split(',');
   app.use(cors({ origin: origins, methods: ['GET', 'POST', 'DELETE'] }));
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
-  // Numeric process counters only; intended for the local benchmark operator.
+
+  // Prometheus and JSON metrics endpoint
   app.get('/metrics', (req, res, next) => {
-    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) return next(new HttpError(403, 'LOCAL_ONLY', 'Local metrics only'));
-    res.json({ cpu: process.cpuUsage(), rss: process.memoryUsage().rss,
-      sessions: manager.sessions.size, active: runner.limit.activeCount, pending: runner.limit.pendingCount });
+    const ip = req.socket.remoteAddress || '';
+    const isAllowed = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)
+      || process.env.METRICS_ALLOW_ALL === 'true'
+      || ip.startsWith('172.') || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('::ffff:172.');
+    if (!isAllowed) return next(new HttpError(403, 'LOCAL_ONLY', 'Local metrics only'));
+
+    const wantsJson = req.query.format === 'json'
+      || req.headers['content-type'] === 'application/json'
+      || (req.headers.accept?.includes('application/json') && !req.headers.accept?.includes('text/plain'));
+
+    if (wantsJson) {
+      return res.json({
+        cpu: process.cpuUsage(),
+        rss: process.memoryUsage().rss,
+        sessions: manager.sessions.size,
+        active: runner.limit.activeCount,
+        pending: runner.limit.pendingCount,
+        counters: metrics.counters
+      });
+    }
+
+    res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    res.send(metrics.toPrometheusText({ manager, runner }));
   });
   app.use('/api', rateLimiter(rateMax));
   app.use(express.json({ limit: '16kb', strict: true }));
@@ -63,7 +86,9 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       try {
         output = await runner.run({ command, cwd: session.cwd,
           workspacePath: `/var/tmp/bashlab/workspaces/${session.id}` });
+        metrics.recordCommand(output.termination || 'completed', output.executionMs);
       } catch (error) {
+        metrics.recordCommand('error', 0);
         if (error.code === 'RUNNER_UNCERTAIN') session.quarantined = true;
         throw error;
       }
@@ -77,6 +102,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
         if (error.status !== 413) throw error;
         output.quotaExceeded = true;
         output.quotaError = error.message;
+        metrics.counters.quota_exceeded++;
       }
       return output;
     });
