@@ -1,0 +1,13 @@
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      bubblewrap coreutils bash nano python3 tar grep sed gawk \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 student \
+    && useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash student \
+    && mkdir -p /opt/bashlab/empty /var/tmp/bashlab/workspaces
+COPY runner/run-job runner/wrap.sh /opt/bashlab/
+RUN chmod 0555 /opt/bashlab/run-job /opt/bashlab/wrap.sh /opt/bashlab/empty
+USER 10001:10001
+WORKDIR /home/student
+CMD ["sleep", "infinity"]
