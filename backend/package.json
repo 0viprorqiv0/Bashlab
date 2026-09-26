@@ -14,5 +14,5 @@
     "report": "node benchmarks/show_dashboard.js",
     "bench:show": "node benchmarks/show_dashboard.js"
   },
-  "dependencies": { "cors": "^2.8.5", "express": "^5.1.0", "p-limit": "^6.2.0" }
+  "dependencies": { "@supabase/supabase-js": "^2.45.4", "cors": "^2.8.5", "express": "^5.1.0", "p-limit": "^6.2.0" }
 }
