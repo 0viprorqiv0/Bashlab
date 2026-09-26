@@ -27,10 +27,13 @@ const PAGES = [
 ];
 
 const RESPONSES = {
-  pwd: { out: '/bashlab', desc: 'pwd prints your current directory. This path belongs to the demo.' },
-  ls: { out: 'about.txt   courses/   getting-started.txt', desc: 'ls lists entries in the demo root.' },
-  whoami: { out: 'guest', desc: 'You are a curious learner. BashLab helps you turn that curiosity into command-line skills.' },
-  help: { out: 'Available demo commands: pwd, ls, whoami, cat about.txt, courses, help, clear', desc: 'Simulated commands to explore how Bash interaction works.' },
+  pwd: { out: '/home/student', desc: 'pwd prints your current working directory.' },
+  ls: { out: 'about.txt   courses/   getting-started.txt', desc: 'ls lists entries in the current directory.' },
+  'ls -la': { out: 'total 12\ndrwxr-xr-x 2 student student 4096 Jan  1 00:00 .\ndrwxr-xr-x 3 root    root    4096 Jan  1 00:00 ..\n-rw-r--r-- 1 student student  220 Jan  1 00:00 .bash_logout\n-rw-r--r-- 1 student student 3771 Jan  1 00:00 .bashrc\n-rw-r--r-- 1 student student  807 Jan  1 00:00 .profile', desc: 'ls -la shows detailed listing including hidden dotfiles.' },
+  whoami: { out: 'guest', desc: 'whoami prints the current user.' },
+  'uname -a': { out: 'Linux bashlab-box 6.8.0-bwrap #1 SMP PREEMPT x86_64 GNU/Linux', desc: 'uname prints system kernel and architecture information.' },
+  'cat /etc/os-release': { out: 'PRETTY_NAME="Ubuntu 24.04 LTS"\nNAME="Ubuntu"\nVERSION_ID="24.04"\nVERSION="24.04 LTS (Noble Numbat)"\nID=ubuntu\nID_LIKE=debian', desc: 'Displays Linux distribution release identification.' },
+  help: { out: 'Available commands: pwd, ls, ls -la, whoami, uname -a, cat /etc/os-release, clear\n(You can run any real Linux command against the sandbox!)', desc: 'Terminal help manual.' },
   'cat about.txt': { out: 'BashLab provides short guided lessons, real browser practice, and requirement feedback.', desc: 'Displaying text file contents with cat.' },
   'cat getting-started.txt': { out: 'Browse courses -> open a course -> choose a lesson -> start practicing.', desc: 'Getting started guide loaded.' },
   courses: { out: 'Shell 101 — Bash Basics [Available now at /courses/shell-101]', desc: 'Explore the full course syllabus in the course section below.' },
@@ -151,10 +154,12 @@ export default function Lookbook() {
   /* Kích thước terminal: default | minimized | expanded | closed */
   const [termSize, setTermSize] = useState('default');
   const [logEntries, setLogEntries] = useState([
-    { type: 'info', content: '// Suggested command ready. Click below or press Enter to run:' },
-    { type: 'prompt', cmd: 'pwd' },
-    { type: 'output', content: '/bashlab' },
-    { type: 'desc', content: 'pwd prints your current directory. This path belongs to the demo.' },
+    {
+      type: 'motd',
+      content: 'Welcome to BashLab Sandbox (Ubuntu 24.04 LTS)\nType any Linux command or explore with quick shortcuts below.',
+    },
+    { type: 'prompt', cmd: 'pwd', cwd: '~' },
+    { type: 'output', content: '/home/student' },
   ]);
 
   const activeRef = useRef(0);
@@ -450,7 +455,7 @@ export default function Lookbook() {
     setSysStatus('EXEC_RUN');
 
     if (cmd.toLowerCase() === 'clear') {
-      setLogEntries([{ type: 'info', content: '// Terminal cleared. Type any command:' }]);
+      setLogEntries([]);
       setInputValue('');
       setSysStatus('SYS_READY');
       return;
@@ -534,9 +539,27 @@ export default function Lookbook() {
     statusTimerRef.current = setTimeout(() => setSysStatus('SYS_READY'), 1400);
   }
 
+  const handleTerminalClick = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.toString().length === 0) {
+      termInputRef.current?.focus();
+    }
+  };
+
   function handleTermKeyDown(e) {
     if (e.key === 'Enter') {
       executeCommand(inputValue);
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      setLogEntries((prev) => [
+        ...prev,
+        { type: 'interrupted', cmd: inputValue, cwd: currentCwd },
+      ]);
+      setInputValue('');
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+      e.preventDefault();
+      setLogEntries([]);
+      setInputValue('');
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (cmdHistory.length === 0) return;
@@ -554,6 +577,8 @@ export default function Lookbook() {
         setHistoryIdx(nextIdx);
         setInputValue(cmdHistory[nextIdx]);
       }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
     }
   }
 
@@ -743,7 +768,7 @@ export default function Lookbook() {
                           </svg>
                         </span>
                       </button>
-                      <span style={{ marginLeft: 8 }}>guest@bashlab:{currentCwd}$</span>
+                      <span className={styles.termTitle}>guest@bashlab: {currentCwd} — bash</span>
                     </span>
                     <div className={styles.termHeadRight}>
                       <div className={styles.termStatusBadge}>
@@ -753,58 +778,98 @@ export default function Lookbook() {
                         />
                         <span className={styles.statusText}>{sysStatus}</span>
                       </div>
-                      <span className={styles.termDemoHint}>Live Linux Sandbox</span>
+                      <span className={styles.termDemoHint}>Sandbox Live</span>
                     </div>
                   </div>
-                  <div className={styles.termBody}>
+                  <div className={styles.termBody} onClick={handleTerminalClick}>
                     <div className={styles.termBodyInner}>
-                  <div ref={logRef} className={styles.termLog} role="log" aria-live="polite" aria-label="Terminal output">
-                    {logEntries.map((e, i) => {
-                      if (e.type === 'prompt') {
-                        return (
-                          <div key={i}>
-                            <span className={styles.termPrompt}>guest@bashlab:{e.cwd || currentCwd}$ </span>
-                            <span className={styles.termCmd}>{e.cmd}</span>
+                      <div ref={logRef} className={styles.termLog} role="log" aria-live="polite" aria-label="Terminal output">
+                        {logEntries.map((e, i) => {
+                          if (e.type === 'motd') {
+                            return <div key={i} className={styles.termMotd}>{e.content}</div>;
+                          }
+                          if (e.type === 'prompt') {
+                            return (
+                              <div key={i} className={styles.termLine}>
+                                <span className={styles.promptUser}>guest@bashlab</span>
+                                <span className={styles.promptColon}>:</span>
+                                <span className={styles.promptPath}>{e.cwd || '~'}</span>
+                                <span className={styles.promptChar}>$ </span>
+                                <span className={styles.termCmd}>{e.cmd}</span>
+                              </div>
+                            );
+                          }
+                          if (e.type === 'interrupted') {
+                            return (
+                              <div key={i} className={styles.termLine}>
+                                <span className={styles.promptUser}>guest@bashlab</span>
+                                <span className={styles.promptColon}>:</span>
+                                <span className={styles.promptPath}>{e.cwd || '~'}</span>
+                                <span className={styles.promptChar}>$ </span>
+                                <span className={styles.termCmd}>{e.cmd}</span>
+                                <span className={styles.termInterrupt}>^C</span>
+                              </div>
+                            );
+                          }
+                          if (e.type === 'output') return <div key={i} className={styles.termOut}>{e.content}</div>;
+                          if (e.type === 'error') return <div key={i} className={styles.termErr}>{e.content}</div>;
+                          if (e.type === 'desc') return <div key={i} className={styles.termDesc}># {e.content}</div>;
+                          return <div key={i} className={styles.termInfo}>{e.content}</div>;
+                        })}
+                        <div className={styles.activeLine}>
+                          <span className={styles.promptUser}>guest@bashlab</span>
+                          <span className={styles.promptColon}>:</span>
+                          <span className={styles.promptPath}>{currentCwd}</span>
+                          <span className={styles.promptChar}>$ </span>
+                          <div className={styles.inputWrapper}>
+                            <input
+                              ref={termInputRef}
+                              type="text"
+                              className={styles.termInput}
+                              value={inputValue}
+                              onChange={(e) => setInputValue(e.target.value)}
+                              onKeyDown={handleTermKeyDown}
+                              spellCheck={false}
+                              autoComplete="off"
+                              autoCorrect="off"
+                              autoCapitalize="off"
+                              aria-label="Command input"
+                            />
                           </div>
-                        );
-                      }
-                      if (e.type === 'output') return <div key={i} className={styles.termOut} style={{ whiteSpace: 'pre-wrap' }}>{e.content}</div>;
-                      if (e.type === 'error') return <div key={i} style={{ color: '#ff5f56', paddingLeft: 16, whiteSpace: 'pre-wrap' }}>{e.content}</div>;
-                      if (e.type === 'desc') return <div key={i} className={styles.termDesc}>{e.content}</div>;
-                      return <div key={i} style={{ color: 'var(--lb-faint)' }}>{e.content}</div>;
-                    })}
-                  </div>
-                  <div className={styles.termInputRow}>
-                    <span className={styles.termPrompt}>guest@bashlab:{currentCwd}$</span>
-                    <input
-                      ref={termInputRef}
-                      className={styles.termInput}
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={handleTermKeyDown}
-                      placeholder="Type pwd, ls, whoami, help..."
-                      spellCheck={false}
-                      autoComplete="off"
-                      aria-label="Command input"
-                    />
-                    <button className={styles.runBtn} type="button" onClick={() => executeCommand(inputValue)}>RUN</button>
-                  </div>
-                  <div className={styles.termChips}>
-                    <div className={styles.chipGroup} role="group" aria-label="Suggested commands">
-                      {['pwd', 'ls', 'whoami', 'help'].map((c) => (
+                        </div>
+                      </div>
+                      <div className={styles.termToolbar}>
+                        <div className={styles.toolbarLeft}>
+                          <span className={styles.toolbarLabel}>Quick test:</span>
+                          <div className={styles.chipGroup} role="group" aria-label="Suggested quick commands">
+                            {['pwd', 'ls -la', 'whoami', 'cat /etc/os-release', 'uname -a'].map((c) => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => {
+                                  executeCommand(c);
+                                  termInputRef.current?.focus();
+                                }}
+                                className={styles.chip}
+                                aria-label={`Run ${c}`}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <button
-                          key={c}
+                          className={styles.clearBtn}
                           type="button"
-                          onClick={() => executeCommand(c)}
-                          className={`${styles.chip} ${c === 'pwd' ? styles.chipPrimary : ''}`}
-                          aria-label={`Run ${c} command`}
+                          onClick={() => {
+                            executeCommand('clear');
+                            termInputRef.current?.focus();
+                          }}
+                          title="Clear terminal (Ctrl+L)"
                         >
-                          {c === 'pwd' ? '▶ Run demo command: pwd' : c}
+                          CLEAR
                         </button>
-                      ))}
-                    </div>
-                    <button className={styles.clearBtn} type="button" onClick={() => executeCommand('clear')}>CLEAR</button>
-                  </div>
+                      </div>
                     </div>
                   </div>
                 </div>
