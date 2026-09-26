@@ -155,8 +155,9 @@ export async function startServer() {
   // API/reaper from starting and reclaiming that inventory.
   await manager.discoverOrphans();
   const stopReaper = startReaper(manager);
-  const server = createApp({ manager, runner }).listen(Number(process.env.PORT || 3001), process.env.HOST || '127.0.0.1', () => {
-    console.log(`BashLab API listening on http://${process.env.HOST || '127.0.0.1'}:${server.address().port}`);
+  const host = process.env.HOST || '0.0.0.0';
+  const server = createApp({ manager, runner }).listen(Number(process.env.PORT || 3001), host, () => {
+    console.log(`BashLab API listening on http://${host}:${server.address().port}`);
   });
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
     stopReaper();
