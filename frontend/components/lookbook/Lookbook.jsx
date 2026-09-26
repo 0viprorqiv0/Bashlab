@@ -138,6 +138,7 @@ export default function Lookbook() {
   /* Cyber Glow & Status LED */
   const [sysStatus, setSysStatus] = useState('SYS_READY');
   const statusTimerRef = useRef(null);
+  const sandboxSessionRef = useRef(null);
 
   const [active, setActive] = useState(0);
   const [enabled, setEnabled] = useState(true);
@@ -438,32 +439,91 @@ export default function Lookbook() {
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
   }, []);
 
-  function executeCommand(raw) {
+  async function executeCommand(raw) {
     const cmd = (raw || '').trim();
     if (!cmd) return;
     setCmdHistory((prev) => [...prev, cmd]);
     setHistoryIdx(-1);
 
     // Cập nhật đèn LED trạng thái
-    setSysStatus('EXEC_OK');
-    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
-    statusTimerRef.current = setTimeout(() => setSysStatus('SYS_READY'), 1400);
+    setSysStatus('EXEC_RUN');
 
     if (cmd.toLowerCase() === 'clear') {
-      setLogEntries([{ type: 'info', content: '// Terminal cleared. Type pwd, help, or click a chip:' }]);
+      setLogEntries([{ type: 'info', content: '// Terminal cleared. Type any command:' }]);
       setInputValue('');
+      setSysStatus('SYS_READY');
       return;
     }
     const next = [...logEntries, { type: 'prompt', cmd }];
-    const hit = RESPONSES[cmd.toLowerCase()];
-    if (hit) {
-      next.push({ type: 'output', content: hit.out });
-      next.push({ type: 'desc', content: hit.desc });
-    } else {
-      next.push({ type: 'error', content: 'This demo supports a few commands. Type help to see them.' });
-    }
     setLogEntries(next);
     setInputValue('');
+
+    // Gửi lệnh thật đến Sandbox Backend
+    try {
+      let sid = sandboxSessionRef.current;
+      if (!sid) {
+        const sRes = await fetch('http://127.0.0.1:3001/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          sid = sData.sessionId;
+          sandboxSessionRef.current = sid;
+        }
+      }
+
+      if (sid) {
+        const res = await fetch(`http://127.0.0.1:3001/api/sessions/${sid}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const items = [];
+          if (data.stdout) {
+            items.push({ type: 'output', content: data.stdout.trimEnd() });
+          }
+          if (data.stderr) {
+            items.push({ type: 'error', content: data.stderr.trimEnd() });
+          }
+          if (data.exitCode !== 0 && !data.stdout && !data.stderr) {
+            items.push({ type: 'desc', content: `[Process exited with code ${data.exitCode}]` });
+          }
+          if (data.cwdUpdated && data.cwd) {
+            items.push({ type: 'desc', content: `CWD: ${data.cwd}` });
+          }
+
+          setLogEntries((prev) => [...prev, ...items]);
+          setSysStatus(data.exitCode === 0 ? 'EXEC_OK' : 'EXEC_ERR');
+          if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+          statusTimerRef.current = setTimeout(() => setSysStatus('SYS_READY'), 1400);
+          return;
+        }
+      }
+    } catch {
+      // Backend offline fallback
+    }
+
+    const hit = RESPONSES[cmd.toLowerCase()];
+    if (hit) {
+      setLogEntries((prev) => [
+        ...prev,
+        { type: 'output', content: hit.out },
+        { type: 'desc', content: hit.desc },
+      ]);
+      setSysStatus('EXEC_OK');
+    } else {
+      setLogEntries((prev) => [
+        ...prev,
+        { type: 'error', content: 'Sandbox backend offline (http://127.0.0.1:3001). Check backend status.' },
+      ]);
+      setSysStatus('SYS_ERR');
+    }
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => setSysStatus('SYS_READY'), 1400);
   }
 
   function handleTermKeyDown(e) {
@@ -700,7 +760,8 @@ export default function Lookbook() {
                           </div>
                         );
                       }
-                      if (e.type === 'output') return <div key={i} className={styles.termOut}>{e.content}</div>;
+                      if (e.type === 'output') return <div key={i} className={styles.termOut} style={{ whiteSpace: 'pre-wrap' }}>{e.content}</div>;
+                      if (e.type === 'error') return <div key={i} style={{ color: '#ff5f56', paddingLeft: 16, whiteSpace: 'pre-wrap' }}>{e.content}</div>;
                       if (e.type === 'desc') return <div key={i} className={styles.termDesc}>{e.content}</div>;
                       return <div key={i} style={{ color: 'var(--lb-faint)' }}>{e.content}</div>;
                     })}
