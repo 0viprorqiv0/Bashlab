@@ -3,6 +3,18 @@ import pLimit from 'p-limit';
 import { performance } from 'node:perf_hooks';
 import { HttpError } from '../errors.js';
 
+export function sanitizeOutput(text) {
+  if (typeof text !== 'string') return text;
+  return text
+    .replace(/\/run\/command\.sh:\s*line\s*\d+:\s*/g, 'bash: ')
+    .replace(/\/run\/command\.sh:\s*/g, 'bash: ')
+    .replace(/\/run\/wrap\.sh:\s*line\s*\d+:\s*/g, 'bash: ')
+    .replace(/\/run\/wrap\.sh:\s*/g, 'bash: ')
+    .replace(/\/var\/tmp\/bashlab\/workspaces\/[0-9a-f-]+\/home/g, '/home/student')
+    .replace(/\/var\/tmp\/bashlab\/workspaces\/[0-9a-f-]+\/tmp/g, '/tmp')
+    .replace(/\/var\/tmp\/bashlab\/workspaces\/[0-9a-f-]+/g, '/home/student');
+}
+
 export function dockerTransport(payload, { container = process.env.RUNNER_CONTAINER || 'bashlab-box' } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn('docker', ['exec', '-i', container, '/opt/bashlab/run-job'], { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -34,6 +46,8 @@ export function dockerTransport(payload, { container = process.env.RUNNER_CONTAI
           || typeof result.cwd !== 'string' || typeof result.cwdUpdated !== 'boolean' || typeof result.outputTruncated !== 'boolean'
           || !['completed', 'timeout', 'output_limit', 'runner_error'].includes(result.termination)) throw new Error('Invalid schema');
         if (result.termination === 'runner_error') return fail('Runner could not confirm sandbox execution and cleanup');
+        result.stdout = sanitizeOutput(result.stdout);
+        result.stderr = sanitizeOutput(result.stderr);
         resolve(result);
       } catch { fail('Malformed runner JSON'); }
     });

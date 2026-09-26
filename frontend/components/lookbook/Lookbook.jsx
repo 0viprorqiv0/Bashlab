@@ -139,6 +139,7 @@ export default function Lookbook() {
   const [sysStatus, setSysStatus] = useState('SYS_READY');
   const statusTimerRef = useRef(null);
   const sandboxSessionRef = useRef(null);
+  const [currentCwd, setCurrentCwd] = useState('~');
 
   const [active, setActive] = useState(0);
   const [enabled, setEnabled] = useState(true);
@@ -454,7 +455,7 @@ export default function Lookbook() {
       setSysStatus('SYS_READY');
       return;
     }
-    const next = [...logEntries, { type: 'prompt', cmd }];
+    const next = [...logEntries, { type: 'prompt', cmd, cwd: currentCwd }];
     setLogEntries(next);
     setInputValue('');
 
@@ -487,13 +488,20 @@ export default function Lookbook() {
             items.push({ type: 'output', content: data.stdout.trimEnd() });
           }
           if (data.stderr) {
-            items.push({ type: 'error', content: data.stderr.trimEnd() });
+            const cleanErr = data.stderr
+              .replace(/\/run\/command\.sh:\s*line\s*\d+:\s*/g, 'bash: ')
+              .replace(/\/run\/command\.sh:\s*/g, 'bash: ')
+              .replace(/\/run\/wrap\.sh:\s*line\s*\d+:\s*/g, 'bash: ')
+              .replace(/\/run\/wrap\.sh:\s*/g, 'bash: ')
+              .trimEnd();
+            items.push({ type: 'error', content: cleanErr });
           }
           if (data.exitCode !== 0 && !data.stdout && !data.stderr) {
-            items.push({ type: 'desc', content: `[Process exited with code ${data.exitCode}]` });
+            items.push({ type: 'error', content: `bash: exit code ${data.exitCode}` });
           }
           if (data.cwdUpdated && data.cwd) {
-            items.push({ type: 'desc', content: `CWD: ${data.cwd}` });
+            const displayCwd = data.cwd === '/home/student' ? '~' : data.cwd.replace(/^\/home\/student\/?/, '~/');
+            setCurrentCwd(displayCwd);
           }
 
           setLogEntries((prev) => [...prev, ...items]);
@@ -735,7 +743,7 @@ export default function Lookbook() {
                           </svg>
                         </span>
                       </button>
-                      <span style={{ marginLeft: 8 }}>guest@bashlab:~$</span>
+                      <span style={{ marginLeft: 8 }}>guest@bashlab:{currentCwd}$</span>
                     </span>
                     <div className={styles.termHeadRight}>
                       <div className={styles.termStatusBadge}>
@@ -745,7 +753,7 @@ export default function Lookbook() {
                         />
                         <span className={styles.statusText}>{sysStatus}</span>
                       </div>
-                      <span className={styles.termDemoHint}>Interactive demo</span>
+                      <span className={styles.termDemoHint}>Live Linux Sandbox</span>
                     </div>
                   </div>
                   <div className={styles.termBody}>
@@ -755,7 +763,7 @@ export default function Lookbook() {
                       if (e.type === 'prompt') {
                         return (
                           <div key={i}>
-                            <span className={styles.termPrompt}>guest@bashlab:~$ </span>
+                            <span className={styles.termPrompt}>guest@bashlab:{e.cwd || currentCwd}$ </span>
                             <span className={styles.termCmd}>{e.cmd}</span>
                           </div>
                         );
@@ -767,7 +775,7 @@ export default function Lookbook() {
                     })}
                   </div>
                   <div className={styles.termInputRow}>
-                    <span className={styles.termPrompt}>guest@bashlab:~$</span>
+                    <span className={styles.termPrompt}>guest@bashlab:{currentCwd}$</span>
                     <input
                       ref={termInputRef}
                       className={styles.termInput}
