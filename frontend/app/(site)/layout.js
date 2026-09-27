@@ -1,14 +1,7 @@
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import SmoothScroll from '@/components/SmoothScroll';
+import SiteChrome from '@/components/layout/SiteChrome';
 
 export default function SiteLayout({ children }) {
   return (
-    <>
-      <SmoothScroll />
-      <Navbar />
-      <main className="pt-16 relative">{children}</main>
-      <Footer />
-    </>
+    <SiteChrome>{children}</SiteChrome>
   );
 }

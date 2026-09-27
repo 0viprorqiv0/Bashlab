@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHeroField } from '../components/lookbook/heroField.mjs';
+import { createHeroField } from '../components/landing/heroField.mjs';
 
 // Seeded input makes coverage checks repeatable, rather than randomly flaky.
 function randomSource() {

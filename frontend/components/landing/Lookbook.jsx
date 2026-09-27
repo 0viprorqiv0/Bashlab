@@ -4,9 +4,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import dynamic from 'next/dynamic';
 import styles from './Lookbook.module.css';
-import CuriosityWord from './CuriosityWord';
+import CuriosityWord from './animations/CuriosityWord';
 import CourseBento from './CourseBento';
-import { getTabCompletions, findCommonPrefix } from '@/components/terminalTabCompletion';
+import { getTabCompletions, findCommonPrefix } from './terminalTabCompletion';
 
 /* Cyber backdrop loads independently from main content */
 const CyberBackdrop = dynamic(() => import('./CyberBackdrop'), { ssr: false });
@@ -14,7 +14,6 @@ const CyberBackdrop = dynamic(() => import('./CyberBackdrop'), { ssr: false });
 /* Thuật toán Lookbook Snap — không dùng CSS scroll-snap */
 const SNAP_DEBOUNCE = 400;
 const SNAP_MAX_PULL = 50;
-const FOOTER_FREE_GAP = 200;
 const DESKTOP_MIN = 901;
 const STORE_KEY = 'bashlab:lookbook-snap';
 
@@ -28,33 +27,9 @@ const PAGES = [
 ];
 
 const RESPONSES = {
-  pwd: { out: '/bashlab', desc: 'pwd prints your current directory. This path belongs to the demo.' },
-  ls: { out: 'System/   about.txt   courses/   getting-started.txt', desc: 'ls lists entries in the demo root.' },
-  whoami: { out: 'guest', desc: 'You are a curious learner. BashLab helps you turn that curiosity into command-line skills.' },
-  help: { out: 'Available demo commands: pwd, ls, whoami, ping google.com, ifconfig, cat about.txt, courses, help, clear', desc: 'Simulated commands to explore how Bash interaction works.' },
   'cat about.txt': { out: 'BashLab provides short guided lessons, real browser practice, and requirement feedback.', desc: 'Displaying text file contents with cat.' },
   'cat getting-started.txt': { out: 'Browse courses -> open a course -> choose a lesson -> start practicing.', desc: 'Getting started guide loaded.' },
   courses: { out: 'Shell 101 — Bash Basics [Available now at /courses/shell-101]', desc: 'Explore the full course syllabus in the course section below.' },
-  ifconfig: {
-    out: `eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-        inet 192.168.1.15  netmask 255.255.255.0  broadcast 192.168.1.255
-        inet6 fe80::a00:27ff:fe4e:66a1  prefixlen 64  scopeid 0x20<link>
-        ether 08:00:27:4e:66:a1  txqueuelen 1000  (Ethernet)
-        RX packets 14205  bytes 12584102 (12.0 MiB)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 8912  bytes 1140921 (1.0 MiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
-
-lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
-        inet 127.0.0.1  netmask 255.0.0.0
-        inet6 ::1  prefixlen 128  scopeid 0x10<host>
-        loop  txqueuelen 1000  (Local Loopback)
-        RX packets 240  bytes 19200 (18.7 KiB)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 240  bytes 19200 (18.7 KiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0`,
-    desc: 'ifconfig displays network interface configuration and IP addresses.',
-  },
 };
 
 function preparePingPlan(cmd) {
@@ -790,6 +765,7 @@ export default function Lookbook() {
 
     function onKey(e) {
       if (termSizeRef.current === 'expanded') return;
+      if (!enabledRef.current) return;
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
@@ -2776,6 +2752,16 @@ export default function Lookbook() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className={styles.snapToggle}
+          aria-pressed={enabled}
+          aria-label={`Lookbook scroll snap ${enabled ? 'on' : 'off'}`}
+          title="Toggle Lookbook scroll snap"
+          onClick={toggleSnap}
+        >
+          <span aria-hidden="true" />
+        </button>
       </nav>
 
       {/* notPandora.exe Video Modal (Cửa sổ nhỏ phát video Never Gonna Give You Up) */}

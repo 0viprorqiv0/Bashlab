@@ -51,11 +51,8 @@ SANDBOX_TTL_SECONDS=900
 
 The following frontend links currently point to non-existent routes and should be updated when the backend is implemented:
 
-- `Navbar` → `/login`, `/courses`, `/courses/shell-101`
-- `Hero CTA` → `/courses`
-- `TryCommand` → chip `courses` command references `/courses/shell-101`
-- `CourseSpotlight CTA` → `/courses/shell-101`
-- `FAQ CTA` → `/courses`
+- `Navbar` → `/login`, `/courses`
+- `Lookbook` → CTAs link to `/courses`; the demo `courses` command references `/courses/shell-101`
 - `Footer` → `/courses`, `#how-it-works`, `#faq`
 
 ## Development

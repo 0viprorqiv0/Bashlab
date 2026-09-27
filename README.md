@@ -2,21 +2,23 @@
 
 Tiếng Việt | [English](README.en.md)
 
-BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và phản hồi theo mục tiêu. Repository hiện chứa bản frontend giới thiệu sản phẩm và tài liệu cho 17 trang thiết kế; chưa có backend hoặc sandbox Bash thật.
+BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và phản hồi theo mục tiêu. Frontend hiện có landing page, giao diện đăng nhập/đăng ký và trang danh mục khóa học. Backend xác thực và sandbox Bash thật chưa được triển khai.
 
 ## Trạng thái triển khai
 
 | Thành phần | Trạng thái trong mã nguồn |
 | --- | --- |
-| Trang chủ `/` | `app/(site)/page.js` render `components/lookbook/Lookbook.jsx`: giới thiệu, thử lệnh, phương pháp học, Shell 101 và FAQ |
+| Trang chủ `/` | `app/(site)/page.js` render `components/landing/Lookbook.jsx`: giới thiệu, thử lệnh, phương pháp học, Shell 101 và FAQ; có thể bật/tắt Lookbook snap |
 | Terminal trên trang chủ | Demo mô phỏng với câu trả lời có sẵn; không thực thi lệnh hệ điều hành |
 | Hiệu ứng giao diện | Có Lookbook navigation, terminal thu/phóng và các thành phần hiệu ứng; có script kiểm tra curiosity/backdrop |
+| Đăng nhập `/login` và đăng ký `/register` | Có biểu mẫu và kiểm tra dữ liệu phía giao diện; gửi biểu mẫu chỉ mô phỏng trạng thái dịch vụ chưa kết nối |
+| Danh mục khóa học `/courses` | Có 3 khóa học, bộ lọc All/Core Tracks/Security và trạng thái tiến độ/Coming soon; View course dẫn tới `/login` |
 | Trang 404 | Có `app/not-found.js` |
 | Giao diện 403 | Có `app/forbidden.js`; chưa có luồng phân quyền backend hay route riêng được triển khai để sử dụng giao diện này |
-| Xác thực, khóa học, học tập, tài khoản, quản trị | Có mô tả thiết kế; chưa có các route chức năng tương ứng trong cây `app/` |
+| Trang chi tiết khóa học, học tập, tài khoản, quản trị | Mới có trong tài liệu thiết kế; chưa triển khai |
 | Backend, dữ liệu, email, sandbox | Mới có kế hoạch trong [backend/README.md](backend/README.md) |
 
-Một số nội dung quảng bá trên giao diện nói về sandbox và lưu tiến độ theo định hướng sản phẩm. Chúng chưa chứng minh các dịch vụ này hoạt động. Các liên kết như `/login`, `/courses`, `/courses/shell-101` chưa có trang đích tương ứng.
+Nội dung về sandbox thật và lưu tiến độ mô tả định hướng sản phẩm; các dịch vụ này chưa hoạt động. Trang `/courses/shell-101` và các trang học chi tiết chưa được triển khai.
 
 ## Phân nhóm chức năng
 
@@ -40,12 +42,12 @@ Bảng dưới mô tả phạm vi yêu cầu, không phải danh sách tính nă
 | STT | Nhóm | Screen | Trang | Chức năng |
 | --- | --- | --- | --- | --- |
 | 01 | A | 01 | Landing | Giới thiệu sản phẩm; thử lệnh mô phỏng; giới thiệu Shell 101; FAQ; dẫn vào khóa học |
-| 02 | B | 02 | Login | Nhập email/mật khẩu; hiện/ẩn mật khẩu; ghi nhớ thiết bị; trạng thái xử lý và lỗi; liên kết đăng ký/quên mật khẩu |
-| 03 | B | 03 | Register | Nhập email, mật khẩu và xác nhận; kiểm tra dữ liệu; gửi yêu cầu tạo tài khoản; lỗi từng trường |
+| 02 | B | 02 | Login | Đã có giao diện `/login`: nhập email/mật khẩu; hiện/ẩn mật khẩu; ghi nhớ thiết bị; trạng thái xử lý/lỗi; liên kết đăng ký và quên mật khẩu. Xác thực backend chưa có |
+| 03 | B | 03 | Register | Đã có giao diện `/register`: nhập email, mật khẩu và xác nhận; kiểm tra dữ liệu; trạng thái lỗi. Tạo tài khoản backend chưa có |
 | 04 | B | 04 | Verify Email | Hướng dẫn kiểm tra email; gửi lại có thời gian chờ; xử lý xác minh thành công hoặc liên kết hết hạn/không hợp lệ |
 | 05 | B | 05 | Forgot Password | Yêu cầu email đặt lại mật khẩu; thông báo trung lập về tài khoản; gửi lại/thử lại khi lỗi |
 | 06 | B | 06 | Reset Password | Nhập và xác nhận mật khẩu mới; kiểm tra liên kết; xử lý lỗi/thành công; quay lại đăng nhập |
-| 07 | C | 07 | Course Catalog | Danh sách khóa học; lọc All/Core Tracks/Security; cấp độ, thời lượng, tiến độ và trạng thái sắp ra mắt |
+| 07 | C | 07 | Course Catalog | Đã có `/courses` với 3 khóa học, lọc All/Core Tracks/Security, cấp độ, thời lượng, tiến độ và trạng thái sắp ra mắt; View course dẫn tới đăng nhập |
 | 08 | C | 08 | Course Overview | Giới thiệu khóa; kết quả học tập; giáo trình theo chương; tiến độ và trạng thái bài; tiếp tục học |
 | 09 | D | 09 | My Learning | Tổng quan học tập; tiếp tục bài; thời gian học, hoạt động, số lệnh và tiến độ kỹ năng |
 | 10 | D | 10 | Interactive Lesson Workspace | Đọc bài; chuyển bài; mục tiêu và gợi ý; terminal sandbox; trạng thái phiên; Check Solution và phản hồi |
@@ -68,8 +70,10 @@ Bash_lab/
 ├── frontend/
 │   ├── app/                 # App Router, layouts và giao diện lỗi
 │   ├── components/
-│   │   ├── lookbook/        # Giao diện trang chủ đang được sử dụng
-│   │   └── landing/         # Các component landing có sẵn
+│   │   ├── courses/         # Danh mục khóa học
+│   │   ├── landing/         # Lookbook và các phần landing page
+│   │   ├── layout/          # Navbar, footer và khung trang dùng chung
+│   │   └── shared/          # Thành phần giao diện dùng chung
 │   ├── scripts/             # Kiểm tra curiosity và backdrop
 │   ├── package.json
 │   └── package-lock.json
