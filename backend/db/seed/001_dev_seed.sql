@@ -1,7 +1,18 @@
--- Dữ liệu mẫu cho môi trường dev/local. KHÔNG chạy trên project dùng thật.
--- Chạy tay khi cần dữ liệu để test Course Catalog/Overview mà chưa có Content UI.
-insert into public.courses (slug, title, description, level, status, sort_order)
-values ('shell-101', 'Shell 101', 'Nhập môn dòng lệnh Bash cho người mới.', 'beginner', 'published', 1)
+-- Dữ liệu mẫu cho môi trường dev/local, khớp đúng 3 course FE đang mock ở
+-- frontend/components/courses/CourseCatalog.jsx. KHÔNG chạy trên project dùng
+-- thật. Số chương/bài ở đây là placeholder để có dữ liệu test, không phải nội
+-- dung cuối cùng — nội dung thật thuộc về Content admin (nhóm F).
+insert into public.courses (slug, title, description, level, category, duration_minutes, status, sort_order)
+values
+  ('shell-101', 'Shell 101 — Bash Basics',
+   'Master command line fundamentals from navigation and directory inspection to file manipulation, redirection, and text filters.',
+   'beginner', 'Core Track', 150, 'published', 1),
+  ('shell-201', 'Shell 201 — Pipelines & Streams',
+   'Dive into standard streams (stdin, stdout, stderr), command chaining, exit codes, and building robust multi-stage data filters.',
+   'intermediate', 'Core Track', 120, 'draft', 2),
+  ('linux-security', 'Linux Permissions & Security',
+   'Understand octal and symbolic permissions, sudo privilege boundaries, process inspection, and secure workspace hygiene.',
+   'intermediate', 'Security', 90, 'draft', 3)
 on conflict (slug) do nothing;
 
 insert into public.chapters (course_id, title, sort_order)

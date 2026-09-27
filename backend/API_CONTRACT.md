@@ -32,9 +32,35 @@ test bằng user giả — learner chỉ thấy `published`, không thấy `draf
 thấy tất cả). Nếu FE thấy trả về rỗng dù dữ liệu có tồn tại, khả năng cao là
 gọi bằng client chưa gắn access token, không phải bug ở DB.
 
-Chưa có gì trong `courses/chapters/lessons` để đọc thật ngoài dữ liệu bạn tự
-tạo — chưa chạy `db/seed/001_dev_seed.sql`, và Content UI (Screen 12) chưa có
-route ghi nào ngoài `service_role`/SQL trực tiếp.
+Đã chạy `db/seed/001_dev_seed.sql` — có sẵn 3 course khớp đúng dữ liệu FE đang
+mock trong `CourseCatalog.jsx`: `shell-101` (published), `shell-201` và
+`linux-security` (draft, chỉ admin thấy). Cột mới: `courses.category`
+(`'Core Track'` / `'Security'`), `courses.duration_minutes`. Content UI
+(Screen 12) chưa có route ghi nào ngoài `service_role`/SQL trực tiếp — admin
+CRUD thẳng qua `supabase-js` được luôn nhờ RLS `for all` đã có.
+
+**Tính % tiến độ 1 course cho user hiện tại** — dùng RPC thay vì tự đếm ở FE:
+```js
+const { data } = await supabase.rpc('get_course_progress', { p_course_id: courseId });
+// data[0] = { total_lessons, completed_lessons }
+```
+
+## 2b. Account page (Screen 11) — đã thêm field ngoài đặc tả gốc theo yêu cầu
+
+`profiles` có thêm `name`, `bio`, `avatar_url` — **learner tự sửa được 3 cột
+này của chính mình** qua `supabase.from('profiles').update({...}).eq('id', user.id)`.
+Cố gửi kèm `role`/`is_locked`/`email` trong cùng update sẽ bị Postgres từ chối
+(permission denied for column) — không phải bug, là cố ý chặn tự nâng quyền.
+
+`avatarUrl` hiện **chỉ là 1 cột text lưu URL**, chưa có chỗ upload ảnh thật
+(chưa tạo Supabase Storage bucket) — nếu Account page cần upload file thật
+(không chỉ dán URL), cần báo trước để tôi tạo bucket + policy riêng.
+
+`stats` (completedCourses, totalCourses, completedLessons, practiceHours,
+streakDays) trên Account mock **chưa có nguồn dữ liệu nào ở DB** — `completedLessons`
+suy ra được từ `progress`, còn `practiceHours`/`streakDays` cần dữ liệu từ
+sandbox (thời gian phiên thực hành) mà hiện `practice_sessions` chưa được ghi
+tự động — để sau khi quyết việc nối sandbox.
 
 ## 3. Sandbox API (Express — CHƯA đổi, giữ nguyên như hiện tại)
 
@@ -51,11 +77,17 @@ sandbox thật.
 ## 4. Việc còn để ngỏ (không tự quyết, cần thống nhất trước khi code tiếp)
 
 - ~~RLS policies đọc cơ bản~~ — **đã xong**, xem mục 2.
-- RLS trực tiếp vs RPC (`admin_set_user_role`, `admin_lock_user`...) cho các thao
-  tác ghi kèm audit log ở Users/Activity (Screen 14, 15). `admin_logs` hiện
-  **chỉ đọc được** (admin), chưa ai ghi được qua client — đúng ý, chờ quyết định.
+- ~~RLS vs RPC cho hành động admin~~ — **đã xong, chọn RPC**. Users/Activity (14–15)
+  dùng `supabase.rpc('admin_set_user_role', { target, new_role, reason })` và
+  `admin_set_user_lock({ target, locked, reason })`. Cả 2 tự chặn không cho
+  khoá/hạ quyền admin hoạt động cuối cùng, và tự ghi `admin_logs`. Đã test bằng
+  user giả: learner gọi RPC bị từ chối, admin gọi được và có log, không ai hạ/khoá
+  được admin cuối cùng.
+- `admin_stop_session` (dừng phiên thực hành ở Activity) — **chưa làm**, chờ
+  quyết định có nối `practice_sessions` với sandbox thật hay không.
 - Có gắn `requireAuth` vào sandbox API hay không, và nếu có thì áp dụng cho route
   nào (chỉ Workspace thật, hay cả demo Landing).
+- Supabase Storage bucket cho avatar upload thật (nếu Account cần, xem mục 2b).
 
 ## 5. Biến môi trường frontend cần (không phải việc của backend dev, chỉ ghi chú)
 
