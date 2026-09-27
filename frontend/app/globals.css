@@ -356,3 +356,53 @@ img {
   border: 1px solid rgba(0, 255, 102, 0.3);
   color: var(--color-primary);
 }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.8);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 4px rgba(0, 255, 102, 0.3);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.card-glow-green:hover {
+  border-color: rgba(0, 255, 102, 0.4) !important;
+  box-shadow: 0 0 25px -4px rgba(0, 255, 102, 0.15) !important;
+}
+
+.card-glow-cyan:hover {
+  border-color: rgba(0, 229, 255, 0.4) !important;
+  box-shadow: 0 0 25px -4px rgba(0, 229, 255, 0.15) !important;
+}
+
+.card-glow-amber:hover {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  box-shadow: 0 0 25px -4px rgba(245, 158, 11, 0.15) !important;
+}
+
+.card-glow-red:hover {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 0 25px -4px rgba(239, 68, 68, 0.15) !important;
+}

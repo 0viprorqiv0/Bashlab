@@ -7,7 +7,7 @@ import SmoothScroll from './SmoothScroll';
 
 export default function SiteChrome({ children }) {
   const pathname = usePathname();
-  const isAccountPage = pathname === '/login' || pathname === '/register';
+  const isAccountPage = pathname === '/login' || pathname === '/register' || pathname === '/account';
   const isCoursesPage = pathname === '/courses';
 
   return (
