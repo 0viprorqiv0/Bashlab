@@ -25,8 +25,8 @@
   --font-body: 'Inter', sans-serif;
   --font-code: 'JetBrains Mono', monospace;
 
-  --container-max: 1200px;
-  --container-padding: 1.5rem;
+  --container-max: min(1340px, 90vw);
+  --container-padding: clamp(1.5rem, 2.5vw, 2.75rem);
 
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
@@ -39,7 +39,20 @@
 }
 
 html {
+  /* Tự động scale theo độ phân giải & tỉ lệ màn hình, phóng to tổng thể ~12-15% */
+  font-size: clamp(16.5px, calc(0.98rem + 0.22vw + 0.1vh), 20.5px);
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
+/* Khóa cố định thanh cuộn, ngăn Lenis (overflow: clip) hoặc modal làm ẩn scrollbar gây giật layout ngang */
+html.lenis.lenis-stopped,
+html.lenis-stopped,
+.lenis:not(.lenis-autoToggle).lenis-stopped,
+:root:has(.termMax) {
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -161,12 +174,13 @@ img {
   background-color: var(--color-primary);
   color: #0A0D14;
   transition: all var(--transition-fast);
-  box-shadow: 0 0 25px -4px rgba(0, 255, 102, 0.45);
+  box-shadow: none;
   white-space: nowrap;
 }
 
 .btn-primary:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
+  box-shadow: 0 0 25px -4px rgba(0, 255, 102, 0.45);
 }
 
 .btn-primary:active {

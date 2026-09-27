@@ -41,3 +41,13 @@ coverage/
 # Misc
 *.tsbuildinfo
 .next-env.d.ts
+
+# Antigravity exclusion
+antigravity/
+antigravity_site/
+
+# Backups & root temp files
+_backups/
+*.bak
+/Rick Astley*.mp4
+/images (10).jpg

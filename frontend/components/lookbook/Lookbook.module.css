@@ -11,12 +11,12 @@
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --fs-display: clamp(2.1rem, 4.6vw, 3.9rem);
-  --fs-h2: clamp(1.5rem, 2.6vw, 2.3rem);
-  --fs-h3: clamp(1rem, 1.4vw, 1.25rem);
-  --fs-body: clamp(0.85rem, 1vw, 0.98rem);
-  --fs-small: clamp(0.7rem, 0.88vw, 0.8rem);
-  --fs-mono: clamp(0.64rem, 0.8vw, 0.74rem);
+  --fs-display: clamp(2.35rem, 5vw, 4.4rem);
+  --fs-h2: clamp(1.65rem, 2.9vw, 2.6rem);
+  --fs-h3: clamp(1.15rem, 1.6vw, 1.45rem);
+  --fs-body: clamp(0.96rem, 1.08vw, 1.16rem);
+  --fs-small: clamp(0.82rem, 0.95vw, 0.96rem);
+  --fs-mono: clamp(0.74rem, 0.88vw, 0.86rem);
 
   --lb-paper: #0a0d14;
   --lb-cmd: #141820;
@@ -44,16 +44,17 @@
   color: #06110a;
 }
 
-/* ---------- Khung section 100svh ---------- */
+/* ---------- Khung section tự động scale theo màn hình ---------- */
 .section {
   position: relative;
-  height: 100vh;
-  height: 100svh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100svh;
+  height: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 70px clamp(20px, 4vw, 56px) 22px;
+  padding: clamp(75px, 8vh, 105px) clamp(20px, 4vw, 56px) clamp(30px, 4vh, 50px);
   padding-right: calc(clamp(20px, 4vw, 56px) + var(--lb-rail-w));
   border-top: 1px solid var(--lb-line);
   isolation: isolate;
@@ -64,6 +65,23 @@
 /* Backdrop canvas sits behind hero content; layout unchanged */
 .sHero .wrap { position: relative; z-index: 1; }
 .sTry { background: var(--lb-cmd); }
+/* Khi terminal phóng to: nâng Section 2 lên z-index 40 để nằm trên Section 3 (Learn level 0) và dưới Navbar (z-50) */
+.sTryExpanded,
+.sTry:has(.termMax) {
+  z-index: 40;
+  isolation: auto;
+}
+
+.sTry .tryCol,
+.sTry .reveal,
+.sTryExpanded .tryCol,
+.sTryExpanded .reveal,
+.sTry:has(.termMax) .tryCol,
+.sTry:has(.termMax) .reveal {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+}
 .sLearn { background: var(--lb-paper); }
 .sCourse { background: var(--lb-course); height: auto; min-height: 100svh; overflow: visible; padding-top: 94px; padding-bottom: 60px; }
 .sFaq { background: var(--lb-paper); }
@@ -78,7 +96,7 @@
 
 .wrap {
   width: 100%;
-  max-width: 1180px;
+  max-width: min(1280px, 88vw);
   margin: 0 auto;
   min-height: 0;
 }
@@ -108,6 +126,56 @@
   text-wrap: balance;
 }
 .h1 em { font-style: normal; color: var(--lb-accent); }
+
+.quoteWrapper {
+  display: inline-block;
+  min-height: 2.15em;
+  text-align: center;
+}
+
+.quoteLine {
+  display: inline-block;
+  min-height: 1.06em;
+  vertical-align: top;
+}
+
+.greenText {
+  color: var(--lb-accent);
+}
+
+.glitchText {
+  color: var(--lb-accent);
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
+  display: inline-block;
+}
+
+.heroCursor {
+  display: inline-block;
+  width: clamp(8px, 0.38em, 18px);
+  height: 0.84em;
+  background-color: var(--lb-accent);
+  margin-left: 0.14em;
+  vertical-align: -0.04em;
+  border-radius: 1px;
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.65), 0 0 2px rgba(0, 255, 102, 0.9);
+  animation: heroCursorBlink 1.06s steps(1) infinite;
+}
+
+.heroCursorTyping {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+@keyframes heroCursorBlink {
+  0%, 49% {
+    opacity: 1;
+    visibility: visible;
+  }
+  50%, 100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
 
 .h2 {
   font-family: var(--font-display);
@@ -220,11 +288,14 @@
   font-weight: 700;
   border: 0;
   cursor: pointer;
-  box-shadow: 0 0 25px -4px rgba(0, 255, 102, 0.45);
-  transition: filter 150ms ease, transform 150ms var(--lb-ease);
+  box-shadow: none;
+  transition: filter 150ms ease, box-shadow 200ms ease, transform 150ms var(--lb-ease);
   white-space: nowrap;
 }
-.btnPrimary:hover { filter: brightness(1.1); }
+.btnPrimary:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 25px -4px rgba(0, 255, 102, 0.45);
+}
 .btnPrimary:active { transform: scale(0.98); }
 
 .btnSecondary {
@@ -292,6 +363,7 @@
 
 /* Terminal (giữ nguyên look cũ) */
 .term {
+  position: relative;
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -304,20 +376,56 @@
   transition: border-color 260ms ease, box-shadow 260ms ease;
 }
 
+/* Lớp phủ chuyển cảnh theo màu nền theme khi phóng to / thu nhỏ terminal (trừ 3 nút điều khiển) */
+.termGrayOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--lb-paper, #0a0d14);
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.termGrayIn {
+  opacity: 1;
+}
+
+.termGrayOut {
+  opacity: 0;
+  transition: opacity 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
 .termHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px 14px;
+  padding: 11px 16px;
   background: #121622;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--lb-muted);
 }
 
-.termDots { display: inline-flex; gap: 2px; align-items: center; min-width: 0; flex: none; }
+.termHeadLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.termDots {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  min-width: 0;
+  flex: none;
+  position: relative;
+  z-index: 10;
+}
 
 /* Nút điều khiển kích thước terminal — hit-area đủ lớn cho mobile */
 .termCtl {
@@ -399,18 +507,61 @@
 /* Phóng to: overlay gần đầy màn hình, lề trái = lề phải = 20px + rail */
 .termMax {
   position: fixed;
-  top: 76px;
-  left: calc(20px + var(--lb-rail-w));
-  right: calc(20px + var(--lb-rail-w));
-  bottom: 20px;
+  top: clamp(74px, 4.5rem, 86px);
+  left: calc(clamp(20px, 2.5vw, 36px) + var(--lb-rail-w));
+  right: calc(clamp(20px, 2.5vw, 36px) + var(--lb-rail-w));
+  bottom: clamp(20px, 2.5vh, 32px);
   width: auto;
-  z-index: 55;
+  z-index: 35;
   max-width: none;
   margin: 0;
   box-shadow: 0 40px 90px -20px rgba(0, 0, 0, 0.85);
   will-change: transform;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
 }
-.termMax .termLog { max-height: none; }
+
+.termMax .termHead {
+  background: #0d111b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.termMax .termDemoHint {
+  display: none;
+}
+
+.termMax .termBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100% - 44px);
+  background: #080b12;
+}
+
+.termMax .termBodyInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.termMax .termLog {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+  height: 100%;
+  padding: 20px 24px;
+  overscroll-behavior: contain;
+  cursor: text;
+}
+
+.termMax .termInputRow,
+.termMax .termChips {
+  display: none !important;
+}
 
 /* Placeholder giữ đúng kích thước trong cột grid khi phóng to để layout không bị giật */
 .termPlaceholder {
@@ -426,12 +577,25 @@
 .termBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 54;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   cursor: pointer;
   will-change: opacity;
+}
+
+/* Khi terminal phóng to: vô hiệu hóa click vào navbar và ẩn rail */
+:root:has(.termMax) {
+  overflow-y: scroll !important;
+}
+:root:has(.termMax) header {
+  pointer-events: none;
+}
+:root:has(.termMax) .rail {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
 }
 
 /* Sân khấu 3D & Hiệu ứng Cyber Glow */
@@ -583,40 +747,43 @@
 }
 
 .termLog {
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.75;
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
-  min-height: 120px;
-  max-height: 196px;
+  min-height: 130px;
+  max-height: 225px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 .termLog::-webkit-scrollbar { width: 8px; }
 .termLog::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 8px; }
 
-.termPrompt { color: var(--lb-cyan); font-weight: 600; }
+.termPrompt { color: var(--lb-cyan); font-weight: 600; white-space: pre; }
+.termPromptRoot { color: #ff5f56; font-weight: 600; white-space: pre; }
 .termCmd { color: var(--lb-accent); font-weight: 700; }
-.termOut { color: #eef0f5; padding-left: 16px; font-weight: 600; }
+.termOut { color: #eef0f5; padding-left: 16px; font-weight: 600; white-space: pre-wrap; word-break: break-word; }
 .termDesc {
-  margin: 3px 0 8px 16px;
-  padding-left: 10px;
+  margin: 4px 0 10px 16px;
+  padding-left: 12px;
   border-left: 2px solid rgba(0, 255, 102, 0.4);
   color: var(--lb-muted);
-  font-size: 10.5px;
+  font-size: 12px;
 }
 
 .termInputRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 0;
+  padding: 10px 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: #0e121c;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .termInput {
@@ -626,16 +793,133 @@
   border: 0;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 13px;
   caret-color: var(--lb-accent);
 }
 .termInput::placeholder { color: rgba(132, 149, 129, 0.55); }
 
+/* Real Terminal Inline Input (khi phóng to expanded) */
+.realTermLine {
+  display: flex;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.75;
+  margin-top: 2px;
+  cursor: text;
+}
+
+.realTermPrompt {
+  white-space: pre;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.realTermInputWrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+}
+
+.realTermInput {
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: #eef0f5;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  padding: 0;
+  margin: 0;
+  caret-color: #00ff66;
+  caret-shape: block;
+}
+
+.realTermInput::selection {
+  background: rgba(0, 255, 102, 0.35);
+  color: #fff;
+}
+
+/* Fastfetch output layout */
+.fastfetchWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 8px 0 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fastfetchArt {
+  color: var(--lb-cyan);
+  font-family: var(--font-mono);
+  white-space: pre;
+  user-select: none;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+  padding: 0;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+}
+
+.fastfetchData {
+  display: flex;
+  flex-direction: column;
+}
+
+.fastfetchHeader {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.fastfetchSep {
+  color: rgba(255, 255, 255, 0.25);
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.fastfetchRow {
+  color: #eef0f5;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fastfetchKey {
+  color: var(--lb-cyan);
+  font-weight: 700;
+  display: inline-block;
+  min-width: 82px;
+}
+
+.fastfetchVal {
+  color: #d1d5db;
+}
+
+.fastfetchColors {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.fastfetchColors span {
+  width: 16px;
+  height: 14px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
 .runBtn {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.1em;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
@@ -648,17 +932,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 9px 12px;
+  padding: 10px 14px;
   background: #090c12;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
-.chipGroup { display: flex; gap: 6px; flex-wrap: wrap; }
+.chipGroup { display: flex; gap: 7px; flex-wrap: wrap; }
 .chip {
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 5px 10px;
+  font-size: 12px;
+  padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);
@@ -673,7 +958,7 @@
 }
 .clearBtn {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--lb-faint);
   background: none;
@@ -1733,11 +2018,25 @@
   gap: 8px;
   margin-top: 18px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--lb-accent);
+  text-decoration: none;
+  transition: gap 200ms ease, opacity 200ms ease;
+}
+.exploreLink:hover {
+  gap: 12px;
+  text-decoration: none;
+}
+.exploreLink:hover > span:first-child {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.exploreLink > span:last-child {
+  display: inline-block;
+  text-decoration: none;
 }
 
 /* Reveal: chỉ transform + opacity (không dùng will-change để khỏi nhốt fixed overlay) */
@@ -1820,53 +2119,12 @@
 .dotWrap:hover .tooltip,
 .dotWrap:focus-visible .tooltip { opacity: 1; transform: translateY(-50%) translateX(0); }
 
-.railDivider { width: 1px; height: 30px; background: var(--lb-line); }
-
-.toggleWrap { position: relative; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
-.toggle {
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  border: 1px solid var(--lb-line);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--lb-muted);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: border-color 180ms, color 180ms, opacity 180ms;
-}
-.toggle:hover { border-color: var(--lb-accent); color: var(--lb-accent); }
-.toggle[aria-pressed="false"] { opacity: 0.45; }
-.toggleTip {
-  position: absolute;
-  right: var(--lb-rail-w);
-  top: 50%;
-  transform: translateY(-50%) translateX(6px);
-  padding: 6px 10px;
-  border-radius: 7px;
-  background: rgba(10, 13, 20, 0.92);
-  border: 1px solid var(--lb-line);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 160ms var(--lb-ease), transform 160ms var(--lb-ease);
-}
-.toggleWrap:hover .toggleTip { opacity: 1; transform: translateY(-50%) translateX(0); }
-
 .toast {
   position: fixed;
   left: 50%;
   bottom: 26px;
   transform: translateX(-50%) translateY(10px);
-  z-index: 80;
+  z-index: 100;
   padding: 10px 16px;
   border-radius: 999px;
   background: rgba(10, 13, 20, 0.92);
@@ -1930,11 +2188,11 @@
   .termLog { max-height: 240px; }
   /* Mở rộng trên mobile: chiếm vùng khả dụng, chừa safe-area */
   .termMax {
-    top: 64px;
+    top: clamp(78px, 10vh, 92px);
     left: 12px;
     right: 12px;
     bottom: max(12px, env(safe-area-inset-bottom));
-    max-height: calc(100dvh - 76px);
+    max-height: calc(100dvh - 100px);
   }
   .termCtl { width: 28px; height: 28px; }
   .rail { display: none; }
@@ -1968,4 +2226,214 @@
     transition-duration: 0.01ms !important;
   }
   .reveal { opacity: 1; transform: none; }
+  .heroCursor { animation: none !important; opacity: 1 !important; }
+  .quoteWrapper { transition: none !important; transform: none !important; }
+}
+
+/* notPandora.exe Video Modal */
+.pandoraModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(3, 7, 14, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: pandoraFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pandoraFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pandoraWindow {
+  width: 100%;
+  max-width: 620px;
+  background: #080d1a;
+  border: 1px solid rgba(0, 255, 102, 0.45);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.85),
+    0 0 30px rgba(0, 255, 102, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  animation: pandoraZoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pandoraZoomIn {
+  from {
+    transform: scale(0.92) translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.pandoraTitleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
+}
+
+.pandoraTitleLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pandoraDots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pandoraDotRed {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff5f56;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.pandoraDotRed:hover {
+  transform: scale(1.15);
+}
+
+.pandoraDotYellow {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffbd2e;
+}
+
+.pandoraDotGreen {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #27c93f;
+}
+
+.pandoraTitleText {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #00ff66;
+  letter-spacing: 0.05em;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pandoraTitleActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pandoraPopoutBtn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--lb-muted);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pandoraPopoutBtn:hover {
+  background: rgba(0, 229, 255, 0.15);
+  color: #00e5ff;
+  border-color: rgba(0, 229, 255, 0.4);
+}
+
+.pandoraCloseBtn {
+  background: transparent;
+  color: var(--lb-muted);
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pandoraCloseBtn:hover {
+  background: rgba(255, 95, 86, 0.2);
+  color: #ff5f56;
+}
+
+.pandoraVideoBody {
+  position: relative;
+  width: 100%;
+  background: #000;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pandoraVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.pandoraFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--lb-muted);
+}
+
+.pandoraStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #00ff66;
+}
+
+.pandoraStatusPulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ff66;
+  box-shadow: 0 0 8px #00ff66;
+  animation: pandoraPulse 1.4s infinite;
+}
+
+@keyframes pandoraPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }

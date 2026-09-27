@@ -6,17 +6,18 @@ export const clamp = (value) => Math.max(0, Math.min(1, value));
 const smooth = (value) => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
 // One timeline: dissolve → close scatter → return → staggered decode.
-export function letterFrame(elapsed, index) {
+export function letterFrame(elapsed, index, word = WORD) {
   const returnAt = 760 + index * 25;
   const resolveAt = returnAt + 220;
   const opacity = elapsed < 250
     ? 1 - smooth(elapsed / 250)
     : smooth((elapsed - returnAt) / 100);
   const decoding = elapsed >= returnAt && elapsed < resolveAt;
-  // Only three letters expose symbols; the rest return directly to their glyph.
-  const text = decoding && index % 3 === 1
+  const targetChar = word ? word[index] : WORD[index];
+  // Only three letters expose symbols; spaces never expose symbols
+  const text = decoding && index % 3 === 1 && targetChar !== ' '
     ? SYMBOLS[(Math.floor((elapsed - returnAt) / 65) + index) % SYMBOLS.length]
-    : WORD[index];
+    : targetChar;
   return { opacity, text };
 }
 

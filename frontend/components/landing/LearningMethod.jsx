@@ -69,10 +69,9 @@ export default function LearningMethod() {
 
           <div className="w-full lg:w-[42%] flex flex-col space-y-6">
             <div>
-              <span className="section-label section-label-primary">{'// 03 / LEARN'}</span>
               <h2
                 id="learn-heading"
-                className="heading-lg mt-3 mb-4"
+                className="heading-lg mb-4"
               >
                 Understand it. Try it. Make it stick.
               </h2>
