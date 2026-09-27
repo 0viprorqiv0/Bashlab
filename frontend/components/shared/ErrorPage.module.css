@@ -1,0 +1,38 @@
+:global(html):has(.page) {
+  background: #000;
+  overflow-y: auto;
+  scrollbar-gutter: auto;
+}
+
+.page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #000;
+  color: #e8e9f0;
+  font-family: system-ui, sans-serif;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+}
+
+.code {
+  flex-shrink: 0;
+  margin: 0 24px 0 0;
+  padding-right: 24px;
+  border-right: 1px solid #333;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 49px;
+}
+
+.message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}

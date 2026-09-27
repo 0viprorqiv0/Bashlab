@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { transform } from 'next/dist/build/swc/index.js';
-import * as motion from '../components/lookbook/curiosityMotion.mjs';
+import * as motion from '../components/landing/animations/curiosityMotion.mjs';
 
 const { WORD, DURATION, letterFrame, particleFrame, springStep } = motion;
 assert.ok(DURATION >= 1000 && DURATION <= 1400);
@@ -32,7 +32,7 @@ for (const frequency of [30, 60, 120]) {
 
 // Exercise the actual component effect with a deterministic clock and DOM stubs.
 // This checks lifecycle/state transitions; it does not substitute for visual QA.
-const source = readFileSync(new URL('../components/lookbook/CuriosityWord.jsx', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../components/landing/animations/CuriosityWord.jsx', import.meta.url), 'utf8');
 const { code } = await transform(source, {
   filename: 'CuriosityWord.jsx',
   jsc: { parser: { syntax: 'ecmascript', jsx: true }, transform: { react: { runtime: 'automatic' } } },
@@ -106,7 +106,11 @@ function harness({ reduced = false, mobile = false, canvasUnavailable = false } 
     requestAnimationFrame: (fn) => { const id = ++serial; frames.set(id, fn); return id; },
     cancelAnimationFrame: (id) => frames.delete(id),
     require(name) {
-      if (name === 'react') return { useEffect: (fn) => { effect = fn; }, useRef: (value) => { const ref = { current: value }; refs.push(ref); return ref; } };
+      if (name === 'react') return {
+        useState: (value) => [typeof value === 'function' ? value() : value, () => {}],
+        useEffect: (fn) => { effect = fn; },
+        useRef: (value) => { const ref = { current: value }; refs.push(ref); return ref; },
+      };
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
       if (name.endsWith('.mjs')) return motion;
       if (name.endsWith('.css')) return { default: {} };

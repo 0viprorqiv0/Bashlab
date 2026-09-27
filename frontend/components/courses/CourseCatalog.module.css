@@ -1,0 +1,175 @@
+.page {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  padding: .9rem var(--container-padding) 1.1rem;
+}
+
+.container {
+  width: 100%;
+  max-width: 1290px;
+  margin: 0 auto;
+}
+
+.heading { margin: 0; }
+.eyebrow {
+  margin: 0 0 .25rem;
+  color: var(--color-primary);
+  font-family: var(--font-code);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.heading h1 {
+  margin: 0;
+  color: #f0f1f6;
+  font-family: var(--font-headline);
+  font-size: clamp(1.8rem, 2.5vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -.045em;
+  line-height: 1.15;
+}
+.heading > p:last-child {
+  margin: .3rem 0 0;
+  color: #a7b1a5;
+  font-size: clamp(.88rem, 1.2vw, 1rem);
+}
+
+.catalogHeader {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 1.25rem;
+  padding-bottom: .65rem;
+  margin-bottom: .9rem;
+  border-bottom: 1px solid #252b35;
+}
+.heading { flex: 1; }
+.filters { display: flex; align-items: center; gap: .5rem; }
+.filters button {
+  min-height: 2.2rem;
+  padding: .45rem .85rem;
+  border: 1px solid #303742;
+  border-radius: .3rem;
+  background: #151a22;
+  color: #aab4a8;
+  font-family: var(--font-code);
+  font-size: .7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.filters button:hover { border-color: #65716d; color: #f0f1f6; }
+.filters button.activeFilter { border-color: var(--color-primary); background: var(--color-primary); color: #07120b; }
+
+.courseList { display: grid; gap: .75rem; padding-top: .9rem; }
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  min-height: 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #303742;
+  border-radius: .55rem;
+  background: #151a22;
+}
+.cardContent { min-width: 0; flex: 1; }
+.metadata { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin-bottom: .55rem; }
+.level, .category, .stat {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.4rem;
+  padding: .15rem .45rem;
+  border-radius: .25rem;
+  font-family: var(--font-code);
+  font-size: .61rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.level { text-transform: uppercase; letter-spacing: .04em; }
+.beginner { border: 1px solid rgba(0, 255, 102, .42); background: rgba(0, 255, 102, .1); color: var(--color-primary); }
+.intermediate { border: 1px solid rgba(0, 229, 255, .4); background: rgba(0, 229, 255, .08); color: var(--color-secondary); }
+.category { border: 1px solid #39414c; background: #1b2029; color: #aab4a8; }
+.comingBadge { display: inline-flex; align-items: center; min-height: 1.65rem; padding: .2rem .55rem; border: 1px solid #63502b; border-radius: .25rem; background: rgba(245, 158, 11, .08); color: #d9b77a; font-family: var(--font-code); font-size: .66rem; font-weight: 700; text-transform: uppercase; }
+.stat { padding-inline: .15rem; color: #9ba597; }
+.stat::before { content: '·'; margin-right: .55rem; color: #667568; }
+.card h2 {
+  margin: 0;
+  color: #f0f1f6;
+  font-family: var(--font-headline);
+  font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1.25;
+}
+.description { max-width: 49rem; margin: .35rem 0 .8rem; color: #aab4a8; font-size: .84rem; line-height: 1.45; }
+.progressBlock { max-width: 34rem; }
+.progressLabels { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .35rem; color: #778278; font-family: var(--font-code); font-size: .65rem; }
+.progressLabels strong { color: var(--color-primary); font-weight: 600; }
+.progressTrack { height: .45rem; overflow: hidden; border-radius: 999px; background: #20252e; }
+.progressTrack span { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); }
+.viewButton, .lockedButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  flex: 0 0 auto;
+  min-width: 9.5rem;
+  min-height: 3rem;
+  padding: .65rem .9rem;
+  border: 1px solid var(--color-primary);
+  border-radius: .3rem;
+  background: var(--color-primary);
+  color: #07120b;
+  font-family: var(--font-code);
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  transition: filter 150ms ease, box-shadow 150ms ease;
+}
+.viewButton:hover { filter: brightness(1.07); box-shadow: 0 0 24px -8px rgba(0, 255, 102, .75); }
+.viewButton span { font-size: 1.2rem; }
+.lockedCard { border-color: #303742; }
+.lockedCard .description { margin-bottom: 1.25rem; }
+.lockedButton { border-color: #343a43; background: #1a1e26; color: #7c857f; cursor: not-allowed; }
+.lockedButton span { font-size: 1.05rem; }
+.comingNote { display: flex; align-items: center; gap: .45rem; margin: 0; color: #8d958a; font-family: var(--font-code); font-size: .63rem; }
+.comingNote span { color: #f59e0b; font-size: 1rem; }
+
+@media (min-width: 761px) and (max-width: 1600px) {
+  .container { max-width: none; }
+  .card { gap: 1.25rem; padding-inline: 1.1rem; }
+  .viewButton, .lockedButton { min-width: 8.75rem; }
+}
+
+@media (max-height: 950px) and (min-width: 761px) {
+  .page { padding-block: .5rem .7rem; }
+  .heading { margin-bottom: 0; }
+  .eyebrow { margin-bottom: .15rem; }
+  .heading h1 { font-size: clamp(1.65rem, 2.2vw, 2rem); }
+  .heading > p:last-child { margin-top: .2rem; font-size: .88rem; }
+  .catalogHeader { gap: .8rem; padding-bottom: .5rem; margin-bottom: .65rem; }
+  .filters button { min-height: 2rem; padding-block: .35rem; }
+  .courseList { gap: .55rem; padding-top: .65rem; }
+  .card { padding-block: .75rem; }
+  .metadata { margin-bottom: .4rem; }
+  .card h2 { font-size: clamp(1.1rem, 1.45vw, 1.35rem); }
+  .description { margin: .25rem 0 .55rem; font-size: .8rem; line-height: 1.4; }
+  .comingNote { font-size: .59rem; }
+  .viewButton, .lockedButton { min-height: 2.75rem; }
+}
+
+@media (max-width: 760px) {
+  .catalogHeader { align-items: flex-start; flex-direction: column; }
+  .filters { overflow-x: auto; padding-bottom: .2rem; }
+  .card { align-items: stretch; flex-direction: column; gap: 1.25rem; }
+  .viewButton, .lockedButton { width: 100%; min-height: 3rem; }
+}
+
+@media (max-width: 480px) {
+  .page { padding-inline: 1rem; }
+  .metadata { gap: .4rem; }
+  .stat { font-size: .6rem; }
+  .progressLabels { align-items: flex-start; flex-direction: column; gap: .2rem; }
+}

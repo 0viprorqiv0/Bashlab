@@ -18,10 +18,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full min-h-[70vh] flex items-center justify-center px-4 py-16 md:py-24">
-      <div className="w-full max-w-[420px] bg-surface-cmd border border-divider-border/60 rounded-xl shadow-2xl p-6 md:p-8 flex flex-col gap-6">
+    <div className="w-full flex-1 flex items-center justify-center px-4 py-10 md:py-14 max-[1600px]:py-6 max-[950px]:py-4">
+      <div className="w-full max-w-[780px] max-[1600px]:max-w-[540px] bg-surface-cmd border border-divider-border/60 rounded-xl shadow-2xl p-6 md:p-10 max-[1600px]:p-5 flex flex-col gap-6 max-[1600px]:gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="font-headline text-2xl font-semibold text-white tracking-tight">
+          <h1 className="font-headline text-3xl md:text-4xl max-[1600px]:text-3xl font-semibold text-white tracking-tight">
             Welcome back
           </h1>
           <p className="body-md">
@@ -48,7 +48,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+        <form className="flex flex-col gap-4 max-[1600px]:gap-3" onSubmit={handleSubmit} noValidate>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="font-code text-xs text-on-surface font-medium">
               Email address
@@ -62,7 +62,7 @@ export default function LoginPage() {
               placeholder="name@domain.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full bg-[#0B0E15] text-on-surface text-sm rounded-lg px-3 py-2.5 outline-none border border-transparent placeholder:text-on-surface-variant/60 focus:border-primary/50 focus:bg-black/40 transition-colors"
+              className="w-full bg-[#0B0E15] text-on-surface text-sm rounded-lg px-3 py-2.5 max-[1600px]:py-2 outline-none border border-transparent placeholder:text-on-surface-variant/60 focus:border-primary/50 focus:bg-black/40 transition-colors"
             />
           </div>
 
@@ -80,7 +80,7 @@ export default function LoginPage() {
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full bg-[#0B0E15] text-on-surface font-code text-sm rounded-lg pl-3 pr-10 py-2.5 outline-none border border-transparent placeholder:text-on-surface-variant/60 focus:border-primary/50 focus:bg-black/40 transition-colors"
+                className="w-full bg-[#0B0E15] text-on-surface font-code text-sm rounded-lg pl-3 pr-10 py-2.5 max-[1600px]:py-2 outline-none border border-transparent placeholder:text-on-surface-variant/60 focus:border-primary/50 focus:bg-black/40 transition-colors"
               />
               <button
                 type="button"
@@ -110,7 +110,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={status === 'loading'}
-            className="btn-primary w-full mt-1 disabled:opacity-75 disabled:cursor-not-allowed"
+            className="btn-primary w-full mt-1 max-[1600px]:py-3 max-[1600px]:px-6 disabled:opacity-75 disabled:cursor-not-allowed"
           >
             {status === 'loading' ? (
               <span className="material-symbols-outlined text-lg animate-spin select-none">

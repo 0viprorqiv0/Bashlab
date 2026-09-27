@@ -63,11 +63,11 @@ export default function RegisterPage() {
   const isMatchValid = confirmPassword.length > 0 && password === confirmPassword;
 
   return (
-    <div className="w-full min-h-[70vh] flex items-center justify-center px-4 py-16 md:py-24">
-      <div className="w-full max-w-[460px] bg-surface-cmd border border-divider-border/60 rounded-xl shadow-2xl p-6 md:p-8 flex flex-col gap-6">
+    <div className="w-full flex-1 flex items-center justify-center px-4 py-8 md:py-12 max-[1600px]:py-6 max-[950px]:py-4">
+      <div className="w-full max-w-[780px] max-[1600px]:max-w-[540px] bg-surface-cmd border border-divider-border/60 rounded-xl shadow-2xl p-6 md:p-10 max-[1600px]:p-5 flex flex-col gap-6 max-[1600px]:gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="font-headline text-2xl font-semibold text-white tracking-tight">
-            Create account
+          <h1 className="font-headline text-3xl md:text-4xl max-[1600px]:text-3xl font-semibold text-white tracking-tight">
+            Create your account
           </h1>
           <p className="body-md">
             Join BashLab to master shell scripting through interactive sandbox sessions.
@@ -93,7 +93,7 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+        <form className="flex flex-col gap-4 max-[1600px]:gap-3" onSubmit={handleSubmit} noValidate>
           {/* Email input */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="font-code text-xs text-on-surface font-medium">
@@ -111,7 +111,7 @@ export default function RegisterPage() {
                 setEmail(e.target.value);
                 if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
               }}
-              className={`w-full bg-[#0B0E15] text-on-surface text-sm rounded-lg px-3 py-2.5 outline-none border ${
+              className={`w-full bg-[#0B0E15] text-on-surface text-sm rounded-lg px-3 py-2.5 max-[1600px]:py-2 outline-none border ${
                 errors.email ? 'border-red-500/80 focus:border-red-500' : 'border-transparent focus:border-primary/50'
               } placeholder:text-on-surface-variant/60 focus:bg-black/40 transition-colors`}
             />
@@ -138,7 +138,7 @@ export default function RegisterPage() {
                   setPassword(e.target.value);
                   if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
                 }}
-                className={`w-full bg-[#0B0E15] text-on-surface font-code text-sm rounded-lg pl-3 pr-10 py-2.5 outline-none border ${
+                className={`w-full bg-[#0B0E15] text-on-surface font-code text-sm rounded-lg pl-3 pr-10 py-2.5 max-[1600px]:py-2 outline-none border ${
                   errors.password ? 'border-red-500/80 focus:border-red-500' : 'border-transparent focus:border-primary/50'
                 } placeholder:text-on-surface-variant/60 focus:bg-black/40 transition-colors`}
               />
@@ -176,7 +176,7 @@ export default function RegisterPage() {
                   setConfirmPassword(e.target.value);
                   if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
                 }}
-                className={`w-full bg-[#0B0E15] text-on-surface font-code text-sm rounded-lg pl-3 pr-10 py-2.5 outline-none border ${
+                className={`w-full bg-[#0B0E15] text-on-surface font-code text-sm rounded-lg pl-3 pr-10 py-2.5 max-[1600px]:py-2 outline-none border ${
                   errors.confirmPassword ? 'border-red-500/80 focus:border-red-500' : 'border-transparent focus:border-primary/50'
                 } placeholder:text-on-surface-variant/60 focus:bg-black/40 transition-colors`}
               />
@@ -198,7 +198,7 @@ export default function RegisterPage() {
 
           {/* Password feedback indicators */}
           {password.length > 0 && (
-            <div className="p-2.5 bg-[#0B0E15] rounded-lg flex flex-col gap-1.5 border border-divider-border/40 text-xs font-code">
+            <div className="p-2.5 max-[1600px]:p-2 bg-[#0B0E15] rounded-lg flex flex-col gap-1.5 max-[1600px]:gap-1 border border-divider-border/40 text-xs font-code">
               <div className="flex items-center gap-2">
                 <span
                   className={`material-symbols-outlined text-sm select-none ${
@@ -253,7 +253,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={status === 'loading'}
-            className="btn-primary w-full mt-2 disabled:opacity-75 disabled:cursor-not-allowed"
+            className="btn-primary w-full mt-2 max-[1600px]:py-3 max-[1600px]:px-6 disabled:opacity-75 disabled:cursor-not-allowed"
           >
             {status === 'loading' ? (
               <span className="material-symbols-outlined text-lg animate-spin select-none">
