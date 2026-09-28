@@ -13,6 +13,12 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState('');
   const [remember, setRemember] = React.useState(true);
 
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/my-learning');
+    });
+  }, [router]);
+
   async function handleSubmit(event) {
     event.preventDefault();
     setStatus('loading');
@@ -23,7 +29,7 @@ export default function LoginPage() {
       return;
     }
     setStatus('idle');
-    router.push('/account');
+    router.push('/my-learning');
   }
 
   return (

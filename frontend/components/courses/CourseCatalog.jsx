@@ -82,7 +82,7 @@ export default function CourseCatalog() {
               <div className={styles.featureMeta} aria-label="Course details">
                 <span>{course.level}</span><span>{course.chapters} chapters</span><span>{course.lessons} lessons</span><span>{course.duration}</span>
               </div>
-              <a className={styles.primaryAction} href="/register">Start learning <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a>
+              <a className={styles.primaryAction} href={`/courses/${course.id}`}>Start learning <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a>
             </div>
             <div className={styles.courseMark} aria-hidden="true"><span>shell / bash</span><strong>{course.code}</strong><span>Learn by doing.</span></div>
           </article>

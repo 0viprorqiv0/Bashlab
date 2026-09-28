@@ -18,6 +18,12 @@ export default function RegisterPage() {
   const [errors, setErrors] = React.useState({});
   const [status, setStatus] = React.useState('idle'); // 'idle' | 'loading' | 'error'
 
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/my-learning');
+    });
+  }, [router]);
+
   // Validation rules designed to maximize input accuracy and minimize submission friction
   const validate = () => {
     const newErrors = {};
@@ -56,7 +62,11 @@ export default function RegisterPage() {
     }
 
     setStatus('loading');
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/verify-email` },
+    });
     if (error) {
       setErrorMessage(error.message);
       setStatus('error');

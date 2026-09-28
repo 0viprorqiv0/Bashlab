@@ -9,26 +9,23 @@ const columns = [
     title: 'Curriculum',
     links: [
       ['All Courses', '/courses'],
-      ['Linux Fundamentals', '/courses#course-linux-security'],
-      ['Text Processing', '/courses#course-shell-101'],
-      ['Shell Scripting 101', '/courses#course-shell-101'],
+      ['Shell 101', '/courses/shell-101'],
+      ['My Learning', '/my-learning'],
     ],
   },
   {
     title: 'Resources',
     links: [
-      ['How It Works', '/#how-it-works'],
-      ['BashLab Cheatsheet', '/cheatsheet'],
-      ['FAQ', '/#faq'],
-      ['GitHub Repo', 'https://github.com/0viprorqiv0/Bashlab'],
+      ['How It Works', '/#learn'],
+      ['Try a command', '/#try'],
+      ['FAQ', '/#questions'],
     ],
   },
   {
     title: 'Platform',
     links: [
-      ['About', '/about'],
+      ['GitHub Repo', 'https://github.com/0viprorqiv0/Bashlab'],
       ['GitHub / Feedback', 'https://github.com/0viprorqiv0/Bashlab/issues'],
-      ['Terms & Privacy', '/terms'],
     ],
   },
 ];
@@ -67,7 +64,7 @@ export default function Footer({ className = '' }) {
           </p>
           <div className={styles.statusList} aria-label="Sandbox status">
             <span className={styles.statusPill}><i aria-hidden="true" />Sandbox engine: operational</span>
-            <span className={styles.statusPill}>Isolation: 64MB RAM / Container</span>
+            <span className={styles.statusPill}>Isolation: 512MB RAM / Container</span>
           </div>
         </section>
 

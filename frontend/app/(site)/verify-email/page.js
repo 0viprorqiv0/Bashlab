@@ -6,13 +6,6 @@ import { supabase } from '@/lib/supabaseClient';
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
-const STATES = [
-  { id: 'inbox', label: '1: Inbox' },
-  { id: 'cooldown', label: '2: Cooldown' },
-  { id: 'verified', label: '3: Verified' },
-  { id: 'expired', label: '4: Expired' },
-];
-
 const FOOTER_STATUS = {
   inbox: 'PENDING',
   cooldown: 'SENT',
@@ -76,18 +69,13 @@ function VerifyEmail() {
   async function handleResend() {
     if (sending || secondsLeft > 0) return;
     setSending(true);
-    await supabase.auth.resend({ type: 'signup', email });
+    await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/verify-email` },
+    });
     setSending(false);
     startCooldown();
-  }
-
-  function switchView(id) {
-    if (id === 'cooldown') {
-      startCooldown();
-    } else {
-      setSecondsLeft(0);
-      setView(id);
-    }
   }
 
   const resendLabel = secondsLeft > 0 ? `Resend email in ${secondsLeft}s` : 'Resend verification email';
@@ -96,28 +84,6 @@ function VerifyEmail() {
     <div className="w-full min-h-[70vh] flex flex-col items-center justify-center px-4 py-16 md:py-24 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center" aria-hidden="true">
         <div className="w-[640px] h-[640px] rounded-full bg-gradient-to-tr from-primary/10 via-secondary/5 to-transparent blur-3xl opacity-40" />
-      </div>
-
-      <div
-        role="group"
-        aria-label="Verification state preview"
-        className="relative z-10 w-full max-w-md mb-6 bg-[#0B0E15] p-1 rounded-lg flex items-center gap-1"
-      >
-        {STATES.map((state) => (
-          <button
-            key={state.id}
-            type="button"
-            aria-pressed={view === state.id}
-            onClick={() => switchView(state.id)}
-            className={`flex-1 py-1.5 px-1 sm:px-2 whitespace-nowrap rounded font-code text-[9px] sm:text-[10px] uppercase tracking-[0.08em] transition-colors focus-visible ${
-              view === state.id
-                ? 'bg-surface-course text-primary font-semibold'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            {state.label}
-          </button>
-        ))}
       </div>
 
       <div className="relative z-10 w-full max-w-md bg-surface-cmd border border-divider-border/60 rounded-xl shadow-2xl overflow-hidden">

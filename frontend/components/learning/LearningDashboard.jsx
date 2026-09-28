@@ -1,13 +1,95 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './LearningDashboard.module.css';
+import { supabase } from '@/lib/supabaseClient';
+import {
+  courseCode, courseStats, fetchProgressMap, fetchPublishedCourses, getCurrentUser, lessonHref,
+} from '@/lib/learning';
 
 const dateLabel = (date, options) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { ...options, timeZone: 'UTC' });
 const fullDate = (date) => dateLabel(date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 function Icon({ name }) { return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>; }
 
-export default function LearningDashboard({ days }) {
+// One entry per day for the last 365 days, built from real practice sessions
+// (minutes) and completed lessons. A day counts as active if either happened.
+function buildDays(sessions, progressRows) {
+  const byDate = new Map();
+  const entry = (date) => {
+    if (!byDate.has(date)) byDate.set(date, { minutes: 0, sessions: 0, lessons: 0 });
+    return byDate.get(date);
+  };
+  for (const session of sessions) {
+    const minutes = Math.max(1, Math.round((new Date(session.last_active_at) - new Date(session.started_at)) / 60000));
+    const day = entry(session.started_at.slice(0, 10));
+    day.minutes += minutes;
+    day.sessions += 1;
+  }
+  for (const row of progressRows) {
+    if (row.status === 'done' && row.completed_at) entry(row.completed_at.slice(0, 10)).lessons += 1;
+  }
+
+  const now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Array.from({ length: 365 }, (_, index) => {
+    const date = new Date(today - (364 - index) * 86400000).toISOString().slice(0, 10);
+    const { minutes, sessions: count, lessons } = byDate.get(date) || { minutes: 0, sessions: 0, lessons: 0 };
+    let level = 0;
+    if (minutes >= 60) level = 4;
+    else if (minutes >= 30) level = 3;
+    else if (minutes >= 15) level = 2;
+    else if (minutes > 0 || lessons > 0) level = 1;
+    return { date, level, minutes, sessions: count, lessons };
+  });
+}
+
+async function loadDashboard(userId) {
+  const [courses, progressMap, sessionsResult] = await Promise.all([
+    fetchPublishedCourses(),
+    fetchProgressMap(userId),
+    supabase.from('practice_sessions').select('started_at, last_active_at').eq('user_id', userId),
+  ]);
+  const withStats = courses.map((course) => ({ course, ...courseStats(course, progressMap) }));
+  const lastTouched = (course) => Math.max(0, ...course.lessons.map((lesson) => {
+    const row = progressMap.get(lesson.id);
+    return row ? new Date(row.updated_at).getTime() : 0;
+  }));
+  const current = withStats
+    .filter((item) => item.done < item.total)
+    .sort((a, b) => lastTouched(b.course) - lastTouched(a.course))[0] || withStats[0] || null;
+
+  return {
+    current,
+    completedCourses: withStats.filter((item) => item.total > 0 && item.done === item.total).length,
+    totalCourses: withStats.length,
+    lessonsDone: [...progressMap.values()].filter((row) => row.status === 'done').length,
+    days: buildDays(sessionsResult.data || [], [...progressMap.values()]),
+  };
+}
+
+export default function LearningDashboard() {
+  const router = useRouter();
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUser().then(async (user) => {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      const loaded = await loadDashboard(user.id);
+      if (!cancelled) setData(loaded);
+    });
+    return () => { cancelled = true; };
+  }, [router]);
+
+  if (!data) return null;
+  return <Dashboard {...data} />;
+}
+
+function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days }) {
   const [range, setRange] = useState(365);
   const [selectedDate, setSelectedDate] = useState(days[days.length - 1].date);
   const calendarRef = useRef(null);
@@ -15,10 +97,12 @@ export default function LearningDashboard({ days }) {
   const startOffset = new Date(`${visibleDays[0].date}T00:00:00Z`).getUTCDay();
   const cells = [...Array(startOffset).fill(null), ...visibleDays];
   const weeks = Math.ceil(cells.length / 7);
-  const activeDays = visibleDays.filter((day) => day.minutes > 0).length;
+  const activeDays = visibleDays.filter((day) => day.level > 0).length;
   const totalMinutes = days.reduce((sum, day) => sum + day.minutes, 0);
   let streak = 0;
-  for (let index = days.length - 1; index >= 0 && days[index].minutes > 0; index--) streak++;
+  for (let index = days.length - 1; index >= 0 && days[index].level > 0; index--) streak++;
+  const percent = current && current.total ? Math.round((current.done / current.total) * 100) : 0;
+  const courseState = !current || current.done === 0 ? 'Not started' : current.done === current.total ? 'Completed' : 'In progress';
 
   useEffect(() => {
     if (calendarRef.current) calendarRef.current.scrollLeft = calendarRef.current.scrollWidth;
@@ -55,23 +139,31 @@ export default function LearningDashboard({ days }) {
         <a className={styles.browseLink} href="/courses" aria-label="Browse courses">Browse courses <Icon name="arrow_outward" /></a>
       </header>
 
-      <section className={styles.journey} aria-label="Your current course, sample progress">
-        <div className={styles.courseMark} aria-hidden="true"><span>$_</span><small>101</small></div>
-        <div className={styles.courseCopy}>
-          <div className={styles.courseMeta}><span>In progress</span><span>Shell 101</span></div>
-          <h2>Make the terminal yours.</h2>
-          <p>Bash Basics <span>·</span> 4 of 12 lessons completed</p>
-        </div>
-        <div className={styles.courseAction}>
-          <a href="/login">Continue learning <Icon name="arrow_forward" /></a>
-          <div className={styles.courseProgress} role="progressbar" aria-label="Shell 101 sample progress" aria-valuenow={4} aria-valuemin={0} aria-valuemax={12}><span /></div>
-        </div>
-      </section>
+      {current ? (
+        <section className={styles.journey} aria-label="Your current course">
+          <div className={styles.courseMark} aria-hidden="true"><span>$_</span><small>{courseCode(current.course.slug)}</small></div>
+          <div className={styles.courseCopy}>
+            <div className={styles.courseMeta}><span>{courseState}</span><span>{current.course.category}</span></div>
+            <h2>{current.course.title}</h2>
+            <p>{current.done} of {current.total} lessons completed</p>
+          </div>
+          <div className={styles.courseAction}>
+            <a href={current.next ? lessonHref(current.course.slug, current.next.slug) : `/courses/${current.course.slug}`}>
+              {current.done === 0 ? 'Start learning' : 'Continue learning'} <Icon name="arrow_forward" />
+            </a>
+            <div className={styles.courseProgress} role="progressbar" aria-label={`${current.course.title} progress`} aria-valuenow={current.done} aria-valuemin={0} aria-valuemax={current.total}><span style={{ width: `${percent}%` }} /></div>
+          </div>
+        </section>
+      ) : (
+        <section className={styles.journey} aria-label="No courses yet">
+          <div className={styles.courseCopy}><h2>No courses available yet.</h2><p>Check back soon.</p></div>
+        </section>
+      )}
 
-      <section className={styles.overview} aria-label="Learning overview, sample data">
+      <section className={styles.overview} aria-label="Learning overview">
         <dl className={styles.stats}>
-          <div><dt>Completed courses</dt><dd>2 <small>/ 5</small></dd></div>
-          <div><dt>Lessons mastered</dt><dd>28</dd></div>
+          <div><dt>Completed courses</dt><dd>{completedCourses} <small>/ {totalCourses}</small></dd></div>
+          <div><dt>Lessons mastered</dt><dd>{lessonsDone}</dd></div>
           <div><dt>Practice hours</dt><dd>{(totalMinutes / 60).toFixed(1)} <small>hrs</small></dd></div>
           <div className={styles.streakStat}><dt><Icon name="local_fire_department" /> Day streak</dt><dd>{streak} <small>days</small></dd></div>
         </dl>
@@ -79,9 +171,8 @@ export default function LearningDashboard({ days }) {
 
       <section className={styles.activity} aria-labelledby="practice-title">
         <header className={styles.activityHeader}>
-          <div><h2 id="practice-title">Consistency looks good on you.</h2><p>Practice activity <span>·</span> <strong>{activeDays}</strong> active days in this period</p></div>
+          <div><h2 id="practice-title">{activeDays ? 'Consistency looks good on you.' : 'Your streak starts with one command.'}</h2><p>Practice activity <span>·</span> <strong>{activeDays}</strong> active days in this period</p></div>
           <div className={styles.activityControls}>
-            <span className={styles.sampleLabel}>Sample data</span>
             <label className={styles.rangeControl}>
               <span className={styles.srOnly}>Activity period</span>
               <select value={range} onChange={changeRange}>
@@ -108,8 +199,8 @@ export default function LearningDashboard({ days }) {
                   <button key={day.date} type="button" data-date={day.date} data-level={day.level}
                     className={styles.day} aria-pressed={selectedDate === day.date}
                     tabIndex={selectedDate === day.date ? 0 : -1}
-                    aria-label={`${fullDate(day.date)}: ${day.minutes} minutes, ${day.sessions} practice sessions`}
-                    title={`${dateLabel(day.date, { month: 'short', day: 'numeric' })} · ${day.minutes ? `${day.minutes} min practiced` : 'No practice'}`}
+                    aria-label={`${fullDate(day.date)}: ${day.minutes} minutes, ${day.sessions} practice sessions, ${day.lessons} lessons completed`}
+                    title={`${dateLabel(day.date, { month: 'short', day: 'numeric' })} · ${day.level ? `${day.minutes} min practiced, ${day.lessons} lessons done` : 'No practice'}`}
                     onClick={() => setSelectedDate(day.date)} />
                 ) : <span key={`empty-${index}`} />)}
               </div>
@@ -122,7 +213,6 @@ export default function LearningDashboard({ days }) {
         </div>
 
       </section>
-      <p className={styles.previewNote}>A preview of your learning journey. Activity and course progress shown here are sample data.</p>
     </div>
   );
 }
