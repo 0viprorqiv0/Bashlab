@@ -27,7 +27,7 @@ Row `profiles` được **tự động tạo** khi `signUp` thành công (trigge
 supabase.from('courses').select('*, chapters(*, lessons(*))').eq('status', 'published')
 ```
 **RLS đã bật cho việc đọc course/chapter/lesson đã publish** (xem
-[`db/migrations/006_rls_policies.sql`](db/migrations/006_rls_policies.sql), đã
+[`db/migrations/006_rls_policies.sql`](../db/migrations/006_rls_policies.sql), đã
 test bằng user giả — learner chỉ thấy `published`, không thấy `draft`; admin
 thấy tất cả). Nếu FE thấy trả về rỗng dù dữ liệu có tồn tại, khả năng cao là
 gọi bằng client chưa gắn access token, không phải bug ở DB.
@@ -68,7 +68,7 @@ tự động — để sau khi quyết việc nối sandbox.
 `POST /api/sessions/:id/reset`, `DELETE /api/sessions/:id` — **không yêu cầu auth
 hiện tại**, hoạt động y như trước (demo Landing vẫn dùng ẩn danh được).
 
-Middleware xác thực đã viết sẵn ở [`src/middleware/auth.js`](src/middleware/auth.js)
+Middleware xác thực đã viết sẵn ở [`src/middleware/auth.js`](../src/middleware/auth.js)
 (`requireAuth`, `requireAdmin`) nhưng **chưa được gắn vào `server.js`** — quyết
 định gắn vào đâu (route nào bắt buộc login, route nào giữ ẩn danh cho demo
 Landing) cần bàn trước vì có thể ảnh hưởng tới Screen 10 (Workspace) đang chạy
