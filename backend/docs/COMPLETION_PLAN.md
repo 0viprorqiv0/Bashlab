@@ -9,6 +9,12 @@
 >
 > Còn lại ngoài tầm máy Windows này: chạy sandbox thật (backend cần Linux/WSL)
 > để test Check Solution đầu-cuối.
+>
+> **Cập nhật 2026-09-29**: FE đã đổi giao diện 5 trang auth (component
+> `AuthShell`/`AuthField` mới, bảng màu mới) trên `main` — đã merge vào
+> `dat-be` và nối lại Supabase lên trên giao diện mới, test qua trình duyệt
+> bằng tài khoản admin thật. Xem quy trình chuẩn cho việc này trong
+> [`CONTEXT.md`](CONTEXT.md).
 
 Audit ngày 2026-09-28. Mức độ: đồ án môn học — đủ chạy, đủ demo 17 trang, không nhắm chuẩn production.
 
