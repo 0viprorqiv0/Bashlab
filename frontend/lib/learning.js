@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 const COURSE_FIELDS = 'id, slug, title, description, level, category, duration_minutes, status, sort_order, '
-  + 'chapters(id, title, sort_order, lessons(id, slug, title, status, sort_order))';
+  + 'chapters(id, title, sort_order, lessons(id, slug, title, status, sort_order, objectives))';
 
 const bySort = (a, b) => a.sort_order - b.sort_order;
 
@@ -54,6 +54,21 @@ export function courseStats(course, progressMap) {
   const done = course.lessons.filter(isDone).length;
   const next = course.lessons.find((lesson) => !isDone(lesson)) || course.lessons[0] || null;
   return { total: course.lessons.length, done, next };
+}
+
+// Lessons unlock in order: everything done stays open, the first unfinished
+// lesson is "current", and anything after it is locked.
+export function lessonStates(course, progressMap) {
+  const states = new Map();
+  let reachedCurrent = false;
+  for (const lesson of course.lessons) {
+    if (progressMap.get(lesson.id)?.status === 'done') states.set(lesson.id, 'done');
+    else if (!reachedCurrent) {
+      states.set(lesson.id, 'current');
+      reachedCurrent = true;
+    } else states.set(lesson.id, 'locked');
+  }
+  return states;
 }
 
 export function courseCode(slug) {
