@@ -247,8 +247,8 @@ const FAQS = [
 const PIPELINE_STEPS = [
   {
     num: '01',
-    color: '#00FF66',
-    glow: 'rgba(0, 255, 102, 0.4)',
+    color: '#68DFA0',
+    glow: 'rgba(104, 223, 160, 0.4)',
     tag: 'VISUAL CONCEPT',
     title: 'Understand the map',
     desc: 'See how folders and paths connect before running any command.',
@@ -270,8 +270,8 @@ const PIPELINE_STEPS = [
   },
   {
     num: '02',
-    color: '#00E5FF',
-    glow: 'rgba(0, 229, 255, 0.4)',
+    color: '#78CBD4',
+    glow: 'rgba(120, 203, 212, 0.4)',
     tag: 'REAL TERMINAL',
     title: 'Practice in real Linux',
     desc: 'Type and run real Bash commands right in your browser. Zero setup.',
@@ -2174,13 +2174,13 @@ export default function Lookbook() {
                 if (button.getAnimations().some((animation) => animation.playState === 'running')) return;
                 button.closest('section').dispatchEvent(new CustomEvent('bashlab:meteors'));
                 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                  button.animate([{ color: '#249dff' }, { color: '#00ff66' }], { duration: 300 });
+                  button.animate([{ color: '#78cbd4' }, { color: '#68dfa0' }], { duration: 300 });
                 } else {
                   button.animate([
-                    { color: '#00ff66' },
-                    { color: '#249dff', offset: 0.04 },
-                    { color: '#249dff', offset: 0.94 },
-                    { color: '#00ff66' },
+                    { color: '#68dfa0' },
+                    { color: '#78cbd4', offset: 0.04 },
+                    { color: '#78cbd4', offset: 0.94 },
+                    { color: '#68dfa0' },
                   ], { duration: 6500, easing: 'ease-in-out' });
                 }
               }}
@@ -2240,7 +2240,7 @@ export default function Lookbook() {
         aria-labelledby="try-heading"
         className={`${styles.section} ${styles.sTry} ${visibleSections[1] ? styles.isVisible : ''} ${termSize === 'expanded' ? styles.sTryExpanded : ''}`}
       >
-        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#00FF66' }} />
+        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#68DFA0' }} />
         <div className={styles.wrap}>
           <div className={styles.tryGrid}>
             <div className={`${styles.tryCol} ${styles.reveal} ${styles.tryIntro}`}>
@@ -2452,11 +2452,11 @@ export default function Lookbook() {
                               <div className={styles.fastfetchColors} aria-hidden="true">
                                 <span style={{ background: '#1c202a' }} />
                                 <span style={{ background: '#ff5f56' }} />
-                                <span style={{ background: '#00ff66' }} />
+                                <span style={{ background: '#68dfa0' }} />
                                 <span style={{ background: '#ffbd2e' }} />
                                 <span style={{ background: '#38bdf8' }} />
                                 <span style={{ background: '#c084fc' }} />
-                                <span style={{ background: '#00e5ff' }} />
+                                <span style={{ background: '#78cbd4' }} />
                                 <span style={{ background: '#ffffff' }} />
                               </div>
                             </div>
@@ -2586,7 +2586,7 @@ export default function Lookbook() {
 
       {/* ===== 03 / LEARN — trái 3 rows 58 / phải heading 42 ===== */}
       <section ref={setSection(2)} id="learn" aria-labelledby="learn-heading" className={`${styles.section} ${styles.sLearn} ${visibleSections[2] ? styles.isVisible : ''}`}>
-        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#00E5FF' }} />
+        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#78CBD4' }} />
         <div className={styles.wrap}>
           <div className={styles.learnGrid}>
             <div className={`${styles.learnSteps} ${styles.reveal}`}>
@@ -2652,11 +2652,11 @@ export default function Lookbook() {
                 Learn Bash through hands-on practice. Read a quick visual guide, run real commands in your browser, and get instant feedback.
               </p>
               <div className={styles.learnFeatures}>
-                <div className={styles.learnFeatureItem} style={{ '--feat-color': '#00FF66', '--feat-bg': 'rgba(0, 255, 102, 0.08)', '--feat-border': 'rgba(0, 255, 102, 0.25)' }}>
+                <div className={styles.learnFeatureItem} style={{ '--feat-color': '#68DFA0', '--feat-bg': 'rgba(104, 223, 160, 0.08)', '--feat-border': 'rgba(104, 223, 160, 0.25)' }}>
                   <span className={styles.learnFeatureNum}>01</span>
                   <span>Visual guides, no memorization</span>
                 </div>
-                <div className={styles.learnFeatureItem} style={{ '--feat-color': '#00E5FF', '--feat-bg': 'rgba(0, 229, 255, 0.08)', '--feat-border': 'rgba(0, 229, 255, 0.25)' }}>
+                <div className={styles.learnFeatureItem} style={{ '--feat-color': '#78CBD4', '--feat-bg': 'rgba(120, 203, 212, 0.08)', '--feat-border': 'rgba(120, 203, 212, 0.25)' }}>
                   <span className={styles.learnFeatureNum}>02</span>
                   <span>Real Linux terminal in your browser</span>
                 </div>
@@ -2675,7 +2675,7 @@ export default function Lookbook() {
 
       {/* ===== 04 / COURSE — spotlight Shell 101 Bento Grid ===== */}
       <section ref={setSection(3)} id="course" aria-labelledby="course-heading" className={`${styles.section} ${styles.sCourse} ${visibleSections[3] ? styles.isVisible : ''}`}>
-        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#00FF66' }} />
+        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#68DFA0' }} />
         <div className={styles.wrap}>
           <div className={`${styles.courseHead} ${styles.reveal}`}>
             <div className={styles.courseHeadRow}>
@@ -2700,7 +2700,7 @@ export default function Lookbook() {
 
       {/* ===== 05 / QUESTIONS — trái intro 40 / phải accordion 60 ===== */}
       <section ref={setSection(4)} id="questions" aria-labelledby="faq-heading" className={`${styles.section} ${styles.sFaq} ${visibleSections[4] ? styles.isVisible : ''}`}>
-        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#00E5FF' }} />
+        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#78CBD4' }} />
         <div className={styles.wrap}>
           <div className={styles.faqGrid}>
             <div className={styles.reveal}>

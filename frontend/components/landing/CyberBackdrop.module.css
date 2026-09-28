@@ -8,7 +8,7 @@
   pointer-events: none;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 48% 55% at 16% 62%, rgba(0, 255, 128, 0.08), transparent 75%),
+    radial-gradient(ellipse 48% 55% at 16% 62%, rgba(104, 223, 160, 0.08), transparent 75%),
     radial-gradient(ellipse 54% 50% at 75% 28%, rgba(0, 180, 210, 0.07), transparent 75%),
     radial-gradient(ellipse 45% 32% at 68% 88%, rgba(0, 185, 145, 0.045), transparent 80%);
 }
@@ -29,7 +29,7 @@
   width: 1em;
   height: 1em;
   border-radius: 50%;
-  background: radial-gradient(circle, #fff 0%, #dcf7ff 8%, rgba(73, 186, 255, 0.8) 20%, rgba(25, 123, 255, 0.25) 42%, transparent 72%);
+  background: radial-gradient(circle, #fff 0%, #dcf7ff 8%, rgba(120, 203, 212, 0.8) 20%, rgba(75, 142, 156, 0.25) 42%, transparent 72%);
   transform-origin: 0 50%;
   user-select: none;
 }
@@ -51,12 +51,12 @@
 /* The tail follows the head's rotation, always opposite its direction of travel. */
 .meteor::before {
   height: 0.065em;
-  background: linear-gradient(90deg, #e8fffb, #65ffe5 15%, rgba(0, 195, 255, 0.55) 45%, transparent);
+  background: linear-gradient(90deg, #e8fffb, #9cdbce 15%, rgba(120, 203, 212, 0.55) 45%, transparent);
 }
 
 .meteor::after {
   height: 0.3em;
-  background: linear-gradient(90deg, rgba(130, 255, 231, 0.55), rgba(0, 170, 255, 0.18) 45%, transparent);
+  background: linear-gradient(90deg, rgba(156, 219, 206, 0.55), rgba(120, 203, 212, 0.18) 45%, transparent);
   filter: blur(3px);
 }
 
@@ -70,8 +70,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(560px 380px at 12% 8%, rgba(0, 255, 102, 0.07), transparent 70%),
-    radial-gradient(520px 360px at 88% 18%, rgba(0, 229, 255, 0.05), transparent 70%),
-    radial-gradient(700px 500px at 50% 120%, rgba(0, 255, 102, 0.03), transparent 70%),
+    radial-gradient(560px 380px at 12% 8%, rgba(104, 223, 160, 0.07), transparent 70%),
+    radial-gradient(520px 360px at 88% 18%, rgba(120, 203, 212, 0.05), transparent 70%),
+    radial-gradient(700px 500px at 50% 120%, rgba(104, 223, 160, 0.03), transparent 70%),
     #0a0d14;
 }

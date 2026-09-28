@@ -6,7 +6,7 @@
   border: 0;
   border-radius: 3px;
   background: transparent;
-  color: var(--lb-accent, #00ff66);
+  color: var(--lb-accent, #68dfa0);
   font: inherit;
   letter-spacing: inherit;
   text-align: inherit;
@@ -18,7 +18,7 @@
 }
 
 .word:focus-visible {
-  outline: 2px solid var(--lb-cyan, #00e5ff);
+  outline: 2px solid var(--lb-cyan, #78cbd4);
   outline-offset: 5px;
 }
 
@@ -47,7 +47,7 @@
   inset: 0;
   opacity: 0;
   color: transparent;
-  background: radial-gradient(ellipse 45px 36px at var(--light-x, 50%) var(--light-y, 50%), #91fff2 0%, #00e5ff 38%, transparent 100%);
+  background: radial-gradient(ellipse 45px 36px at var(--light-x, 50%) var(--light-y, 50%), #b7ece3 0%, #78cbd4 38%, transparent 100%);
   background-clip: text;
   -webkit-background-clip: text;
   white-space: pre;
@@ -63,16 +63,16 @@
   display: none;
 }
 .word[data-phase="playing"] .particles { display: block; }
-.word[data-phase="highlight"] { color: #91fff2; }
+.word[data-phase="highlight"] { color: #b7ece3; }
 
 /* Cyber glitch effect for secret easter egg word */
 .word[data-glitch="true"] {
-  text-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
+  text-shadow: 0 0 8px rgba(104, 223, 160, 0.4);
 }
 
 .letter[data-glitched="true"] .face {
-  color: var(--lb-accent, #00ff66);
-  text-shadow: 0 0 10px rgba(0, 255, 102, 0.8), -1.5px 0 rgba(255, 0, 85, 0.7), 1.5px 0 #00ff66;
+  color: var(--lb-accent, #68dfa0);
+  text-shadow: 0 0 10px rgba(104, 223, 160, 0.8), -1.5px 0 rgba(255, 0, 85, 0.7), 1.5px 0 #68dfa0;
   transform: translateY(-2px) scale(1.06);
   display: inline-block;
   font-family: inherit;
@@ -86,8 +86,8 @@
 
 /* Scramble transition effect when secret turns into pwn3d */
 .letter[data-scrambling="true"] .face {
-  color: var(--lb-accent, #00ff66);
-  text-shadow: 0 0 12px rgba(0, 255, 102, 0.85), -1.5px 0 rgba(255, 0, 85, 0.7), 1.5px 0 #00ff66;
+  color: var(--lb-accent, #68dfa0);
+  text-shadow: 0 0 12px rgba(104, 223, 160, 0.85), -1.5px 0 rgba(255, 0, 85, 0.7), 1.5px 0 #68dfa0;
   display: inline-block;
   font-family: inherit;
   font-weight: inherit;
@@ -99,8 +99,8 @@
 }
 
 .letter[data-resolved="true"] .face {
-  color: var(--lb-accent, #00ff66);
-  text-shadow: 0 0 12px rgba(0, 255, 102, 0.9), 0 0 4px #00ff66;
+  color: var(--lb-accent, #68dfa0);
+  text-shadow: 0 0 12px rgba(104, 223, 160, 0.9), 0 0 4px #68dfa0;
   display: inline-block;
   font-family: inherit;
   font-weight: inherit;
@@ -114,13 +114,13 @@
 @keyframes resolvePop {
   0% {
     transform: scale(1.12);
-    color: #80ffaa;
-    text-shadow: 0 0 16px #00ff66, 0 0 24px rgba(0, 255, 102, 0.8);
+    color: #94e8b8;
+    text-shadow: 0 0 16px #68dfa0, 0 0 24px rgba(104, 223, 160, 0.8);
   }
   100% {
     transform: scale(1);
-    color: var(--lb-accent, #00ff66);
-    text-shadow: 0 0 12px rgba(0, 255, 102, 0.9);
+    color: var(--lb-accent, #68dfa0);
+    text-shadow: 0 0 12px rgba(104, 223, 160, 0.9);
   }
 }
 
@@ -135,6 +135,6 @@
     transition: none;
     animation: none;
     font-family: inherit;
-    color: var(--lb-accent, #00ff66);
+    color: var(--lb-accent, #68dfa0);
   }
 }

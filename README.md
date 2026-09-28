@@ -12,6 +12,7 @@ BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và
 | Terminal trên trang chủ | Demo mô phỏng với câu trả lời có sẵn; không thực thi lệnh hệ điều hành |
 | Hiệu ứng giao diện | Có Lookbook navigation, terminal thu/phóng và các thành phần hiệu ứng; có script kiểm tra curiosity/backdrop |
 | Đăng nhập `/login` và đăng ký `/register` | Có biểu mẫu và kiểm tra dữ liệu phía giao diện; gửi biểu mẫu chỉ mô phỏng trạng thái dịch vụ chưa kết nối |
+| Xác minh email và khôi phục mật khẩu | `/verify-email`, `/forgot-password`, `/reset-password` có giao diện và trạng thái minh họa; chưa gửi email, xác thực liên kết hoặc đổi mật khẩu thật |
 | Danh mục khóa học `/courses` | Có 3 khóa học, bộ lọc All/Core Tracks/Security và trạng thái tiến độ/Coming soon; View course dẫn tới `/login` |
 | My Learning `/my-learning` | Trang tổng quan riêng với bốn chỉ số và lịch hoạt động 12 tháng minh họa, cùng lối vào danh mục khóa học; chưa có dữ liệu tiến độ thật |
 | Account & Security `/account` | Chỉ gồm hồ sơ, sửa thông tin/ảnh đại diện, chi tiết tài khoản, yêu cầu đặt lại mật khẩu và xác nhận đăng xuất; hồ sơ lưu trong localStorage, email/logout là demo |
@@ -46,9 +47,9 @@ Bảng dưới mô tả phạm vi yêu cầu, không phải danh sách tính nă
 | 01 | A | 01 | Landing | Giới thiệu sản phẩm; thử lệnh mô phỏng; giới thiệu Shell 101; FAQ; dẫn vào khóa học |
 | 02 | B | 02 | Login | Đã có giao diện `/login`: nhập email/mật khẩu; hiện/ẩn mật khẩu; ghi nhớ thiết bị; trạng thái xử lý/lỗi; liên kết đăng ký và quên mật khẩu. Xác thực backend chưa có |
 | 03 | B | 03 | Register | Đã có giao diện `/register`: nhập email, mật khẩu và xác nhận; kiểm tra dữ liệu; trạng thái lỗi. Tạo tài khoản backend chưa có |
-| 04 | B | 04 | Verify Email | Hướng dẫn kiểm tra email; gửi lại có thời gian chờ; xử lý xác minh thành công hoặc liên kết hết hạn/không hợp lệ |
-| 05 | B | 05 | Forgot Password | Yêu cầu email đặt lại mật khẩu; thông báo trung lập về tài khoản; gửi lại/thử lại khi lỗi |
-| 06 | B | 06 | Reset Password | Nhập và xác nhận mật khẩu mới; kiểm tra liên kết; xử lý lỗi/thành công; quay lại đăng nhập |
+| 04 | B | 04 | Verify Email | Đã có `/verify-email` với trạng thái hộp thư, chờ gửi lại, thành công và liên kết hết hạn; chỉ là demo, chưa xác minh hay gửi email thật |
+| 05 | B | 05 | Forgot Password | Đã có `/forgot-password` với kiểm tra email và thông báo trung lập; gửi email chỉ là demo |
+| 06 | B | 06 | Reset Password | Đã có `/reset-password` với kiểm tra mật khẩu và trạng thái demo; chưa xác thực token hay đổi mật khẩu thật |
 | 07 | C | 07 | Course Catalog | Đã có `/courses` với 3 khóa học, lọc All/Core Tracks/Security, cấp độ, thời lượng, tiến độ và trạng thái sắp ra mắt; View course dẫn tới đăng nhập |
 | 08 | C | 08 | Course Overview | Giới thiệu khóa; kết quả học tập; giáo trình theo chương; tiến độ và trạng thái bài; tiếp tục học |
 | 09 | D | 09 | My Learning | Đã có `/my-learning` với bốn chỉ số, lịch hoạt động 12 tháng minh họa và liên kết danh mục khóa học; tiếp tục bài và tiến độ thật chưa triển khai |

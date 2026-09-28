@@ -9,7 +9,9 @@
   --color-bg: #0A0D14;
   --color-on-surface: #E8E9F0;
   --color-on-surface-variant: #9BA3B5;
-  --color-primary: #00FF66;
+  --color-primary: #68DFA0;
+  --color-action: #176B49;
+  --color-action-hover: #1C8058;
 
   --font-headline: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
@@ -124,20 +126,46 @@ img {
   font-weight: 700;
   text-transform: none;
   letter-spacing: 0.02em;
-  background-color: var(--color-primary);
-  color: #0A0D14;
+  background-color: var(--color-action);
+  color: #F1FAF5;
   transition: all var(--transition-fast);
   box-shadow: none;
   white-space: nowrap;
 }
 
 .btn-primary:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 0 25px -4px rgba(0, 255, 102, 0.45);
+  background-color: var(--color-action-hover);
 }
 
 .btn-primary:active {
   transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.375rem;
+  background-color: rgba(255, 255, 255, 0.02);
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.btn-secondary:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .body-md {

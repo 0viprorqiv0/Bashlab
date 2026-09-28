@@ -410,7 +410,7 @@ export default function CuriosityWord({ word = WORD, transformTo = null, isGlitc
           context.clearRect(0, 0, width + padding * 2, height + padding * 2);
           context.globalAlpha = opacity;
           for (const particle of particles) {
-            context.fillStyle = particle.cyan ? '#62f4ed' : '#00ff66';
+            context.fillStyle = particle.cyan ? '#a4dcd5' : '#68dfa0';
             context.fillRect(padding + particle.x + particle.dx * scatter, padding + particle.y + particle.dy * scatter, 1.6, 1.6);
           }
           context.globalAlpha = 1;

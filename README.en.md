@@ -12,6 +12,7 @@ BashLab aims to teach Bash through short lessons, hands-on practice, and feedbac
 | Home page terminal | A simulation with predefined responses. It does not run operating system commands |
 | Visual effects | Lookbook navigation, terminal resize controls, and visual components; check scripts exist for curiosity and backdrop effects |
 | Login `/login` and registration `/register` | Forms and client-side validation are implemented; submissions only simulate an unavailable authentication service |
+| Email verification and password recovery | `/verify-email`, `/forgot-password`, and `/reset-password` have demo interfaces and states; no email is sent, link is verified, or password is changed |
 | Course catalog `/courses` | Three courses with All/Core Tracks/Security filters and progress/coming-soon states; View course leads to `/login` |
 | My Learning `/my-learning` | Separate overview with four sample metrics, a sample 12-month activity calendar, and a course catalog link; real progress data is not connected |
 | Account & Security `/account` | Profile editing/avatar, account details, password-reset request, and logout confirmation; profile uses localStorage, email/logout are demos |
@@ -46,9 +47,9 @@ This table describes design requirements, not a list of completed features.
 | 01 | A | 01 | Landing | Introduce BashLab; offer a simulated command demo; present Shell 101 and FAQ; guide visitors to courses |
 | 02 | B | 02 | Login | `/login` interface implemented: email/password, show/hide password, remember device, loading/error states, and links to registration and password recovery. Backend authentication is not implemented |
 | 03 | B | 03 | Register | `/register` interface implemented: email/password confirmation, client-side validation, and error states. Backend account creation is not implemented |
-| 04 | B | 04 | Verify Email | Explain how to check email; resend with a waiting period; handle successful verification and invalid or expired links |
-| 05 | B | 05 | Forgot Password | Request a reset email; avoid revealing whether an account exists; allow resend or retry after errors |
-| 06 | B | 06 | Reset Password | Accept and confirm a new password; validate the reset link; show success or errors; return to login |
+| 04 | B | 04 | Verify Email | `/verify-email` shows inbox, resend cooldown, success, and expired-link demo states; no email is sent or verified |
+| 05 | B | 05 | Forgot Password | `/forgot-password` validates an email and shows a neutral response; sending email is a demo |
+| 06 | B | 06 | Reset Password | `/reset-password` validates new passwords and shows a demo result; tokens are not verified and no password is changed |
 | 07 | C | 07 | Course Catalog | `/courses` implemented with three courses, All/Core Tracks/Security filters, level, duration, progress, and coming-soon status; View course leads to login |
 | 08 | C | 08 | Course Overview | Explain the course and learning outcomes; show chapters, lesson states, and progress; continue learning |
 | 09 | D | 09 | My Learning | `/my-learning` shows four sample metrics, a sample 12-month activity calendar, and a catalog link; resume lesson and real progress are not implemented yet |
