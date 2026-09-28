@@ -2,7 +2,7 @@
 
 Tiếng Việt | [English](README.en.md)
 
-BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và phản hồi theo mục tiêu. Frontend hiện có landing page, giao diện đăng nhập/đăng ký và trang danh mục khóa học. Backend xác thực và sandbox Bash thật chưa được triển khai.
+BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và phản hồi theo mục tiêu. Frontend hiện có landing page, giao diện đăng nhập/đăng ký, trang danh mục khóa học và trang Account & Security. Backend xác thực và sandbox Bash thật chưa được triển khai.
 
 ## Trạng thái triển khai
 
@@ -13,9 +13,11 @@ BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và
 | Hiệu ứng giao diện | Có Lookbook navigation, terminal thu/phóng và các thành phần hiệu ứng; có script kiểm tra curiosity/backdrop |
 | Đăng nhập `/login` và đăng ký `/register` | Có biểu mẫu và kiểm tra dữ liệu phía giao diện; gửi biểu mẫu chỉ mô phỏng trạng thái dịch vụ chưa kết nối |
 | Danh mục khóa học `/courses` | Có 3 khóa học, bộ lọc All/Core Tracks/Security và trạng thái tiến độ/Coming soon; View course dẫn tới `/login` |
+| My Learning `/my-learning` | Trang tổng quan riêng với bốn chỉ số và lịch hoạt động 12 tháng minh họa, cùng lối vào danh mục khóa học; chưa có dữ liệu tiến độ thật |
+| Account & Security `/account` | Chỉ gồm hồ sơ, sửa thông tin/ảnh đại diện, chi tiết tài khoản, yêu cầu đặt lại mật khẩu và xác nhận đăng xuất; hồ sơ lưu trong localStorage, email/logout là demo |
 | Trang 404 | Có `app/not-found.js` |
 | Giao diện 403 | Có `app/forbidden.js`; chưa có luồng phân quyền backend hay route riêng được triển khai để sử dụng giao diện này |
-| Trang chi tiết khóa học, học tập, tài khoản, quản trị | Mới có trong tài liệu thiết kế; chưa triển khai |
+| Trang chi tiết khóa học, bài học thực hành và quản trị | Mới có trong tài liệu thiết kế; chưa triển khai |
 | Backend, dữ liệu, email, sandbox | Mới có kế hoạch trong [backend/README.md](backend/README.md) |
 
 Nội dung về sandbox thật và lưu tiến độ mô tả định hướng sản phẩm; các dịch vụ này chưa hoạt động. Trang `/courses/shell-101` và các trang học chi tiết chưa được triển khai.
@@ -49,9 +51,9 @@ Bảng dưới mô tả phạm vi yêu cầu, không phải danh sách tính nă
 | 06 | B | 06 | Reset Password | Nhập và xác nhận mật khẩu mới; kiểm tra liên kết; xử lý lỗi/thành công; quay lại đăng nhập |
 | 07 | C | 07 | Course Catalog | Đã có `/courses` với 3 khóa học, lọc All/Core Tracks/Security, cấp độ, thời lượng, tiến độ và trạng thái sắp ra mắt; View course dẫn tới đăng nhập |
 | 08 | C | 08 | Course Overview | Giới thiệu khóa; kết quả học tập; giáo trình theo chương; tiến độ và trạng thái bài; tiếp tục học |
-| 09 | D | 09 | My Learning | Tổng quan học tập; tiếp tục bài; thời gian học, hoạt động, số lệnh và tiến độ kỹ năng |
+| 09 | D | 09 | My Learning | Đã có `/my-learning` với bốn chỉ số, lịch hoạt động 12 tháng minh họa và liên kết danh mục khóa học; tiếp tục bài và tiến độ thật chưa triển khai |
 | 10 | D | 10 | Interactive Lesson Workspace | Đọc bài; chuyển bài; mục tiêu và gợi ý; terminal sandbox; trạng thái phiên; Check Solution và phản hồi |
-| 11 | E | 12 | Account | Thông tin tài khoản, email, xác minh và vai trò chỉ đọc; yêu cầu đổi mật khẩu qua email; đăng xuất |
+| 11 | E | 12 | Account | Đã có giao diện `/account`: xem/sửa hồ sơ, ảnh đại diện, vai trò và cài đặt bảo mật; yêu cầu đặt lại mật khẩu và xác nhận đăng xuất là demo, chưa nối backend |
 | 12 | F | 14 | Content | Cây khóa/chương/bài; tạo và sửa nội dung; sắp xếp thứ tự; trạng thái xuất bản; mở trình soạn bài |
 | 13 | F | 16 | Lesson Editor | Metadata bài; Markdown và xem trước; mục tiêu bài; mẫu kiểm tra; nháp/xuất bản; lưu/hủy |
 | 14 | G | 17 | Users | Tìm kiếm/phân trang; đổi vai trò; khóa/mở khóa; xác nhận và lý do; bảo vệ quản trị viên hoạt động cuối cùng |
