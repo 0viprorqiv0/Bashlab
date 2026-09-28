@@ -35,10 +35,15 @@ export default function Navbar({ isTransparent = false }) {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, role')
+        .select('name, role, is_locked')
         .eq('id', session.user.id)
         .single();
       if (cancelled) return;
+      if (profile?.is_locked) {
+        await supabase.auth.signOut();
+        setUser(null);
+        return;
+      }
       const displayName = profile?.name || session.user.email;
       setUser({
         name: displayName,
@@ -139,6 +144,12 @@ export default function Navbar({ isTransparent = false }) {
                     <span className="material-symbols-outlined text-base text-secondary">school</span>
                     My Learning
                   </a>
+                  {user.role === 'Admin' && (
+                    <a href="/admin/content" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors">
+                      <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
+                      Admin
+                    </a>
+                  )}
                   <div className="border-t border-divider-border/60 my-1" />
                   <button type="button" onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
                     <span className="material-symbols-outlined text-base">logout</span>
@@ -192,6 +203,12 @@ export default function Navbar({ isTransparent = false }) {
                     <span className="material-symbols-outlined text-base text-primary">manage_accounts</span>
                     Account &amp; Security
                   </a>
+                  {user.role === 'Admin' && (
+                    <a href="/admin/content" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
+                      <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
+                      Admin
+                    </a>
+                  )}
                   <button type="button" onClick={handleLogout} className="text-sm font-code text-red-400 hover:text-red-300 flex items-center gap-2 py-2 focus-visible text-left">
                     <span className="material-symbols-outlined text-base">logout</span>
                     Log out

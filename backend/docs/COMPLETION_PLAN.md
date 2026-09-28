@@ -1,5 +1,15 @@
 # Kế hoạch hoàn thiện BashLab (nhánh feature/dat-be)
 
+> **Trạng thái: đã hoàn thành Phase 1–4** (2026-09-28). Đủ 17 trang thiết kế; lint,
+> build, test hiệu ứng pass; BE 15/17 (2 test chỉ fail trên Windows). Đã chạy thử
+> trên trình duyệt: đăng nhập → My Learning → Course Overview → Workspace (hoàn
+> thành bài, mở khoá bài sau, bài khoá bị chặn) → admin Content/Lesson Editor/
+> Users (khoá = chặn đăng nhập thật, mở khoá)/Activity (dừng phiên, admin log);
+> learner vào /admin thấy 403, gọi thẳng RPC admin bị từ chối.
+>
+> Còn lại ngoài tầm máy Windows này: chạy sandbox thật (backend cần Linux/WSL)
+> để test Check Solution đầu-cuối.
+
 Audit ngày 2026-09-28. Mức độ: đồ án môn học — đủ chạy, đủ demo 17 trang, không nhắm chuẩn production.
 
 ## Hiện trạng sau audit

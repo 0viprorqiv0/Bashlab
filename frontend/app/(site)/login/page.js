@@ -24,7 +24,9 @@ export default function LoginPage() {
     setStatus('loading');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setErrorMessage(error.message);
+      setErrorMessage(/banned/i.test(error.message)
+        ? 'Your account has been locked by an administrator.'
+        : error.message);
       setStatus('error');
       return;
     }

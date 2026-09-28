@@ -47,26 +47,25 @@ const { data } = await supabase.rpc('get_course_progress', { p_course_id: course
 
 ## 2b. Account page (Screen 11) — đã thêm field ngoài đặc tả gốc theo yêu cầu
 
-`profiles` có thêm `name`, `bio`, `avatar_url` — **learner tự sửa được 3 cột
-này của chính mình** qua `supabase.from('profiles').update({...}).eq('id', user.id)`.
-Cố gửi kèm `role`/`is_locked`/`email` trong cùng update sẽ bị Postgres từ chối
-(permission denied for column) — không phải bug, là cố ý chặn tự nâng quyền.
+`profiles` có thêm `name`, `bio`, `avatar_url`, `age`, `location`, `occupation`
+(migration 007, 011) — **learner tự sửa được các cột này của chính mình**. Cố gửi
+kèm `role`/`is_locked`/`email` sẽ bị Postgres từ chối (permission denied for
+column) — cố ý chặn tự nâng quyền.
 
-`avatarUrl` hiện **chỉ là 1 cột text lưu URL**, chưa có chỗ upload ảnh thật
-(chưa tạo Supabase Storage bucket) — nếu Account page cần upload file thật
-(không chỉ dán URL), cần báo trước để tôi tạo bucket + policy riêng.
-
-`stats` (completedCourses, totalCourses, completedLessons, practiceHours,
-streakDays) trên Account mock **chưa có nguồn dữ liệu nào ở DB** — `completedLessons`
-suy ra được từ `progress`, còn `practiceHours`/`streakDays` cần dữ liệu từ
-sandbox (thời gian phiên thực hành) mà hiện `practice_sessions` chưa được ghi
-tự động — để sau khi quyết việc nối sandbox.
+Avatar: FE đọc file ảnh thành base64 và lưu thẳng vào `avatar_url` (text).
+Thống kê học tập (bài xong, giờ học, streak) nằm ở My Learning, không ở Account.
 
 ## 3. Sandbox API (Express — CHƯA đổi, giữ nguyên như hiện tại)
 
 `POST /api/sessions`, `POST /api/sessions/:id/execute`, `POST /api/sessions/:id/check`,
 `POST /api/sessions/:id/reset`, `DELETE /api/sessions/:id` — **không yêu cầu auth
-hiện tại**, hoạt động y như trước (demo Landing vẫn dùng ẩn danh được).
+hiện tại**, hoạt động y như trước.
+
+**Đã nối vào Workspace** (`/learn/[course]/[lesson]`, [`frontend/lib/sandbox.js`](../../frontend/lib/sandbox.js)),
+bật bằng `NEXT_PUBLIC_SANDBOX_API_URL`. Không set → terminal báo "Sandbox not
+configured", bài có chấm tự động cho "Mark complete anyway". `check` nhận
+`lessonId` = `lessons.test_template.verifier` (key trong `taskVerifier.js`).
+Terminal ở Landing **cố ý là mô phỏng** (đúng `bashlab-pages.md`), không gọi API.
 
 Middleware xác thực đã viết sẵn ở [`src/middleware/auth.js`](../src/middleware/auth.js)
 (`requireAuth`, `requireAdmin`) nhưng **chưa được gắn vào `server.js`** — quyết
@@ -83,15 +82,37 @@ sandbox thật.
   khoá/hạ quyền admin hoạt động cuối cùng, và tự ghi `admin_logs`. Đã test bằng
   user giả: learner gọi RPC bị từ chối, admin gọi được và có log, không ai hạ/khoá
   được admin cuối cùng.
-- `admin_stop_session` (dừng phiên thực hành ở Activity) — **chưa làm**, chờ
-  quyết định có nối `practice_sessions` với sandbox thật hay không.
-- Có gắn `requireAuth` vào sandbox API hay không, và nếu có thì áp dụng cho route
-  nào (chỉ Workspace thật, hay cả demo Landing).
-- Supabase Storage bucket cho avatar upload thật (nếu Account cần, xem mục 2b).
+- ~~`admin_stop_session`~~ — **đã xong** (migration 012): dừng phiên có lý do bắt buộc + ghi log.
+- `admin_set_user_lock` giờ **chặn đăng nhập thật** (đặt `auth.users.banned_until`
+  = +100 năm; không dùng `'infinity'` vì Supabase Auth không parse được).
+- `admin_list_users(p_search, p_limit, p_offset)` — danh sách user kèm trạng thái
+  xác minh email / lần đăng nhập cuối (nằm ở `auth.users`, client không đọc trực tiếp được).
+- `practice_sessions` được Workspace tự ghi (tạo khi mở sandbox, cập nhật mỗi lệnh,
+  `stopped` khi rời trang) → nguồn dữ liệu cho My Learning (giờ học, streak) và Activity.
+- Có gắn `requireAuth` vào sandbox API hay không — vẫn để ngỏ, không bắt buộc cho đồ án.
+- Avatar lưu base64 trong `avatar_url` (text) — không cần Storage bucket.
 
-## 5. Biến môi trường frontend cần (không phải việc của backend dev, chỉ ghi chú)
+## 5. Trang đã nối (tổng hợp)
+
+| Trang | Route | Nguồn dữ liệu |
+|---|---|---|
+| Login/Register/Verify/Forgot/Reset | `/login` ... `/reset-password` | Supabase Auth |
+| Course Catalog / Overview | `/courses`, `/courses/[slug]` | `courses/chapters/lessons` + `progress` |
+| My Learning | `/my-learning` | `progress`, `practice_sessions` |
+| Workspace | `/learn/[course]/[lesson]` | `lessons` + sandbox API + ghi `progress`/`practice_sessions` |
+| Account | `/account` | `profiles` |
+| Content / Lesson Editor | `/admin/content`, `/admin/lessons/[id]` | CRUD thẳng, RLS `is_admin()` |
+| Users | `/admin/users` | RPC `admin_list_users`, `admin_set_user_role`, `admin_set_user_lock` |
+| Activity | `/admin/activity` | `practice_sessions`, `admin_logs`, RPC `admin_stop_session` |
+| 403 | mọi trang `/admin/*` khi không phải admin | `AdminGate` |
+
+Admin đầu tiên phải tạo bằng SQL (chưa có admin nào để cấp quyền qua UI):
+`update profiles set role = 'admin' where email = '<email>';`
+
+## 6. Biến môi trường frontend
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=<Project URL>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+NEXT_PUBLIC_SANDBOX_API_URL=http://127.0.0.1:3001   # tuỳ chọn, cần backend chạy trên Linux/WSL
 ```
