@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
@@ -43,12 +44,23 @@ function VerifyEmail() {
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || 'your email address';
 
-  // No backend exists yet (see backend/README.md). The page starts from the
-  // ?state= query (verified | expired), which is where the real verification
-  // link will land, and "resending" only runs the cooldown locally.
   const [view, setView] = React.useState(() => initialState(searchParams.get('state')));
   const [sending, setSending] = React.useState(false);
   const [secondsLeft, setSecondsLeft] = React.useState(0);
+
+  // Supabase's client auto-processes the verification link's URL (session or
+  // error) on load. If it left us signed in, the link was valid; an
+  // `error_description` in the URL means expired/invalid.
+  React.useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    if (hash.get('error') || searchParams.get('error')) {
+      setView('expired');
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setView('verified');
+    });
+  }, [searchParams]);
 
   React.useEffect(() => {
     if (secondsLeft <= 0) return undefined;
@@ -61,13 +73,12 @@ function VerifyEmail() {
     setSecondsLeft(RESEND_COOLDOWN_SECONDS);
   }
 
-  function handleResend() {
+  async function handleResend() {
     if (sending || secondsLeft > 0) return;
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
-      startCooldown();
-    }, 700);
+    await supabase.auth.resend({ type: 'signup', email });
+    setSending(false);
+    startCooldown();
   }
 
   function switchView(id) {
@@ -335,10 +346,6 @@ function VerifyEmail() {
         </div>
       </div>
 
-      <p className="relative z-10 mt-6 flex items-center gap-1 text-xs text-on-surface-variant">
-        <span className="material-symbols-outlined text-sm text-accent-amber select-none">dns</span>
-        UI demo — email delivery is not connected yet, no message is actually sent.
-      </p>
     </div>
   );
 }

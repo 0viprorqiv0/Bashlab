@@ -1,18 +1,16 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 function ResetPasswordContent() {
-    const searchParams = useSearchParams();
-    const token = searchParams.get('token');
-
     const [password, setPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
-    const [status, setStatus] = React.useState('idle'); // 'idle' | 'loading' | 'success' | 'invalid_token'
+    const [status, setStatus] = React.useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
+    const [errorMessage, setErrorMessage] = React.useState('');
     const [errors, setErrors] = React.useState({});
 
     const isLengthValid = password.length >= 8;
@@ -36,15 +34,20 @@ function ResetPasswordContent() {
         return Object.keys(errs).length === 0;
     }
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
         if (!validate()) return;
 
         setStatus('loading');
-
-        setTimeout(() => {
-            setStatus('success');
-        }, 900);
+        // The recovery session comes from the link Supabase emailed (parsed
+        // automatically from the URL by the client on page load).
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) {
+            setErrorMessage(error.message);
+            setStatus('error');
+            return;
+        }
+        setStatus('success');
     }
 
     return (
@@ -58,6 +61,20 @@ function ResetPasswordContent() {
                         Choose a strong password to secure your terminal sessions and progress.
                     </p>
                 </div>
+
+                {status === 'error' && (
+                    <div
+                        className="rounded-lg p-3 flex items-start gap-3 bg-[#0B0E15] border border-accent-amber/30"
+                        role="alert"
+                    >
+                        <span className="material-symbols-outlined text-accent-amber text-lg leading-none select-none">
+                            warning
+                        </span>
+                        <p className="body-sm text-accent-amber">
+                            {errorMessage || 'This reset link is invalid or has expired.'}
+                        </p>
+                    </div>
+                )}
 
                 {status === 'success' ? (
                     <div className="flex flex-col gap-5">

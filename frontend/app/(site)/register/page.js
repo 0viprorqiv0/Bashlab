@@ -1,8 +1,12 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -44,7 +48,7 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!validate()) {
@@ -52,11 +56,13 @@ export default function RegisterPage() {
     }
 
     setStatus('loading');
-    // No backend authentication service is live yet (see backend/README.md).
-    // Provides immediate and clear feedback regarding service state.
-    setTimeout(() => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setErrorMessage(error.message);
       setStatus('error');
-    }, 900);
+      return;
+    }
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
   const isLengthValid = password.length >= 8;
@@ -84,11 +90,9 @@ export default function RegisterPage() {
             </span>
             <div className="flex flex-col gap-0.5">
               <span className="font-code text-xs uppercase tracking-wide text-accent-amber font-semibold">
-                Daemon unreachable
+                Registration failed
               </span>
-              <p className="body-sm">
-                Registration service is currently offline — backend auth will be active soon.
-              </p>
+              <p className="body-sm">{errorMessage || 'Could not create your account.'}</p>
             </div>
           </div>
         )}

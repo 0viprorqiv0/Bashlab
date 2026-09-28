@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
@@ -20,6 +21,17 @@ export default function ForgotPasswordPage() {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
     }
 
+    async function sendResetLink() {
+        setStatus('loading');
+        // Neutral outcome by design: always shows the same "check your inbox"
+        // message whether or not the account exists — never reveal that here.
+        await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        });
+        setStatus('success');
+        setSecondsLeft(RESEND_COOLDOWN_SECONDS);
+    }
+
     function handleSubmit(event) {
         event.preventDefault();
         setErrorMessage('');
@@ -34,22 +46,12 @@ export default function ForgotPasswordPage() {
             return;
         }
 
-        setStatus('loading');
-
-        // Send simulation (to be replaced by your fetch API call once the backend is ready)
-        setTimeout(() => {
-            setStatus('success');
-            setSecondsLeft(RESEND_COOLDOWN_SECONDS);
-        }, 800);
+        sendResetLink();
     }
 
     function handleResend() {
         if (secondsLeft > 0 || status === 'loading') return;
-        setStatus('loading');
-        setTimeout(() => {
-            setStatus('success');
-            setSecondsLeft(RESEND_COOLDOWN_SECONDS);
-        }, 800);
+        sendResetLink();
     }
 
     return (

@@ -1,20 +1,29 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = React.useState(false);
   const [status, setStatus] = React.useState('idle'); // idle | loading | error
+  const [errorMessage, setErrorMessage] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [remember, setRemember] = React.useState(true);
 
-  // No backend exists yet (see backend/README.md). Submitting always resolves
-  // to a "service unreachable" state so the UI demonstrates its states honestly.
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setStatus('loading');
-    setTimeout(() => setStatus('error'), 900);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setErrorMessage(error.message);
+      setStatus('error');
+      return;
+    }
+    setStatus('idle');
+    router.push('/account');
   }
 
   return (
@@ -39,11 +48,9 @@ export default function LoginPage() {
             </span>
             <div className="flex flex-col gap-0.5">
               <span className="font-code text-xs uppercase tracking-wide text-accent-amber font-semibold">
-                Daemon unreachable
+                Login failed
               </span>
-              <p className="body-sm">
-                Backend is not connected yet — this is a UI demo. Try again once the auth service is live.
-              </p>
+              <p className="body-sm">{errorMessage || 'Invalid email or password.'}</p>
             </div>
           </div>
         )}

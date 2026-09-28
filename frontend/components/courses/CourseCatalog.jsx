@@ -1,38 +1,63 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './CourseCatalog.module.css';
-
-const courses = [
-  {
-    id: 'shell-101', code: '101', title: 'Shell 101 — Bash Basics', level: 'Beginner', category: 'Core Track',
-    chapters: 3, lessons: 12, duration: '2.5 hours',
-    description: 'Master command line fundamentals from navigation and directory inspection to file manipulation, redirection, and text filters.',
-    status: 'available',
-  },
-  {
-    id: 'shell-201', code: '201', title: 'Shell 201 — Pipelines & Streams', level: 'Intermediate', category: 'Core Track',
-    chapters: 2, lessons: 8, duration: '2 hours',
-    description: 'Dive into standard streams (stdin, stdout, stderr), command chaining, exit codes, and building robust multi-stage data filters.',
-    status: 'locked',
-  },
-  {
-    id: 'linux-security', code: 'SEC', title: 'Linux Permissions & Security', level: 'Intermediate', category: 'Security',
-    chapters: 2, lessons: 6, duration: '1.5 hours',
-    description: 'Understand octal and symbolic permissions, sudo privilege boundaries, process inspection, and secure workspace hygiene.',
-    status: 'locked',
-  },
-];
+import { supabase } from '@/lib/supabaseClient';
 
 const filters = ['All', 'Core Tracks', 'Security'];
 
+function courseCode(slug) {
+  const digits = slug.match(/\d+/)?.[0];
+  if (digits) return digits;
+  return slug.slice(0, 3).toUpperCase();
+}
+
+function formatDuration(minutes) {
+  if (!minutes) return '';
+  const hours = minutes / 60;
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hours`;
+}
+
+function toCourse(row) {
+  const chapters = row.chapters || [];
+  const lessons = chapters.reduce((sum, ch) => sum + (ch.lessons?.length || 0), 0);
+  return {
+    id: row.slug,
+    code: courseCode(row.slug),
+    title: row.title,
+    level: row.level ? row.level[0].toUpperCase() + row.level.slice(1) : '',
+    category: row.category || '',
+    chapters: chapters.length,
+    lessons,
+    duration: formatDuration(row.duration_minutes),
+    description: row.description || '',
+    status: row.status === 'published' ? 'available' : 'locked',
+  };
+}
+
 export default function CourseCatalog() {
   const [filter, setFilter] = useState('All');
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('courses')
+      .select('slug, title, description, level, category, duration_minutes, status, chapters(id, lessons(id))')
+      .order('sort_order')
+      .then(({ data }) => {
+        setCourses((data || []).map(toCourse));
+        setLoading(false);
+      });
+  }, []);
+
   const visibleCourses = courses.filter((course) => filter === 'All'
     || (filter === 'Core Tracks' && course.category === 'Core Track')
     || course.category === filter);
   const availableCourses = visibleCourses.filter((course) => course.status === 'available');
   const upcomingCourses = visibleCourses.filter((course) => course.status === 'locked');
+
+  if (loading) return null;
 
   return (
     <div className={styles.page}>
