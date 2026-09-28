@@ -4,12 +4,12 @@ import { useRef, useState } from 'react';
 import styles from './CourseBento.module.css';
 
 const modules = [
-  { title: 'Find your bearings.', name: 'Filesystem', accent: '#65dce9', description: 'Know where you are. Find your way through folders and paths.', commands: ['pwd', 'ls -la', 'cd'], examples: [
+  { title: 'Find your bearings.', name: 'Filesystem', accent: '#78cbd4', description: 'Know where you are. Find your way through folders and paths.', commands: ['pwd', 'ls -la', 'cd'], examples: [
     { command: 'pwd', output: '/home/learner', note: 'Your current working directory, printed as an absolute path.' },
     { command: 'ls -la', output: 'drwxr-xr-x  learner  .\ndrwxr-xr-x  learner  projects\n-rw-r--r--  learner  .bashrc', note: 'An illustrative listing, including hidden files and permissions.' },
     { command: 'cd projects && pwd', output: '/home/learner/projects', note: 'Change directory, then print the new location.' },
   ], skills: ['Read absolute paths', 'Inspect hidden files', 'Navigate directories'] },
-  { title: 'Make it your own.', name: 'Directories & files', accent: '#55e593', description: 'Create a workspace. Organize files with a few deliberate commands.', commands: ['mkdir', 'touch', 'cp'], examples: [
+  { title: 'Make it your own.', name: 'Directories & files', accent: '#68dfa0', description: 'Create a workspace. Organize files with a few deliberate commands.', commands: ['mkdir', 'touch', 'cp'], examples: [
     { command: 'mkdir notes && ls', output: 'notes/   projects/', note: 'mkdir creates a directory. ls lets you check the result.' },
     { command: 'touch notes/today.txt && ls notes', output: 'today.txt', note: 'Create an empty file inside the notes directory.' },
     { command: 'cp notes/today.txt notes/backup.txt && ls notes', output: 'backup.txt   today.txt', note: 'Copy a file while keeping the original.' },

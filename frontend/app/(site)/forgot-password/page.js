@@ -1,168 +1,49 @@
 'use client';
 
-import React from 'react';
+import { useEffect, useState } from 'react';
+import AuthShell from '@/components/auth/AuthShell';
+import AuthField from '@/components/auth/AuthField';
+import styles from '@/components/auth/Auth.module.css';
 import { supabase } from '@/lib/supabaseClient';
 
-const RESEND_COOLDOWN_SECONDS = 45;
-
 export default function ForgotPasswordPage() {
-    const [email, setEmail] = React.useState('');
-    const [status, setStatus] = React.useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
-    const [errorMessage, setErrorMessage] = React.useState('');
-    const [secondsLeft, setSecondsLeft] = React.useState(0);
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('idle');
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
-    React.useEffect(() => {
-        if (secondsLeft <= 0) return undefined;
-        const timer = setTimeout(() => setSecondsLeft((val) => val - 1), 1000);
-        return () => clearTimeout(timer);
-    }, [secondsLeft]);
+  useEffect(() => {
+    if (!secondsLeft) return undefined;
+    const timer = window.setTimeout(() => setSecondsLeft(secondsLeft - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [secondsLeft]);
 
-    function validateEmail(val) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  async function send(event) {
+    event?.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Enter a valid email address.');
+      document.getElementById('email')?.focus();
+      return;
     }
+    setError('');
+    setStatus('loading');
+    // Neutral outcome by design: always the same message whether or not the
+    // account exists — never reveal that here.
+    await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setStatus('sent');
+    setSecondsLeft(45);
+  }
 
-    async function sendResetLink() {
-        setStatus('loading');
-        // Neutral outcome by design: always shows the same "check your inbox"
-        // message whether or not the account exists — never reveal that here.
-        await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
-        });
-        setStatus('success');
-        setSecondsLeft(RESEND_COOLDOWN_SECONDS);
-    }
-
-    function handleSubmit(event) {
-        event.preventDefault();
-        setErrorMessage('');
-
-        if (!email.trim()) {
-            setErrorMessage('Please enter your email address.');
-            return;
-        }
-
-        if (!validateEmail(email)) {
-            setErrorMessage('Please enter a valid email address.');
-            return;
-        }
-
-        sendResetLink();
-    }
-
-    function handleResend() {
-        if (secondsLeft > 0 || status === 'loading') return;
-        sendResetLink();
-    }
-
-    return (
-        <div className="w-full min-h-[70vh] flex items-center justify-center px-4 py-16 md:py-24">
-            <div className="w-full max-w-[440px] bg-surface-cmd border border-divider-border/60 rounded-xl shadow-2xl p-6 md:p-8 flex flex-col gap-6">
-
-                {/* En-tête */}
-                <div className="flex flex-col gap-1">
-                    <h1 className="font-headline text-2xl font-semibold text-white tracking-tight">
-                        Reset password
-                    </h1>
-                    <p className="body-md">
-                        Enter the email associated with your account and we’ll send you instructions to reset your password.
-                    </p>
-                </div>
-
-                {/* Message d'erreur de validation ou service */}
-                {errorMessage && (
-                    <div
-                        className="rounded-lg p-3 flex items-start gap-3 bg-[#0B0E15] border border-accent-amber/30"
-                        role="alert"
-                    >
-            <span className="material-symbols-outlined text-accent-amber text-lg leading-none select-none">
-              warning
-            </span>
-                        <p className="body-sm text-accent-amber">{errorMessage}</p>
-                    </div>
-                )}
-
-                {/* État Succès : Email envoyé */}
-                {status === 'success' ? (
-                    <div className="flex flex-col gap-5">
-                        <div className="p-4 rounded-lg bg-[#0B0E15] border border-primary/30 flex items-start gap-3">
-              <span className="material-symbols-outlined text-primary text-xl leading-none select-none">
-                mark_email_read
-              </span>
-                            <div className="flex flex-col gap-1">
-                <span className="font-code text-xs uppercase tracking-wide text-primary font-semibold">
-                  Check your inbox
-                </span>
-                                <p className="body-sm text-on-surface">
-                                    If an account exists for <span className="text-white font-medium">{email}</span>, you will receive password reset instructions shortly.
-                                </p>
-                            </div>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={handleResend}
-                            disabled={secondsLeft > 0}
-                            className="btn-secondary w-full text-xs font-code uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {secondsLeft > 0 ? `Resend email in ${secondsLeft}s` : 'Resend reset link'}
-                        </button>
-                    </div>
-                ) : (
-                    /* Formulaire de saisie */
-                    <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
-                        <div className="flex flex-col gap-1.5">
-                            <label htmlFor="email" className="font-code text-xs text-on-surface font-medium">
-                                Email address
-                            </label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                placeholder="developer@domain.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-[#0B0E15] text-on-surface text-sm rounded-lg px-3 py-2.5 outline-none border border-transparent placeholder:text-on-surface-variant/60 focus:border-primary/50 focus:bg-black/40 transition-colors"
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={status === 'loading'}
-                            className="btn-primary w-full mt-1 disabled:opacity-75 disabled:cursor-not-allowed"
-                        >
-                            {status === 'loading' ? (
-                                <span className="material-symbols-outlined text-lg animate-spin select-none">
-                  progress_activity
-                </span>
-                            ) : (
-                                <>
-                                    Send reset link
-                                    <span className="material-symbols-outlined text-lg select-none">arrow_forward</span>
-                                </>
-                            )}
-                        </button>
-                    </form>
-                )}
-
-                {/* Pied de carte */}
-                <div className="pt-3 flex items-center justify-between text-sm border-t border-divider-border/60">
-                    <a
-                        href="/login"
-                        className="text-on-surface-variant hover:text-on-surface transition-colors hover:underline focus-visible flex items-center gap-1"
-                    >
-                        <span className="material-symbols-outlined text-base select-none">arrow_back</span>
-                        Back to log in
-                    </a>
-                    <a
-                        href="/register"
-                        className="text-on-surface-variant hover:text-on-surface transition-colors hover:underline focus-visible"
-                    >
-                        Create account
-                    </a>
-                </div>
-            </div>
-        </div>
-    );
+  return <AuthShell title="Forgot your password?" description="Enter your email address to request a password reset link.">
+    {status === 'sent' ? <div className={styles.result} role="status">
+      <p className={styles.successBox}>If an account exists for <strong>{email}</strong>, you will receive password reset instructions shortly.</p>
+      <button type="button" className={styles.secondaryButton} disabled={secondsLeft > 0} onClick={() => send()}>{secondsLeft ? `Try again in ${secondsLeft}s` : 'Request another link'}</button>
+    </div> : <form className={styles.form} onSubmit={send} noValidate>
+      <AuthField id="email" label="Email address" type="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(value) => { setEmail(value); setError(''); }} error={error} />
+      <button className={styles.button} type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Preparing request…' : 'Request reset link'}</button>
+    </form>}
+    <p className={styles.bottomLink}><a className={styles.textLink} href="/login">Back to log in</a></p>
+  </AuthShell>;
 }

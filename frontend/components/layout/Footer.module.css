@@ -15,7 +15,7 @@
   left: 50%;
   width: min(22rem, 46vw);
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 255, 102, .45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(104, 223, 160, .45), transparent);
   content: '';
   transform: translateX(-50%);
 }
@@ -72,8 +72,8 @@
   height: .48rem;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: #00e676;
-  box-shadow: 0 0 10px rgba(0, 230, 118, .55);
+  background: #68dfa0;
+  box-shadow: 0 0 10px rgba(104, 223, 160, .55);
 }
 
 .column {
@@ -85,7 +85,7 @@
 }
 .column h2 {
   margin: 0 0 .25rem;
-  color: #00e676;
+  color: #68dfa0;
   font-family: var(--font-code);
   font-size: .76rem;
   font-weight: 700;
@@ -100,9 +100,9 @@
   line-height: 1.45;
   transition: color 150ms ease;
 }
-.column a:hover { color: #00e676; }
+.column a:hover { color: #68dfa0; }
 .column a:focus-visible, .copyright a:focus-visible, .logo:focus-visible {
-  outline: 2px solid #00e676;
+  outline: 2px solid #68dfa0;
   outline-offset: 4px;
 }
 
@@ -137,8 +137,8 @@
   color: #9aa7aa;
   font-size: .66rem;
 }
-.terminal > p strong { color: #32d9ee; font-weight: 600; }
-.terminal > p b { color: #00e676; font-weight: 500; }
+.terminal > p strong { color: #78cbd4; font-weight: 600; }
+.terminal > p b { color: #68dfa0; font-weight: 500; }
 .terminal form { display: flex; gap: .55rem; }
 .terminal input {
   min-width: 0;
@@ -155,21 +155,21 @@
 .terminal input::placeholder { color: #78868c; }
 .terminal button {
   padding: 0 .85rem;
-  border: 1px solid #00e676;
+  border: 1px solid #176b49;
   border-radius: .25rem;
-  background: #10271e;
-  color: #52e49b;
+  background: #176b49;
+  color: #f1faf5;
   font-family: var(--font-code);
   font-size: .62rem;
   font-weight: 700;
   white-space: nowrap;
 }
-.terminal button:hover { background: #143324; }
+.terminal button:hover { background: #1c8058; }
 .terminal input:focus-visible, .terminal button:focus-visible {
-  outline: 2px solid #32d9ee;
+  outline: 2px solid #78cbd4;
   outline-offset: 2px;
 }
-.terminal .message { margin: .55rem 0 0; color: #52e49b; }
+.terminal .message { margin: .55rem 0 0; color: #68dfa0; }
 
 .copyright {
   grid-column: 1 / -1;
@@ -182,7 +182,7 @@
   font-family: var(--font-code);
   font-size: .72rem;
 }
-.copyright a { color: #00e676; font-weight: 700; }
+.copyright a { color: #68dfa0; font-weight: 700; }
 
 @media (max-width: 900px) {
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 1.5rem; }

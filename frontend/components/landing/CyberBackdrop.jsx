@@ -314,8 +314,8 @@ export default function CyberBackdrop() {
           void main() {
             float d = length(gl_PointCoord - 0.5);
             float a = mix(1.0-smoothstep(0.10,0.5,d), exp(-d*d*18.0)*(1.0-smoothstep(0.32,0.5,d)), vSoft);
-            vec3 green = vec3(0.12, 0.85, 0.55);
-            vec3 cyan = vec3(0.20, 0.65, 1.0);
+            vec3 green = vec3(0.41, 0.87, 0.63);
+            vec3 cyan = vec3(0.47, 0.80, 0.83);
             vec3 col = mix(green, cyan, vMix);
             // Pale stellar cores sit inside coloured halos.
             col = mix(col, vec3(0.72,0.95,1.0), (1.0-smoothstep(0.0,0.20,d))*(1.0-vSoft)*0.50);
@@ -335,7 +335,7 @@ export default function CyberBackdrop() {
 
       const glowAMat = new THREE.MeshBasicMaterial({
         map: glowTex,
-        color: 0x00ff66,
+        color: 0x68dfa0,
         transparent: true,
         opacity: 0.11,
         depthWrite: false,
@@ -351,7 +351,7 @@ export default function CyberBackdrop() {
 
       const glowBMat = new THREE.MeshBasicMaterial({
         map: glowTex,
-        color: 0x00e5ff,
+        color: 0x78cbd4,
         transparent: true,
         opacity: 0.06,
         depthWrite: false,

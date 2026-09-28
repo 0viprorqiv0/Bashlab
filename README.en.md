@@ -2,21 +2,26 @@
 
 [Tiếng Việt](README.md) | English
 
-BashLab aims to teach Bash through short lessons, hands-on practice, and feedback on learning goals. This repository currently contains a product landing page and design requirements for 17 pages. The backend and real Bash sandbox are not implemented yet.
+BashLab aims to teach Bash through short lessons, hands-on practice, and feedback on learning goals. The frontend currently includes a landing page, login and registration interfaces, a course catalog, and an Account & Security page. Backend authentication and a real Bash sandbox are not implemented yet.
 
 ## What works today
 
 | Part | Current state |
 | --- | --- |
-| Home page `/` | `app/(site)/page.js` renders `components/lookbook/Lookbook.jsx`: introduction, command demo, learning method, Shell 101, and FAQ |
+| Home page `/` | `app/(site)/page.js` renders `components/landing/Lookbook.jsx`: introduction, command demo, learning method, Shell 101, and FAQ; Lookbook snapping can be toggled |
 | Home page terminal | A simulation with predefined responses. It does not run operating system commands |
 | Visual effects | Lookbook navigation, terminal resize controls, and visual components; check scripts exist for curiosity and backdrop effects |
+| Login `/login` and registration `/register` | Forms and client-side validation are implemented; submissions only simulate an unavailable authentication service |
+| Email verification and password recovery | `/verify-email`, `/forgot-password`, and `/reset-password` have demo interfaces and states; no email is sent, link is verified, or password is changed |
+| Course catalog `/courses` | Three courses with All/Core Tracks/Security filters and progress/coming-soon states; View course leads to `/login` |
+| My Learning `/my-learning` | Separate overview with four sample metrics, a sample 12-month activity calendar, and a course catalog link; real progress data is not connected |
+| Account & Security `/account` | Profile editing/avatar, account details, password-reset request, and logout confirmation; profile uses localStorage, email/logout are demos |
 | 404 page | Implemented in `app/not-found.js` |
 | 403 interface | Present in `app/forbidden.js`, but there is no implemented backend permission flow or dedicated route using it |
-| Authentication, courses, learning, account, and admin pages | Documented in the designs; their feature routes are not implemented in `app/` |
+| Course detail, lesson workspace, and admin pages | Documented in the designs; not implemented yet |
 | Backend, database, email, and sandbox | Plans only; see [backend/README.md](backend/README.md) |
 
-Some text on the interface describes planned features, such as real sandboxes and saved progress. These services are not working yet. Links such as `/login`, `/courses`, and `/courses/shell-101` do not have matching pages yet.
+Real sandbox and saved-progress copy describes planned product behavior; those services are not active. `/courses/shell-101` and other course-learning detail pages are not implemented yet.
 
 ## Feature groups
 
@@ -40,16 +45,16 @@ This table describes design requirements, not a list of completed features.
 | Page | Group | Screen | Name | What it should do |
 | --- | --- | --- | --- | --- |
 | 01 | A | 01 | Landing | Introduce BashLab; offer a simulated command demo; present Shell 101 and FAQ; guide visitors to courses |
-| 02 | B | 02 | Login | Accept email and password; show/hide password; remember device; show loading and errors; link to registration and password recovery |
-| 03 | B | 03 | Register | Accept email, password, and confirmation; validate input; request account creation; show errors for each field |
-| 04 | B | 04 | Verify Email | Explain how to check email; resend with a waiting period; handle successful verification and invalid or expired links |
-| 05 | B | 05 | Forgot Password | Request a reset email; avoid revealing whether an account exists; allow resend or retry after errors |
-| 06 | B | 06 | Reset Password | Accept and confirm a new password; validate the reset link; show success or errors; return to login |
-| 07 | C | 07 | Course Catalog | List courses; filter All/Core Tracks/Security; show level, duration, progress, and coming-soon status |
+| 02 | B | 02 | Login | `/login` interface implemented: email/password, show/hide password, remember device, loading/error states, and links to registration and password recovery. Backend authentication is not implemented |
+| 03 | B | 03 | Register | `/register` interface implemented: email/password confirmation, client-side validation, and error states. Backend account creation is not implemented |
+| 04 | B | 04 | Verify Email | `/verify-email` shows inbox, resend cooldown, success, and expired-link demo states; no email is sent or verified |
+| 05 | B | 05 | Forgot Password | `/forgot-password` validates an email and shows a neutral response; sending email is a demo |
+| 06 | B | 06 | Reset Password | `/reset-password` validates new passwords and shows a demo result; tokens are not verified and no password is changed |
+| 07 | C | 07 | Course Catalog | `/courses` implemented with three courses, All/Core Tracks/Security filters, level, duration, progress, and coming-soon status; View course leads to login |
 | 08 | C | 08 | Course Overview | Explain the course and learning outcomes; show chapters, lesson states, and progress; continue learning |
-| 09 | D | 09 | My Learning | Show personal learning progress; resume a lesson; display study time, activity, command count, and skill progress |
+| 09 | D | 09 | My Learning | `/my-learning` shows four sample metrics, a sample 12-month activity calendar, and a catalog link; resume lesson and real progress are not implemented yet |
 | 10 | D | 10 | Interactive Lesson Workspace | Read and navigate lessons; view goals and hints; use a sandbox terminal; view session state; check solutions and receive feedback |
-| 11 | E | 12 | Account | Show account details, email, verification status, and read-only role; request a password-reset email; sign out |
+| 11 | E | 12 | Account | `/account` interface implemented: view/edit profile and avatar, role, and security settings; password-reset email and logout confirmation are demos, not connected to a backend |
 | 12 | F | 14 | Content | Manage the course/chapter/lesson tree; create and edit content; change order and publication status; open the lesson editor |
 | 13 | F | 16 | Lesson Editor | Edit lesson details, Markdown, goals, and check templates; preview content; manage drafts/publication; save or cancel |
 | 14 | G | 17 | Users | Search and paginate users; change roles; lock/unlock accounts with confirmation and a reason; protect the last active administrator |
@@ -68,8 +73,10 @@ Bash_lab/
 ├── frontend/
 │   ├── app/                 # App Router, layouts, and error interfaces
 │   ├── components/
-│   │   ├── lookbook/        # Current home page interface
-│   │   └── landing/         # Existing landing components
+│   │   ├── courses/         # Course catalog
+│   │   ├── landing/         # Lookbook and landing page sections
+│   │   ├── layout/          # Shared navbar, footer, and page shell
+│   │   └── shared/          # Shared UI components
 │   ├── scripts/             # Curiosity and backdrop checks
 │   ├── package.json
 │   └── package-lock.json
