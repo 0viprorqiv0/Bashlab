@@ -353,7 +353,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
   }
 
   // Fill terminal input with quick chip command
-  function useQuickCommand(cmdText) {
+  function handleQuickCommand(cmdText) {
     setTerminalInput(cmdText);
     inputRef.current?.focus();
   }
@@ -827,7 +827,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
                   key={cmd}
                   type="button"
                   className={styles.chipBtn}
-                  onClick={() => useQuickCommand(cmd)}
+                  onClick={() => handleQuickCommand(cmd)}
                   title={`Run command: ${cmd}`}
                 >
                   {cmd}
