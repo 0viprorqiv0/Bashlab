@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { initialLabs } from '@/data/labsData';
 import styles from './CourseDetail.module.css';
@@ -84,6 +84,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
   const [activeNav, setActiveNav] = useState('Library');
   const [tipIndex, setTipIndex] = useState(0);
   const [copiedTip, setCopiedTip] = useState(false);
+  const [isTipPaused, setIsTipPaused] = useState(false);
 
   const currentTip = bashTips[tipIndex];
 
@@ -98,6 +99,16 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
       setTimeout(() => setCopiedTip(false), 1800);
     }
   }
+
+  // Auto-cycle tips every 10 seconds
+  useEffect(() => {
+    if (isTipPaused) return;
+    const timer = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % bashTips.length);
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [isTipPaused, tipIndex]);
 
   // Derived calculations
   const solvedCount = useMemo(() => labs.filter((l) => l.status === 'solved').length, [labs]);
@@ -453,7 +464,11 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
           {/* Right Sidebar */}
           <aside className={styles.rightSidebar} aria-label="Learning tips and activities">
             {/* Tip & Trick Widget */}
-            <div className={styles.widget}>
+            <div
+              className={styles.widget}
+              onMouseEnter={() => setIsTipPaused(true)}
+              onMouseLeave={() => setIsTipPaused(false)}
+            >
               <div className={styles.widgetHeader}>
                 <div className={styles.widgetTitle}>
                   <span className="material-symbols-outlined text-accent">lightbulb</span>
@@ -463,19 +478,28 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                   type="button"
                   className={styles.tipShuffleBtn}
                   onClick={handleNextTip}
-                  title="Show another tip"
+                  title="Cycle to next tip (auto-cycles every 10s)"
                 >
                   <span className="material-symbols-outlined text-xs">autorenew</span>
                   <span>Next Tip</span>
                 </button>
               </div>
 
-              {/* Tip Content Card */}
-              <div className={styles.tipCard}>
+              {/* 10-second Animated Countdown Progress Bar */}
+              <div className={styles.tipProgressBar}>
+                <div
+                  key={`${currentTip.id}-${isTipPaused}`}
+                  className={`${styles.tipProgressFill} ${isTipPaused ? styles.tipProgressPaused : ''}`}
+                />
+              </div>
+
+              {/* Animated Tip Content Card */}
+              <div key={currentTip.id} className={styles.tipCard}>
                 <div className={styles.tipMetaRow}>
                   <span className={styles.tipCategoryBadge}>{currentTip.category}</span>
                   <span className={styles.tipIndexIndicator}>
                     #{tipIndex + 1} of {bashTips.length}
+                    {isTipPaused && ' · Paused'}
                   </span>
                 </div>
 
