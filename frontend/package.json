@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "test:curiosity": "node scripts/check-curiosity.mjs",
-    "test:backdrop": "node scripts/check-backdrop.mjs"
+    "test:backdrop": "node scripts/check-backdrop.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report tests/e2e/report"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
@@ -20,6 +23,7 @@
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "autoprefixer": "^10.4.20",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.5",

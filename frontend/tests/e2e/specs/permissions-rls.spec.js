@@ -1,0 +1,134 @@
+// This is the core of "phân quyền" coverage: the UI guard (AdminGate) is
+// UX-only by design (see its own comment in the component), so the real
+// assertions here go straight at Postgres RLS and the admin_* RPCs — the
+// actual security boundary — the same way a learner with dev tools open
+// could try to bypass the UI.
+const path = require('path');
+const { test, expect } = require('@playwright/test');
+const { signIn, forToken } = require('../support/apiClient');
+const { adminClient } = require('../support/supabaseAdmin');
+const { loadUsers } = require('../support/testUsers');
+
+const authDir = path.join(__dirname, '..', '.auth');
+let users;
+test.beforeAll(() => { users = loadUsers(); });
+
+test.describe('admin UI guard (UX layer)', () => {
+  test.use({ storageState: path.join(authDir, 'learner.json') });
+  for (const section of ['content', 'users', 'activity']) {
+    test(`a logged-in learner sees 403 on /admin/${section}`, async ({ page }) => {
+      await page.goto(`/admin/${section}`);
+      await expect(page.getByText('You do not have permission to access this page.')).toBeVisible();
+    });
+  }
+});
+
+test.describe('admin UI guard (admin allowed)', () => {
+  test.use({ storageState: path.join(authDir, 'admin.json') });
+  test('an admin reaches /admin/content and does not see the 403 page', async ({ page }) => {
+    await page.goto('/admin/content');
+    await expect(page.getByRole('heading', { name: 'Content' })).toBeVisible();
+    await expect(page.getByText('You do not have permission')).toHaveCount(0);
+  });
+});
+
+test.describe('RLS / RPC boundary — learner token, bypassing the UI entirely', () => {
+  let api;
+
+  test.beforeAll(async () => {
+    const session = await signIn(users.learner.email, users.learner.password);
+    api = forToken(session.access_token);
+  });
+
+  test('every admin_* RPC rejects a learner with 42501 forbidden', async () => {
+    for (const [fn, args] of [
+      ['admin_list_users', { p_search: '', p_limit: 5, p_offset: 0 }],
+      ['admin_set_user_role', { target: users.target.id, new_role: 'admin', reason: 'e2e probe' }],
+      ['admin_set_user_lock', { target: users.target.id, locked: true, reason: 'e2e probe' }],
+      ['admin_stop_session', { p_session: '00000000-0000-0000-0000-000000000000', p_reason: 'e2e probe' }],
+    ]) {
+      const { status, data } = await api.rpc(fn, args);
+      expect(status, `${fn} should be rejected`).toBe(403);
+      expect(data.code).toBe('42501');
+      expect(data.message).toBe('forbidden');
+    }
+  });
+
+  test('cannot write to courses/chapters/lessons', async () => {
+    const { status, data } = await api.insert('courses', { title: 'e2e hack', slug: `e2e-hack-${Date.now()}`, status: 'draft', sort_order: 999 });
+    expect(status).toBe(403);
+    expect(data.code).toBe('42501');
+  });
+
+  test('draft/hidden courses are invisible — only published rows come back', async () => {
+    const { status, data } = await api.select('courses', '?select=slug,status');
+    expect(status).toBe(200);
+    expect(data.every((row) => row.status === 'published')).toBe(true);
+    expect(data.some((row) => row.slug === 'shell-101')).toBe(true);
+  });
+
+  test('admin_logs is invisible to a learner (RLS filters rows, not an error)', async () => {
+    const { status, data } = await api.select('admin_logs', '?select=id&limit=5');
+    expect(status).toBe(200);
+    expect(data).toEqual([]);
+  });
+
+  test('profiles: a learner only ever sees their own row', async () => {
+    const { status, data } = await api.select('profiles', '?select=id,email');
+    expect(status).toBe(200);
+    expect(data).toHaveLength(1);
+    expect(data[0].id).toBe(users.learner.id);
+  });
+
+  test('progress: a learner can write their own row but not impersonate another user', async () => {
+    const [{ data: lessons }] = await Promise.all([
+      adminClient.from('lessons').select('id').eq('slug', 'hello-bashlab').limit(1).then((r) => r),
+    ]);
+    const lessonId = lessons[0].id;
+
+    const own = await api.insert('progress', { user_id: users.learner.id, lesson_id: lessonId, status: 'done', completed_at: new Date().toISOString() });
+    expect(own.status).toBe(201);
+
+    const spoofed = await api.insert('progress', { user_id: users.target.id, lesson_id: lessonId, status: 'done' });
+    expect(spoofed.status).toBe(403);
+
+    await adminClient.from('progress').delete().eq('user_id', users.learner.id).eq('lesson_id', lessonId);
+  });
+});
+
+test.describe('RLS / RPC boundary — admin token', () => {
+  let api;
+
+  test.beforeAll(async () => {
+    const session = await signIn(users.admin.email, users.admin.password);
+    api = forToken(session.access_token);
+  });
+
+  test('admin cannot lock their own account (self-lock guard in the RPC, independent of "last admin")', async () => {
+    const { status, data } = await api.rpc('admin_set_user_lock', { target: users.admin.id, locked: true, reason: 'e2e self-lock probe' });
+    expect(status).toBe(400);
+    expect(data.message).toContain('cannot lock your own account');
+  });
+
+  test('admin can promote/demote a learner and read draft content, and every action is written to admin_logs', async () => {
+    // admin_set_user_role returns void — PostgREST responds 204 No Content on success.
+    const promote = await api.rpc('admin_set_user_role', { target: users.target.id, new_role: 'admin', reason: 'e2e promote' });
+    expect(promote.status).toBe(204);
+
+    const demote = await api.rpc('admin_set_user_role', { target: users.target.id, new_role: 'learner', reason: 'e2e demote' });
+    expect(demote.status).toBe(204);
+
+    const { data: logs } = await adminClient
+      .from('admin_logs')
+      .select('action, reason, actor_id, target_id')
+      .eq('target_id', users.target.id)
+      .order('created_at', { ascending: false })
+      .limit(2);
+    expect(logs.map((l) => l.action)).toEqual(['set_role:learner', 'set_role:admin']);
+    expect(logs.every((l) => l.actor_id === users.admin.id)).toBe(true);
+
+    const drafts = await api.select('courses', '?select=slug,status&status=eq.draft');
+    expect(drafts.status).toBe(200);
+    expect(drafts.data.length).toBeGreaterThan(0);
+  });
+});

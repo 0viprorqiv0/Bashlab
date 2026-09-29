@@ -55,9 +55,18 @@ export default function Navbar({ isTransparent = false }) {
 
     supabase.auth.getSession().then(({ data }) => loadUser(data.session));
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => loadUser(session));
+
+    // Editing the profile (Account page) writes straight to `profiles` and
+    // doesn't fire a Supabase auth event, so the navbar would otherwise only
+    // pick up the new name/initials after a full reload. Account page
+    // dispatches this event right after a successful save.
+    const onProfileUpdated = () => supabase.auth.getSession().then(({ data }) => loadUser(data.session));
+    window.addEventListener('bashlab:profile-updated', onProfileUpdated);
+
     return () => {
       cancelled = true;
       subscription.subscription.unsubscribe();
+      window.removeEventListener('bashlab:profile-updated', onProfileUpdated);
     };
   }, []);
 

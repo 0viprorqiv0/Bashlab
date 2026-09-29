@@ -154,6 +154,9 @@ export default function AccountPage() {
     }));
     setShowEditModal(false);
     setToast({ type: 'success', title: 'Profile Updated', message: 'Your account information has been saved successfully.' });
+    // The navbar loads its own copy of the profile and has no other way to
+    // know it just went stale (no Supabase auth event fires for this).
+    window.dispatchEvent(new Event('bashlab:profile-updated'));
   };
 
   // Handle Avatar Image Upload — stored as a base64 data URL directly in

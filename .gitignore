@@ -37,6 +37,9 @@ pnpm-debug.log*
 
 # Testing
 coverage/
+frontend/tests/e2e/.auth/
+frontend/tests/e2e/report/
+frontend/test-results/
 
 # Misc
 *.tsbuildinfo
