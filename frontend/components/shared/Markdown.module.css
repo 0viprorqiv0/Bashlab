@@ -1,0 +1,17 @@
+.markdown { color: #c9d2cd; font-size: 15px; line-height: 1.7; }
+.markdown h1 { font-family: var(--font-headline); font-size: 28px; font-weight: 500; letter-spacing: -.025em; color: #eef1ef; margin: 0 0 14px; }
+.markdown h2 { font-family: var(--font-headline); font-size: 20px; font-weight: 500; color: #eef1ef; margin: 26px 0 10px; }
+.markdown h3 { font-size: 16px; font-weight: 600; color: #eef1ef; margin: 20px 0 8px; }
+.markdown p { margin: 0 0 14px; }
+.markdown ul, .markdown ol { margin: 0 0 14px 20px; }
+.markdown ul { list-style: disc; }
+.markdown ol { list-style: decimal; }
+.markdown li { margin: 4px 0; }
+.markdown strong { color: #eef1ef; font-weight: 600; }
+.markdown a { color: #00E5FF; text-decoration: underline; }
+.markdown code { font-family: var(--font-code); font-size: 13px; background: #20292a; color: #b4d4bd; padding: 2px 6px; border-radius: 4px; }
+.codeBlock { position: relative; margin: 0 0 16px; }
+.codeBlock pre { background: #0b0e15; border: 1px solid #2c3635; border-radius: 8px; padding: 14px 16px; overflow-x: auto; }
+.codeBlock pre code { background: none; padding: 0; color: #d7e6dc; line-height: 1.6; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--font-code); font-size: 11px; color: #a3ada8; background: #1c2425; border: 1px solid #35403b; border-radius: 4px; padding: 3px 8px; opacity: .8; }
+.copy:hover { opacity: 1; color: #eef1ef; }

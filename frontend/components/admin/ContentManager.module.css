@@ -1,0 +1,25 @@
+.layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 18px; align-items: start; }
+.courseList { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.courseList button { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: #d3dad6; }
+.courseList button:hover { background: #1f2728; }
+.courseActive { background: #243030 !important; color: #fff !important; }
+.detail { display: flex; flex-direction: column; gap: 18px; }
+.treeHeader { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.treeHeader h2 { font-family: var(--font-headline); font-size: 18px; font-weight: 500; }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.formActions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
+.chapter { border-top: 1px solid #2c3635; padding: 10px 0; }
+.chapterRow { display: flex; align-items: center; gap: 10px; }
+.chapterRow strong { font-weight: 500; font-size: 15px; }
+.index { font-family: var(--font-code); font-size: 12px; color: #71867b; width: 22px; }
+.rowActions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+.lessons { margin: 6px 0 0 32px; display: flex; flex-direction: column; gap: 2px; }
+.lessonRow { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; font-size: 14px; }
+.lessonRow:hover { background: #1c2425; }
+.lessonRow > a { color: #d3dad6; }
+.lessonRow > a:hover { color: #fff; text-decoration: underline; }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .lessons { margin-left: 8px; }
+  .rowActions { flex-wrap: wrap; }
+}

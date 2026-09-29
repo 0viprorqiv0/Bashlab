@@ -4,14 +4,16 @@ import { useState } from 'react';
 import AuthShell from '@/components/auth/AuthShell';
 import AuthField from '@/components/auth/AuthField';
 import styles from '@/components/auth/Auth.module.css';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     const next = {};
     if (password.length < 8) next.password = 'Use at least 8 characters.';
@@ -22,12 +24,21 @@ export default function ResetPasswordPage() {
       return;
     }
     setStatus('loading');
-    window.setTimeout(() => setStatus('complete'), 700);
+    // The recovery session comes from the link Supabase emailed (parsed
+    // automatically from the URL by the client on page load).
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      setErrorMessage(error.message);
+      setStatus('error');
+      return;
+    }
+    setStatus('complete');
   }
 
-  return <AuthShell title="Create a new password" description="Choose a new password for your BashLab account." demoNote="Preview only — this form cannot change your password yet.">
+  return <AuthShell title="Create a new password" description="Choose a new password for your BashLab account.">
+    {status === 'error' && <p className={styles.errorBox} role="alert">{errorMessage || 'This reset link is invalid or has expired.'}</p>}
     {status === 'complete' ? <div className={styles.result} role="status">
-      <p className={styles.successBox}>Form preview complete. Your password was not changed because account recovery is not connected yet.</p>
+      <p className={styles.successBox}>Your password has been updated. You can now log in with your new credentials.</p>
       <a className={styles.button} href="/login">Back to log in</a>
     </div> : <form className={styles.form} onSubmit={submit} noValidate>
       <AuthField id="password" label="New password" type="password" autoComplete="new-password" value={password} onChange={(value) => { setPassword(value); setErrors({ ...errors, password: '' }); }} error={errors.password} hint="Use at least 8 characters." />

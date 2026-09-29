@@ -1,19 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AuthShell from '@/components/auth/AuthShell';
 import AuthField from '@/components/auth/AuthField';
 import styles from '@/components/auth/Auth.module.css';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  function submit(event) {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/my-learning');
+    });
+  }, [router]);
+
+  async function submit(event) {
     event.preventDefault();
     const next = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = 'Enter a valid email address.';
@@ -26,11 +36,21 @@ export default function RegisterPage() {
       return;
     }
     setStatus('loading');
-    window.setTimeout(() => setStatus('error'), 700);
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/verify-email` },
+    });
+    if (error) {
+      setErrorMessage(error.message);
+      setStatus('error');
+      return;
+    }
+    router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
   }
 
-  return <AuthShell title="Create your account" description="Start learning Bash with short lessons and hands-on practice." demoNote="Preview only — account creation is not connected yet.">
-    {status === 'error' && <p className={styles.errorBox} role="alert">Registration is unavailable while the account service is offline.</p>}
+  return <AuthShell title="Create your account" description="Start learning Bash with short lessons and hands-on practice.">
+    {status === 'error' && <p className={styles.errorBox} role="alert">{errorMessage || 'Could not create your account.'}</p>}
     <form className={styles.form} onSubmit={submit} noValidate>
       <AuthField id="email" label="Email address" type="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(value) => { setEmail(value); setErrors({ ...errors, email: '' }); }} error={errors.email} />
       <AuthField id="password" label="Password" type="password" autoComplete="new-password" value={password} onChange={(value) => { setPassword(value); setErrors({ ...errors, password: '' }); }} error={errors.password} hint="Use at least 8 characters." />

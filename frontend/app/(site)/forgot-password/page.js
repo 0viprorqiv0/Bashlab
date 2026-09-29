@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import AuthShell from '@/components/auth/AuthShell';
 import AuthField from '@/components/auth/AuthField';
 import styles from '@/components/auth/Auth.module.css';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ export default function ForgotPasswordPage() {
     return () => window.clearTimeout(timer);
   }, [secondsLeft]);
 
-  function send(event) {
+  async function send(event) {
     event?.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError('Enter a valid email address.');
@@ -26,12 +27,18 @@ export default function ForgotPasswordPage() {
     }
     setError('');
     setStatus('loading');
-    window.setTimeout(() => { setStatus('sent'); setSecondsLeft(45); }, 700);
+    // Neutral outcome by design: always the same message whether or not the
+    // account exists — never reveal that here.
+    await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setStatus('sent');
+    setSecondsLeft(45);
   }
 
-  return <AuthShell title="Forgot your password?" description="Enter your email address to request a password reset link." demoNote="Preview only — no reset email is sent.">
+  return <AuthShell title="Forgot your password?" description="Enter your email address to request a password reset link.">
     {status === 'sent' ? <div className={styles.result} role="status">
-      <p className={styles.successBox}>If an account exists for <strong>{email}</strong>, reset instructions will be sent when email delivery is available.</p>
+      <p className={styles.successBox}>If an account exists for <strong>{email}</strong>, you will receive password reset instructions shortly.</p>
       <button type="button" className={styles.secondaryButton} disabled={secondsLeft > 0} onClick={() => send()}>{secondsLeft ? `Try again in ${secondsLeft}s` : 'Request another link'}</button>
     </div> : <form className={styles.form} onSubmit={send} noValidate>
       <AuthField id="email" label="Email address" type="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(value) => { setEmail(value); setError(''); }} error={error} />

@@ -1,0 +1,16 @@
+.crumbs { display: flex; align-items: center; gap: 8px; font-family: var(--font-code); font-size: 12px; color: #a3ada8; margin-bottom: 12px; }
+.crumbs a { display: inline-flex; align-items: center; gap: 4px; color: #b4d4bd; }
+.crumbs a :global(.material-symbols-outlined) { font-size: 16px; }
+.crumbs span { color: #5d6f63; }
+.saveBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.body { min-width: 0; }
+.toolbar { display: flex; gap: 2px; margin-bottom: 8px; }
+.preview { min-height: 420px; padding: 6px 4px; }
+.side { display: flex; flex-direction: column; gap: 14px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.sideTitle { font-family: var(--font-headline); font-size: 16px; font-weight: 500; }
+.objective { display: flex; gap: 6px; }
+.objective input { flex: 1; background: #0b0e15; border: 1px solid #2c3635; border-radius: 6px; padding: 8px 10px; color: #eef1ef; font-size: 13px; outline: none; }
+.objective input:focus { border-color: #b4d4bd; }
+@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }

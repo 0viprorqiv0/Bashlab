@@ -1,0 +1,206 @@
+#!/usr/bin/python3
+"""Trusted, single-request runner. Never run a command outside Bubblewrap."""
+import ctypes
+import json
+import os
+import re
+import resource
+import selectors
+import signal
+import stat
+import subprocess
+import sys
+import time
+
+ROOT = '/var/tmp/bashlab/workspaces'
+HOME = '/home/student'
+CAP = 64 * 1024
+UUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
+
+
+def valid_cwd(value):
+    return (isinstance(value, str) and value.startswith('/') and '\0' not in value
+            and len(value.encode('utf-8')) <= 4096
+            and '..' not in value.split('/') and os.path.normpath(value) == value)
+
+
+def read_request():
+    raw = sys.stdin.buffer.read(32769)
+    if len(raw) > 32768:
+        raise ValueError('Request is too large')
+    request = json.loads(raw)
+    command = request.get('command')
+    cwd = request.get('cwd', HOME)
+    workspace = request.get('workspacePath', '')
+    if not isinstance(command, str) or not command.strip() or '\0' in command or len(command.encode()) > 8192:
+        raise ValueError('Invalid command')
+    if not valid_cwd(cwd):
+        raise ValueError('Invalid cwd')
+    if not isinstance(workspace, str) or os.path.dirname(workspace) != ROOT or not UUID.fullmatch(os.path.basename(workspace)):
+        raise ValueError('Invalid workspacePath')
+    for directory in [ROOT, workspace, workspace + '/home', workspace + '/tmp']:
+        if not stat.S_ISDIR(os.lstat(directory).st_mode):
+            raise ValueError('Workspace must contain real directories')
+    return command, cwd, workspace
+
+
+def run(command, cwd, workspace):
+    # Adopt/reap descendants even if bwrap dies. PR_SET_CHILD_SUBREAPER.
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(36, 1, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), 'Cannot enable child subreaper')
+    command_fd = os.memfd_create('bashlab-command', 0)
+    os.write(command_fd, command.encode('utf-8'))
+    os.lseek(command_fd, 0, os.SEEK_SET)
+    cwd_read, cwd_write = os.pipe()
+    status_read, status_write = os.pipe()
+    # Allocate pipe after memfd: FD 3 is installed in the child before exec.
+    # pass_fds includes 3 so subprocess does not close it after preexec_fn.
+    args = ['/usr/bin/bwrap', '--unshare-all', '--unshare-user', '--disable-userns',
+            '--json-status-fd', str(status_write),
+            '--die-with-parent', '--as-pid-1', '--cap-drop', 'ALL', '--clearenv',
+            '--setenv', 'HOME', HOME, '--setenv', 'PATH', '/usr/bin:/bin',
+            '--setenv', 'LANG', 'C.UTF-8', '--setenv', 'TERM', 'dumb',
+            '--ro-bind', '/usr', '/usr', '--symlink', 'usr/bin', '/bin',
+            '--symlink', 'usr/sbin', '/sbin', '--symlink', 'usr/lib', '/lib',
+            '--symlink', 'usr/lib64', '/lib64',
+            '--ro-bind', '/etc/passwd', '/etc/passwd', '--ro-bind', '/etc/group', '/etc/group',
+            '--proc', '/proc', '--dev', '/dev',
+            '--ro-bind', '/opt/bashlab/empty', '/dev/shm',
+            '--bind', workspace + '/home', HOME, '--bind', workspace + '/tmp', '/tmp',
+            '--ro-bind', '/opt/bashlab/wrap.sh', '/run/wrap.sh',
+            '--ro-bind-data', str(command_fd), '/run/command.sh',
+            '--remount-ro', '/dev', '--remount-ro', '/',
+            '/bin/bash', '--noprofile', '--norc', '-c',
+            # cwd is an argv value, never interpolated shell source. Missing cwd recovers HOME.
+            'cd -- "$1" 2>/dev/null || cd /home/student; exec /bin/bash --noprofile --norc /run/wrap.sh /run/command.sh',
+            'bashlab', cwd]
+
+    # Duplicate command fd above 3 before FD 3 becomes the metadata pipe.
+    import fcntl
+    high_command_fd = fcntl.fcntl(command_fd, fcntl.F_DUPFD_CLOEXEC, 10)
+    args[args.index('--ro-bind-data') + 1] = str(high_command_fd)
+
+    def prepare_child():
+        os.dup2(cwd_write, 3)
+        os.set_inheritable(3, True)
+        os.close(cwd_write)
+        resource.setrlimit(resource.RLIMIT_FSIZE, (10 * 1024 * 1024,) * 2)
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+
+    child = None
+    selector = selectors.DefaultSelector()
+    output = {'stdout': bytearray(), 'stderr': bytearray(), 'cwd': bytearray(), 'status': bytearray()}
+    total = 0
+    termination = 'completed'
+    deadline = time.monotonic() + 3.0
+    killed_at = None
+
+    def kill_sandbox():
+        nonlocal killed_at
+        if killed_at is None:
+            killed_at = time.monotonic()
+        try:
+            os.killpg(child.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        # --die-with-parent also kills the PID-namespace init if it changed groups.
+
+    try:
+        child = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, start_new_session=True,
+                                 pass_fds=tuple(set([3, cwd_write, status_write, high_command_fd])), preexec_fn=prepare_child)
+        os.close(cwd_write)
+        cwd_write = -1
+        os.close(status_write)
+        status_write = -1
+        for fd, label in [(child.stdout.fileno(), 'stdout'), (child.stderr.fileno(), 'stderr'), (cwd_read, 'cwd'), (status_read, 'status')]:
+            os.set_blocking(fd, False)
+            selector.register(fd, selectors.EVENT_READ, label)
+        while selector.get_map() or child.poll() is None:
+            now = time.monotonic()
+            if killed_at is None and now >= deadline:
+                termination = 'timeout'
+                kill_sandbox()
+            if killed_at is not None and now - killed_at > 2:
+                raise RuntimeError('Sandbox cleanup deadline exceeded')
+            for key, _ in selector.select(timeout=0.02):
+                chunk = os.read(key.fd, 16384)
+                if not chunk:
+                    selector.unregister(key.fd)
+                    continue
+                label = key.data
+                if label in ('cwd', 'status'):
+                    # CWD is untrusted metadata and has its own small storage cap.
+                    output[label].extend(chunk[:max(0, 4098 - len(output[label]))])
+                else:
+                    keep = max(0, CAP - total)
+                    output[label].extend(chunk[:keep])
+                    total += min(len(chunk), keep)
+                    if len(chunk) > keep and killed_at is None:
+                        termination = 'output_limit'
+                        kill_sandbox()
+                # Continue draining/discarding after the cap until all writers exit.
+        rc = child.wait()
+        # Bash is PID 1: its exit tears down the whole PID namespace, including
+        # background children. Reap adopted descendants before releasing the session.
+        cleanup_deadline = time.monotonic() + 2
+        while True:
+            try:
+                pid, _ = os.waitpid(-1, os.WNOHANG)
+            except ChildProcessError:
+                break
+            if pid == 0:
+                if time.monotonic() >= cleanup_deadline:
+                    raise RuntimeError('Descendants did not exit')
+                time.sleep(0.01)
+        metadata = bytes(output['cwd'])
+        new_cwd = cwd
+        updated = False
+        if termination == 'completed' and metadata.endswith(b'\0') and metadata.count(b'\0') == 1:
+            candidate = metadata[:-1].decode('utf-8', errors='replace')
+            if valid_cwd(candidate):
+                new_cwd, updated = candidate, True
+        if termination == 'timeout':
+            rc = 124
+        elif termination == 'output_limit':
+            rc = 137
+        elif rc < 0:
+            rc = 128 - rc
+        # This FD is closed before the student command starts. Bubblewrap emits
+        # exit-code only after setup succeeds, so student stderr cannot spoof it.
+        statuses = [json.loads(line) for line in output['status'].splitlines()]
+        if termination == 'completed' and not any('exit-code' in item for item in statuses):
+            termination = 'runner_error'
+        # Invalid bytes are discarded: replacement characters could otherwise
+        # expand 64 KiB of binary output to 192 KiB of UTF-8 text.
+        return dict(stdout=output['stdout'].decode('utf-8', errors='ignore'),
+                    stderr=output['stderr'].decode('utf-8', errors='ignore'), exitCode=rc,
+                    cwd=new_cwd, cwdUpdated=updated, outputTruncated=termination == 'output_limit',
+                    termination=termination)
+    finally:
+        if child is not None and child.poll() is None:
+            kill_sandbox()
+            child.wait(timeout=2)
+        selector.close()
+        for fd in [command_fd, high_command_fd, cwd_read, cwd_write, status_read, status_write]:
+            if fd >= 0:
+                os.close(fd)
+        if child is not None:
+            child.stdout.close()
+            child.stderr.close()
+
+
+def main():
+    cwd = HOME
+    try:
+        command, cwd, workspace = read_request()
+        result = run(command, cwd, workspace)
+    except Exception as error:
+        result = dict(stdout='', stderr=f'Runner error: {error}', exitCode=125, cwd=cwd,
+                      cwdUpdated=False, outputTruncated=False, termination='runner_error')
+    print(json.dumps(result, ensure_ascii=True), flush=True)
+
+
+if __name__ == '__main__':
+    main()

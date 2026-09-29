@@ -3,30 +3,61 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './Account.module.css';
+import { supabase } from '@/lib/supabaseClient';
 
-export default function AccountPage({
-  userProps = {
-    name: 'Alex Morgan',
-    bio: 'DevOps Enthusiast & Shell Scripting Learner',
-    initials: 'AM',
-    avatarUrl: null,
-    email: 'alex.morgan@example.com',
-    userId: 'DEMO-0001',
-    age: 28,
-    location: 'Seattle, WA',
-    occupation: 'DevOps learner',
-    role: 'Learner',
-    roleDescription: 'Learner (Managed by platform)',
-    roleAccess: 'Read-only',
-    isVerified: true,
-    joinedDate: 'September 2026',
-  },
-}) {
+const EMPTY_USER = {
+  name: '',
+  bio: '',
+  initials: 'U',
+  avatarUrl: null,
+  email: '',
+  userId: '',
+  age: '',
+  location: '',
+  occupation: '',
+  role: 'learner',
+  roleDescription: 'Learner (Managed by platform)',
+  roleAccess: 'Read-only',
+  isVerified: false,
+  joinedDate: '',
+};
+
+function getInitials(fullName) {
+  const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'U';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function toUser(authUser, profile) {
+  return {
+    ...EMPTY_USER,
+    name: profile?.name || '',
+    bio: profile?.bio || '',
+    avatarUrl: profile?.avatar_url || null,
+    age: profile?.age ?? '',
+    location: profile?.location || '',
+    occupation: profile?.occupation || '',
+    initials: getInitials(profile?.name || authUser.email),
+    email: authUser.email,
+    userId: authUser.id,
+    role: profile?.role === 'admin' ? 'Admin' : 'Learner',
+    roleDescription: profile?.role === 'admin' ? 'Admin (Full access)' : 'Learner (Managed by platform)',
+    roleAccess: profile?.role === 'admin' ? 'Full access' : 'Read-only',
+    isVerified: !!authUser.email_confirmed_at,
+    joinedDate: authUser.created_at
+      ? new Date(authUser.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+      : '',
+  };
+}
+
+export default function AccountPage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
 
   // State management
-  const [user, setUser] = useState(userProps);
+  const [user, setUser] = useState(EMPTY_USER);
+  const [loading, setLoading] = useState(true);
   const [resetStatus, setResetStatus] = useState('idle'); // idle | loading | success | error
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -43,20 +74,28 @@ export default function AccountPage({
     occupation: '',
   });
 
-  // Load saved profile from localStorage if exists
+  // Load the real signed-in user + their profile row from Supabase.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedProfile = localStorage.getItem('bashlab_user_profile');
-        if (savedProfile) {
-          const parsed = JSON.parse(savedProfile);
-          setUser((prev) => ({ ...prev, ...parsed }));
-        }
-      } catch (e) {
-        console.error('Failed to parse saved user profile:', e);
+    let cancelled = false;
+    async function load() {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        router.push('/login');
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, bio, avatar_url, age, location, occupation, role')
+        .eq('id', authUser.id)
+        .single();
+      if (!cancelled) {
+        setUser(toUser(authUser, profile));
+        setLoading(false);
       }
     }
-  }, []);
+    load();
+    return () => { cancelled = true; };
+  }, [router]);
 
   // Auto hide toast after 5 seconds
   useEffect(() => {
@@ -67,13 +106,6 @@ export default function AccountPage({
       return () => clearTimeout(timer);
     }
   }, [toast]);
-
-  const getInitials = (fullName) => {
-    const parts = fullName.trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return 'U';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
 
   // Open Edit Profile Modal
   const handleOpenEditModal = () => {
@@ -88,128 +120,104 @@ export default function AccountPage({
     setShowEditModal(true);
   };
 
-  // Save Profile Changes
-  const handleSaveProfile = (e) => {
+  // Save Profile Changes — writes straight to `profiles`; RLS + column grants
+  // only let a user touch their own row's name/bio/avatar_url/age/location/occupation.
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
     if (!editForm.name.trim()) {
-      setToast({
-        type: 'error',
-        title: 'Validation Error',
-        message: 'Full Name cannot be empty.',
-      });
+      setToast({ type: 'error', title: 'Validation Error', message: 'Full Name cannot be empty.' });
       return;
     }
 
-    const updatedUser = {
-      ...user,
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('profiles').update({
       name: editForm.name.trim(),
       bio: editForm.bio.trim(),
-      email: editForm.email.trim(),
+      age: editForm.age === '' ? null : Number(editForm.age),
+      location: editForm.location.trim(),
+      occupation: editForm.occupation.trim(),
+    }).eq('id', authUser.id);
+
+    if (error) {
+      setToast({ type: 'error', title: 'Save failed', message: error.message });
+      return;
+    }
+
+    setUser((prev) => ({
+      ...prev,
+      name: editForm.name.trim(),
+      bio: editForm.bio.trim(),
       age: editForm.age === '' ? '' : Number(editForm.age),
       location: editForm.location.trim(),
       occupation: editForm.occupation.trim(),
       initials: getInitials(editForm.name),
-    };
-
-    setUser(updatedUser);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('bashlab_user_profile', JSON.stringify(updatedUser));
-    }
-
+    }));
     setShowEditModal(false);
-    setToast({
-      type: 'success',
-      title: 'Profile Updated',
-      message: 'Your account information has been saved successfully.',
-    });
+    setToast({ type: 'success', title: 'Profile Updated', message: 'Your account information has been saved successfully.' });
   };
 
-  // Handle Avatar Image Upload
+  // Handle Avatar Image Upload — stored as a base64 data URL directly in
+  // `avatar_url` (text column). No file storage bucket for this project.
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setToast({
-        type: 'error',
-        title: 'File Too Large',
-        message: 'Please choose an image under 5MB.',
-      });
+      setToast({ type: 'error', title: 'File Too Large', message: 'Please choose an image under 5MB.' });
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      const updatedUser = {
-        ...user,
-        avatarUrl: reader.result,
-      };
-      setUser(updatedUser);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('bashlab_user_profile', JSON.stringify(updatedUser));
+    reader.onload = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { error } = await supabase.from('profiles').update({ avatar_url: reader.result }).eq('id', authUser.id);
+      if (error) {
+        setToast({ type: 'error', title: 'Avatar update failed', message: error.message });
+        return;
       }
-      setToast({
-        type: 'success',
-        title: 'Avatar Updated',
-        message: 'Your profile picture has been updated.',
-      });
+      setUser((prev) => ({ ...prev, avatarUrl: reader.result }));
+      setToast({ type: 'success', title: 'Avatar Updated', message: 'Your profile picture has been updated.' });
     };
     reader.readAsDataURL(file);
   };
 
   // Remove Custom Avatar
-  const handleRemoveAvatar = () => {
-    const updatedUser = {
-      ...user,
-      avatarUrl: null,
-    };
-    setUser(updatedUser);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('bashlab_user_profile', JSON.stringify(updatedUser));
+  const handleRemoveAvatar = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', authUser.id);
+    if (error) {
+      setToast({ type: 'error', title: 'Avatar reset failed', message: error.message });
+      return;
     }
-    setToast({
-      type: 'info',
-      title: 'Avatar Reset',
-      message: 'Reverted to default initial avatar.',
-    });
+    setUser((prev) => ({ ...prev, avatarUrl: null }));
+    setToast({ type: 'info', title: 'Avatar Reset', message: 'Reverted to default initial avatar.' });
   };
 
   // Handle password reset email request
-  const handleSendResetEmail = () => {
+  const handleSendResetEmail = async () => {
     if (resetStatus === 'loading') return;
     setResetStatus('loading');
-
-    setTimeout(() => {
-      setResetStatus('success');
-      setToast({
-        type: 'success',
-        title: 'Reset Link Dispatched',
-        message: `A secure password reset email has been sent to ${user.email}. Please check your inbox.`,
-      });
-
-      // Reset button state back to idle after 4s
-      setTimeout(() => {
-        setResetStatus('idle');
-      }, 4000);
-    }, 1200);
+    await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResetStatus('success');
+    setToast({
+      type: 'success',
+      title: 'Reset Link Dispatched',
+      message: `A secure password reset email has been sent to ${user.email}. Please check your inbox.`,
+    });
+    setTimeout(() => setResetStatus('idle'), 4000);
   };
 
   // Handle Confirm Logout
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setShowLogoutModal(false);
-    setToast({
-      type: 'info',
-      title: 'Session Terminated',
-      message: 'Logging out and clearing active session tokens...',
-    });
-
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('bashlab_session');
-      }
-      router.push('/login');
-    }, 900);
+    setToast({ type: 'info', title: 'Session Terminated', message: 'Logging out and clearing active session tokens...' });
+    await supabase.auth.signOut();
+    router.push('/login');
   };
+
+  if (loading) return null;
 
   return (
     <div className={styles.page}>
@@ -246,7 +254,7 @@ export default function AccountPage({
               <h3>Edit profile</h3>
               <div className={styles.fields}>
                 <label htmlFor="edit-name-input">Full name<input autoFocus id="edit-name-input" required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></label>
-                <label htmlFor="edit-email-input">Email address<input id="edit-email-input" type="email" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} /></label>
+                <label htmlFor="edit-email-input">Email address<input id="edit-email-input" type="email" readOnly disabled value={editForm.email} title="Changing your sign-in email isn't supported here yet." /></label>
                 <label htmlFor="edit-age-input">Age<input id="edit-age-input" type="number" min="1" max="120" value={editForm.age} onChange={(e) => setEditForm({ ...editForm, age: e.target.value })} /></label>
                 <label htmlFor="edit-location-input">Location<input id="edit-location-input" value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} placeholder="City, country" /></label>
                 <label htmlFor="edit-occupation-input">Occupation<input id="edit-occupation-input" value={editForm.occupation} onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })} /></label>
