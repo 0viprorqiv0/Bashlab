@@ -678,92 +678,155 @@
   color: var(--accent);
 }
 
-.streakPill {
+/* Tip & Trick Widget */
+.tipShuffleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(104, 223, 160, 0.08);
+  border: 1px solid rgba(104, 223, 160, 0.25);
+  color: var(--accent);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.tipShuffleBtn:hover {
+  background: rgba(104, 223, 160, 0.18);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.tipCard {
+  background: #11161f;
+  border: 1px solid #232c38;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.tipMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.tipCategoryBadge {
+  font-family: var(--font-code);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #78cbd4;
+  background: rgba(120, 203, 212, 0.1);
+  border: 1px solid rgba(120, 203, 212, 0.25);
+  padding: 1px 7px;
+  border-radius: 4px;
+}
+
+.tipIndexIndicator {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tipTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.tipCodeBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #080b11;
+  border: 1px solid #26313d;
+  border-radius: 6px;
+  padding: 7px 12px;
+  margin-bottom: 10px;
+}
+
+.tipCodeBox code {
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tipCopyBtn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
   font-size: 11px;
-  font-weight: 600;
-  color: var(--amber);
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  padding: 2px 8px;
-  border-radius: 9999px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 150ms ease;
 }
 
-/* Mini Calendar */
-.calendarGrid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  text-align: center;
-  font-size: 11px;
+.tipCopyBtn:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.calDayHeader {
-  color: #6b7280;
-  font-size: 10px;
-  font-weight: 600;
-  padding-bottom: 4px;
+.tipExplanation {
+  font-size: 12px;
+  color: #9ba3b5;
+  line-height: 1.5;
+  margin: 0;
 }
 
-.calDay {
-  aspect-ratio: 1;
+/* Shortcuts Cheat-sheet */
+.shortcutsBox {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #202734;
+}
+
+.shortcutsTitle {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  color: var(--muted);
-  background: #11161f;
-  position: relative;
+  gap: 6px;
   font-size: 11px;
-}
-
-.calDayActive {
-  background: rgba(104, 223, 160, 0.15);
-  color: var(--accent);
   font-weight: 600;
-  border: 1px solid rgba(104, 223, 160, 0.4);
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
 }
 
-.calDayToday {
-  background: var(--accent) !important;
-  color: #0a0d14 !important;
-  font-weight: 700;
-  box-shadow: 0 0 10px rgba(104, 223, 160, 0.5);
-}
-
-.weeklyCard {
-  margin-top: 14px;
-  padding: 12px;
-  background: #11151c;
-  border: 1px solid #232c38;
-  border-radius: 8px;
-}
-
-.weeklyHeader {
+.shortcutsList {
   display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.shortcutItem {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
 }
 
-.weeklyHeader strong {
-  color: var(--ink);
-}
-
-.weeklyBar {
-  width: 100%;
-  height: 4px;
-  background: #202734;
-  border-radius: 9999px;
-  overflow: hidden;
-}
-
-.weeklyFill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 9999px;
+.kbd {
+  font-family: var(--font-code);
+  font-size: 11px;
+  background: #171d27;
+  border: 1px solid #2b3747;
+  color: #e2e8f0;
+  padding: 1px 7px;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* Daily Challenge Widget */

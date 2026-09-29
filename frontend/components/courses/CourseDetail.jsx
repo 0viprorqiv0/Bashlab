@@ -14,6 +14,65 @@ const categoryTabs = [
   { id: 'Automation & Scripting', label: 'Shell Scripting', icon: 'code' },
 ];
 
+const bashTips = [
+  {
+    id: 1,
+    title: 'Toggle Previous Directory',
+    command: 'cd -',
+    explanation: 'Jump back to your previous working directory without typing out full paths.',
+    category: 'Navigation',
+    tag: 'Pro Tip'
+  },
+  {
+    id: 2,
+    title: 'Re-run Last Command with Sudo',
+    command: 'sudo !!',
+    explanation: 'Forgot root privileges on a command? Automatically re-runs it with sudo prepended.',
+    category: 'Privileges',
+    tag: 'Shortcut'
+  },
+  {
+    id: 3,
+    title: 'Reverse History Search',
+    command: 'Ctrl + R',
+    explanation: 'Search interactively backwards through your entire command history by keyword.',
+    category: 'History',
+    tag: 'Speed'
+  },
+  {
+    id: 4,
+    title: 'Reuse Last Command Argument',
+    command: '!$',
+    explanation: 'Expands to the last argument of previous command (e.g. mkdir project && cd !$).',
+    category: 'Expansion',
+    tag: 'Productivity'
+  },
+  {
+    id: 5,
+    title: 'Clear Screen Without Losing Context',
+    command: 'Ctrl + L',
+    explanation: 'Redraws and clears the terminal viewport while keeping your active command line intact.',
+    category: 'View',
+    tag: 'Quick Key'
+  },
+  {
+    id: 6,
+    title: 'Jump to Beginning / End of Line',
+    command: 'Ctrl + A / Ctrl + E',
+    explanation: 'Jump cursor to line beginning with Ctrl+A, or line end with Ctrl+E instantly.',
+    category: 'Editing',
+    tag: 'Navigation'
+  },
+  {
+    id: 7,
+    title: 'Delete Word Backward',
+    command: 'Ctrl + W',
+    explanation: 'Deletes the previous word before cursor instead of pressing Backspace repeatedly.',
+    category: 'Editing',
+    tag: 'Speed'
+  }
+];
+
 export default function CourseDetail({ courseId = 'shell-101' }) {
   const router = useRouter();
   const [labs, setLabs] = useState(initialLabs);
@@ -23,6 +82,22 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
   const [difficultyFilter, setDifficultyFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [activeNav, setActiveNav] = useState('Library');
+  const [tipIndex, setTipIndex] = useState(0);
+  const [copiedTip, setCopiedTip] = useState(false);
+
+  const currentTip = bashTips[tipIndex];
+
+  function handleNextTip() {
+    setTipIndex((prev) => (prev + 1) % bashTips.length);
+  }
+
+  function handleCopyTip(cmd) {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(cmd);
+      setCopiedTip(true);
+      setTimeout(() => setCopiedTip(false), 1800);
+    }
+  }
 
   // Derived calculations
   const solvedCount = useMemo(() => labs.filter((l) => l.status === 'solved').length, [labs]);
@@ -376,47 +451,78 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
           </main>
 
           {/* Right Sidebar */}
-          <aside className={styles.rightSidebar} aria-label="Learning streak and activities">
-            {/* Streak & Calendar Widget */}
+          <aside className={styles.rightSidebar} aria-label="Learning tips and activities">
+            {/* Tip & Trick Widget */}
             <div className={styles.widget}>
               <div className={styles.widgetHeader}>
                 <div className={styles.widgetTitle}>
-                  <span className="material-symbols-outlined">calendar_month</span>
-                  <span>Daily Streak</span>
+                  <span className="material-symbols-outlined text-accent">lightbulb</span>
+                  <span>Tip &amp; Trick</span>
                 </div>
-                <span className={styles.streakPill}>
-                  🔥 28 Days
-                </span>
+                <button
+                  type="button"
+                  className={styles.tipShuffleBtn}
+                  onClick={handleNextTip}
+                  title="Show another tip"
+                >
+                  <span className="material-symbols-outlined text-xs">autorenew</span>
+                  <span>Next Tip</span>
+                </button>
               </div>
 
-              <div className={styles.calendarGrid}>
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
-                  <div key={idx} className={styles.calDayHeader}>{day}</div>
-                ))}
-                {/* 30 days grid mock */}
-                {Array.from({ length: 30 }, (_, i) => {
-                  const day = i + 1;
-                  const isActive = [2, 3, 5, 8, 9, 11, 14, 15, 17, 18, 20, 22, 23, 24, 26, 27, 28].includes(day);
-                  const isToday = day === 29;
-                  return (
-                    <div
-                      key={day}
-                      className={`${styles.calDay} ${isActive ? styles.calDayActive : ''} ${isToday ? styles.calDayToday : ''}`}
-                      title={`Day ${day}: ${isToday ? 'Today (Active)' : isActive ? 'Practiced' : 'Rest'}`}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
+              {/* Tip Content Card */}
+              <div className={styles.tipCard}>
+                <div className={styles.tipMetaRow}>
+                  <span className={styles.tipCategoryBadge}>{currentTip.category}</span>
+                  <span className={styles.tipIndexIndicator}>
+                    #{tipIndex + 1} of {bashTips.length}
+                  </span>
+                </div>
+
+                <h4 className={styles.tipTitle}>{currentTip.title}</h4>
+
+                {/* Command Snippet */}
+                <div className={styles.tipCodeBox}>
+                  <code>{currentTip.command}</code>
+                  <button
+                    type="button"
+                    className={styles.tipCopyBtn}
+                    onClick={() => handleCopyTip(currentTip.command)}
+                    title="Copy command"
+                  >
+                    <span className="material-symbols-outlined text-xs">
+                      {copiedTip ? 'check' : 'content_copy'}
+                    </span>
+                    <span>{copiedTip ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+
+                <p className={styles.tipExplanation}>{currentTip.explanation}</p>
               </div>
 
-              <div className={styles.weeklyCard}>
-                <div className={styles.weeklyHeader}>
-                  <strong>Weekly Milestone</strong>
-                  <span className="text-primary font-code">4 / 5 Labs</span>
+              {/* Quick Shell Shortcuts Cheat-sheet */}
+              <div className={styles.shortcutsBox}>
+                <div className={styles.shortcutsTitle}>
+                  <span className="material-symbols-outlined text-xs">keyboard</span>
+                  <span>Essential Bash Keybindings</span>
                 </div>
-                <div className={styles.weeklyBar}>
-                  <div className={styles.weeklyFill} style={{ width: '80%' }} />
+                <div className={styles.shortcutsList}>
+                  <div className={styles.shortcutItem}>
+                    <kbd className={styles.kbd}>Ctrl + R</kbd>
+                    <span>Search history</span>
+                  </div>
+                  <div className={styles.shortcutItem}>
+                    <kbd className={styles.kbd}>Ctrl + L</kbd>
+                    <span>Clear viewport</span>
+                  </div>
+                  <div className={styles.shortcutItem}>
+                    <kbd className={styles.kbd}>Ctrl + C</kbd>
+                    <span>Halt / Cancel process</span>
+                  </div>
+                  <div className={styles.shortcutItem}>
+                    <kbd className={styles.kbd}>Tab</kbd>
+                    <span>Auto-complete path</span>
+                  </div>
                 </div>
               </div>
             </div>
