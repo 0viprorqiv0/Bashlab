@@ -8,7 +8,7 @@ export default function Navbar({ isTransparent = false }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
   const pathname = usePathname();
-  const isUserArea = pathname === '/account' || pathname === '/my-learning';
+  const isUserArea = pathname === '/account' || pathname === '/my-learning' || pathname?.startsWith('/courses/');
   const dropdownRef = React.useRef(null);
 
   const navLinks = [
@@ -27,7 +27,8 @@ export default function Navbar({ isTransparent = false }) {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full z-50 px-6 lg:px-8 py-2.5 transition-all duration-200 ${
+      style={{ height: '64px' }}
+      className={`fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 ${
         isTransparent
           ? 'border-b border-[#26313d]/60 bg-[#111720]/35 backdrop-blur-md'
           : 'border-b border-[#26313d] bg-[#111720]/95 shadow-[0_8px_28px_rgba(0,0,0,0.3)] backdrop-blur-xl'
@@ -102,7 +103,7 @@ export default function Navbar({ isTransparent = false }) {
           ) : (
             <>
               <a href="/login" className="hidden sm:inline-flex text-xs font-code text-on-surface-variant hover:text-white px-3 py-1.5 transition-colors focus-visible">Log in</a>
-              <a href="/register" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Start learning</a>
+              <a href="/courses/shell-101" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Start learning</a>
             </>
           )}
 
@@ -152,7 +153,7 @@ export default function Navbar({ isTransparent = false }) {
               ) : (
                 <>
                   <a href="/login" className="text-sm font-code text-on-surface-variant hover:text-white text-center py-2 focus-visible" onClick={() => setMobileOpen(false)}>Log in</a>
-                  <a href="/register" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
+                  <a href="/courses/shell-101" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
                     Start learning
                     <span className="material-symbols-outlined text-base">arrow_forward</span>
                   </a>

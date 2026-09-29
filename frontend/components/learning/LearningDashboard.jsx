@@ -63,7 +63,7 @@ export default function LearningDashboard({ days }) {
           <p>Bash Basics <span>·</span> 4 of 12 lessons completed</p>
         </div>
         <div className={styles.courseAction}>
-          <a href="/login">Continue learning <Icon name="arrow_forward" /></a>
+          <a href="/courses/shell-101">Continue learning <Icon name="arrow_forward" /></a>
           <div className={styles.courseProgress} role="progressbar" aria-label="Shell 101 sample progress" aria-valuenow={4} aria-valuemin={0} aria-valuemax={12}><span /></div>
         </div>
       </section>

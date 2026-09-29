@@ -1,3 +1,29 @@
 .authMain {
-  padding-top: 4rem;
+  padding-top: 64px;
+}
+
+.workspaceMain {
+  padding-top: 64px;
+  height: 100vh;
+  height: 100svh;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.standardMain {
+  padding-top: 64px;
+  position: relative;
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.defaultMain {
+  padding-top: 64px;
+  position: relative;
+  box-sizing: border-box;
 }
