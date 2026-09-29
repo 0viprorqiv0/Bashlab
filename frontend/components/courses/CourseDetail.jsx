@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { initialLabs } from '@/data/labsData';
 import styles from './CourseDetail.module.css';
+import {
+  fetchCourseLabs, fetchProgressMap, getCurrentUser, markLessonDone, markLessonUndone, toDisplayLab,
+} from '@/lib/learning';
 
 const categoryTabs = [
   { id: 'All', label: 'All Topics', icon: 'grid_view' },
@@ -76,7 +78,9 @@ const bashTips = [
 
 export default function CourseDetail({ courseId = 'shell-101' }) {
   const router = useRouter();
-  const [labs, setLabs] = useState(initialLabs);
+  const [state, setState] = useState({ loading: true });
+  const [labs, setLabs] = useState([]);
+  const [user, setUser] = useState(null);
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeTag, setActiveTag] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,6 +92,20 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
   const [isTipPaused, setIsTipPaused] = useState(false);
 
   const currentTip = bashTips[tipIndex];
+
+  const load = useCallback(async () => {
+    const [course, currentUser] = await Promise.all([fetchCourseLabs(courseId), getCurrentUser()]);
+    setUser(currentUser);
+    if (!course) {
+      setState({ loading: false, notFound: true });
+      return;
+    }
+    const progressMap = currentUser ? await fetchProgressMap(currentUser.id) : new Map();
+    setLabs(course.labs.map((row) => toDisplayLab(row, progressMap)));
+    setState({ loading: false, courseTitle: course.title });
+  }, [courseId]);
+
+  useEffect(() => { load(); }, [load]);
 
   function handleNextTip() {
     setTipIndex((prev) => (prev + 1) % bashTips.length);
@@ -113,7 +131,13 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
 
   // Derived calculations
   const solvedCount = useMemo(() => labs.filter((l) => l.status === 'solved').length, [labs]);
-  const progressPercent = Math.round((solvedCount / labs.length) * 100);
+  // Stable "pick of the day" — same lab all day for every visitor, changes daily.
+  const dailyChallengeLab = useMemo(() => {
+    if (labs.length === 0) return null;
+    const dayIndex = Math.floor(Date.now() / 86400000) % labs.length;
+    return labs[dayIndex];
+  }, [labs]);
+  const progressPercent = labs.length ? Math.round((solvedCount / labs.length) * 100) : 0;
 
   // Filtered labs
   const filteredLabs = useMemo(() => {
@@ -153,22 +177,40 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
 
   // Handle random lab pick
   function handleRandomPick() {
+    if (labs.length === 0) return;
     const unsolved = labs.filter((l) => l.status !== 'solved');
     const pool = unsolved.length > 0 ? unsolved : labs;
     const randomIndex = Math.floor(Math.random() * pool.length);
-    router.push(`/courses/${courseId}/labs/${pool[randomIndex].id}`);
+    router.push(`/courses/${courseId}/labs/${pool[randomIndex].slug}`);
   }
 
-  // Toggle solve status directly from table checkbox
-  function toggleSolveStatus(labId) {
-    setLabs((prev) =>
-      prev.map((lab) => {
-        if (lab.id === labId) {
-          const nextStatus = lab.status === 'solved' ? 'todo' : 'solved';
-          return { ...lab, status: nextStatus };
-        }
-        return lab;
-      })
+  // Toggle solve status directly from table checkbox — writes straight to
+  // `progress` (RLS lets a learner touch only their own rows).
+  async function toggleSolveStatus(lab) {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    const willSolve = lab.status !== 'solved';
+    setLabs((prev) => prev.map((item) => (item.id === lab.id ? { ...item, status: willSolve ? 'solved' : 'todo' } : item)));
+    const { error } = willSolve ? await markLessonDone(user.id, lab.id) : await markLessonUndone(user.id, lab.id);
+    if (error) {
+      // Roll back optimistic update on failure.
+      setLabs((prev) => prev.map((item) => (item.id === lab.id ? { ...item, status: lab.status } : item)));
+    }
+  }
+
+  if (state.loading) return null;
+  if (state.notFound) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <p className={styles.breadcrumbs}>
+            <Link href="/courses"><span className="material-symbols-outlined text-base">arrow_back</span>Courses</Link>
+          </p>
+          <p>This course does not exist or is not published yet.</p>
+        </div>
+      </div>
     );
   }
 
@@ -183,7 +225,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
               Courses
             </Link>
             <span className="separator">/</span>
-            <span className="current">Shell 101 — Bash Basics</span>
+            <span className="current">{state.courseTitle}</span>
           </div>
 
           <div className={styles.courseHeaderRight}>
@@ -199,8 +241,8 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
           {/* Left Sidebar */}
           <aside className={styles.leftSidebar} aria-label="Course navigation">
             <div className={styles.courseSummaryCard}>
-              <div className={styles.summaryCode}>SHELL / 101</div>
-              <h2 className={styles.summaryTitle}>Shell 101 — Bash Basics</h2>
+              <div className={styles.summaryCode}>{courseId.toUpperCase()}</div>
+              <h2 className={styles.summaryTitle}>{state.courseTitle}</h2>
               <div className={styles.summaryProgress}>
                 <div className={styles.summaryProgressBar}>
                   <div className={styles.summaryProgressFill} style={{ width: `${progressPercent}%` }} />
@@ -355,7 +397,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                     <th className={styles.statusCell}>Status</th>
                     <th className={styles.indexCell}>#</th>
                     <th className={styles.titleCell}>Lab Title &amp; Command Focus</th>
-                    <th className={styles.rateCell}>Acceptance</th>
+                    <th className={styles.rateCell}>Grading</th>
                     <th className={styles.difficultyCell}>Difficulty</th>
                     <th className={styles.actionCell}>Action</th>
                   </tr>
@@ -368,17 +410,17 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                       </td>
                     </tr>
                   ) : (
-                    filteredLabs.map((lab) => (
+                    filteredLabs.map((lab, index) => (
                       <tr
                         key={lab.id}
                         className={styles.problemRow}
-                        onClick={() => router.push(`/courses/${courseId}/labs/${lab.id}`)}
+                        onClick={() => router.push(`/courses/${courseId}/labs/${lab.slug}`)}
                       >
                         <td
                           className={styles.statusCell}
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleSolveStatus(lab.id);
+                            toggleSolveStatus(lab);
                           }}
                         >
                           {lab.status === 'solved' ? (
@@ -406,7 +448,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                         </td>
 
                         <td className={styles.indexCell}>
-                          {String(lab.id).padStart(2, '0')}
+                          {String(index + 1).padStart(2, '0')}
                         </td>
 
                         <td className={styles.titleCell}>
@@ -421,7 +463,9 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                         </td>
 
                         <td className={styles.rateCell}>
-                          {lab.acceptance}
+                          {lab.verifier
+                            ? <span title="Check Solution runs a real sandbox check">Auto-checked</span>
+                            : <span title="Marked complete manually">Manual</span>}
                         </td>
 
                         <td className={styles.difficultyCell}>
@@ -442,11 +486,11 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                           className={styles.actionCell}
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/courses/${courseId}/labs/${lab.id}`);
+                            router.push(`/courses/${courseId}/labs/${lab.slug}`);
                           }}
                         >
                           <Link
-                            href={`/courses/${courseId}/labs/${lab.id}`}
+                            href={`/courses/${courseId}/labs/${lab.slug}`}
                             className={`${styles.startLabBtn} ${lab.status === 'solved' ? styles.reviewBtn : ''}`}
                             aria-label={`${lab.status === 'solved' ? 'Review' : 'Start'} lab ${lab.title}`}
                           >
@@ -552,20 +596,22 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
               </div>
             </div>
 
-            {/* Daily Challenge Widget */}
+            {/* Daily Challenge Widget — a stable pick of the day from real labs */}
+            {dailyChallengeLab && (
             <div className={`${styles.widget} ${styles.challengeCard}`}>
               <div className={styles.challengeTag}>Daily Terminal Mission</div>
               <h4 className={styles.challengeTitle}>
-                Filter unique IP addresses and sort by frequency using cut &amp; uniq
+                {dailyChallengeLab.shortObjective || dailyChallengeLab.title}
               </h4>
               <Link
-                href={`/courses/${courseId}/labs/7`}
+                href={`/courses/${courseId}/labs/${dailyChallengeLab.slug}`}
                 className={styles.challengeBtn}
               >
                 <span className="material-symbols-outlined text-sm">play_arrow</span>
                 <span>Launch Challenge</span>
               </Link>
             </div>
+            )}
           </aside>
         </div>
       </div>

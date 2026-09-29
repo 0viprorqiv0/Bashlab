@@ -1,83 +1,97 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { initialLabs, getLabById } from '@/data/labsData';
+import { useRouter } from 'next/navigation';
 import styles from './LabWorkspace.module.css';
+import { supabase } from '@/lib/supabaseClient';
+import {
+  fetchCourseLabs, fetchProgressMap, getCurrentUser, markLessonDone, markLessonStarted, toDisplayLab,
+} from '@/lib/learning';
+import {
+  checkSolution, createSession, endSession, resetSession, runCommand, sandboxEnabled,
+} from '@/lib/sandbox';
 
-export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
-  const currentLab = getLabById(labId);
-  const totalLabs = initialLabs.length;
+const HOME = '/home/student';
+const shortCwd = (cwd) => (cwd === HOME ? '~' : cwd?.startsWith(`${HOME}/`) ? `~${cwd.slice(HOME.length)}` : cwd || '~');
+
+export default function LabWorkspace({ courseId = 'shell-101', labId }) {
+  const router = useRouter();
+  const [state, setState] = useState({ loading: true });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      const course = await fetchCourseLabs(courseId);
+      const labs = course?.labs || [];
+      const index = labs.findIndex((item) => item.slug === labId);
+      if (index === -1) {
+        if (!cancelled) setState({ loading: false, notFound: true });
+        return;
+      }
+      const progressMap = await fetchProgressMap(user.id);
+      await markLessonStarted(user.id, labs[index].id);
+      if (!cancelled) setState({ loading: false, user, labs, index, progressMap });
+    })();
+    return () => { cancelled = true; };
+  }, [courseId, labId, router]);
+
+  if (state.loading) return null;
+  if (state.notFound) {
+    return (
+      <div className={styles.workspacePage}>
+        <p style={{ padding: 32, color: '#eef1ef' }}>
+          Lab not found. <Link href={`/courses/${courseId}`}>Back to {courseId}</Link>
+        </p>
+      </div>
+    );
+  }
+  return <Workspace key={state.labs[state.index].id} courseId={courseId} {...state} />;
+}
+
+function Workspace({ courseId, user, labs, index, progressMap }) {
+  const currentLab = toDisplayLab(labs[index], progressMap);
+  const totalLabs = labs.length;
 
   // Active tab on left pane
   const [activeTab, setActiveTab] = useState('instructions');
 
   // Completed steps checklist
-  const [completedSteps, setCompletedSteps] = useState(() => {
-    // If lab was already marked solved, start with all steps checked
-    if (currentLab.status === 'solved') {
-      return (currentLab.steps || []).map((s) => s.id);
-    }
-    return [];
-  });
+  const [completedSteps, setCompletedSteps] = useState(() => (
+    currentLab.status === 'solved' ? (currentLab.steps || []).map((s) => s.id) : []
+  ));
 
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [instanceStatus, setInstanceStatus] = useState('running'); // 'running' | 'stopped' | 'restarting'
   const [isMaximized, setIsMaximized] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkMessage, setCheckMessage] = useState('');
+
+  const terminal = useSandbox(user, currentLab);
+  const instanceStatus = terminal.status === 'ready' ? 'running' : terminal.status === 'connecting' ? 'restarting' : 'stopped';
 
   useEffect(() => {
     setShowHint(false);
-  }, [labId]);
+  }, [currentLab.id]);
 
   // Red button: Stop / Toggle instance
   function handleToggleStopInstance() {
     if (instanceStatus === 'running' || instanceStatus === 'restarting') {
-      setInstanceStatus('stopped');
-      setTerminalLogs((prev) => [
-        ...prev,
-        {
-          type: 'output',
-          text: `\n[Broadcast] Signal SIGTERM received. Instance container halted.\nTo boot the environment again, click the red dot or "Start Instance".`
-        }
-      ]);
+      terminal.stop();
     } else {
-      handleStartInstance();
+      terminal.retry();
     }
   }
 
-  // Start instance
-  function handleStartInstance() {
-    setInstanceStatus('restarting');
-    setTerminalLogs([
-      {
-        type: 'output',
-        text: `Booting container instance...\n[  0.020] Loading kernel image (Ubuntu 24.04 LTS POSIX sandbox)\n[  0.110] Mounting /home/learner/workspace [OK]\n[  0.250] Initializing bash shell session [OK]\n\nBashLab Cloud Shell v2.4 (Ready).\nFocus commands for this lab: ${currentLab.commands.join(', ')}`
-      }
-    ]);
-    setTimeout(() => {
-      setInstanceStatus('running');
-      setCurrentDir('/home/learner/workspace');
-      inputRef.current?.focus();
-    }, 500);
-  }
-
-  // Yellow button: Restart instance
+  // Yellow button: Restart instance — resets the sandbox filesystem, keeps the session.
   function handleRestartInstance() {
-    setInstanceStatus('restarting');
-    setTerminalLogs((prev) => [
-      ...prev,
-      {
-        type: 'output',
-        text: `\n[System] Restarting sandbox container instance...\n[  0.010] Terminating lingering child processes [OK]\n[  0.120] Resetting working directory state [OK]\n[  0.260] POSIX environment reinitialized [OK]\nInstance restarted successfully.`
-      }
-    ]);
-    setTimeout(() => {
-      setInstanceStatus('running');
-      setCurrentDir('/home/learner/workspace');
-      inputRef.current?.focus();
-    }, 600);
+    terminal.reset();
   }
 
   // Green button: Maximize / Minimize
@@ -107,17 +121,12 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
     });
   }
 
-  // Terminal state
-  const [currentDir, setCurrentDir] = useState('/home/learner/workspace');
+  // Terminal input state (pure UI — the sandbox session itself lives in `terminal`)
   const [terminalInput, setTerminalInput] = useState('');
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [cmdHistory, setCmdHistory] = useState([]);
-  const [terminalLogs, setTerminalLogs] = useState([
-    {
-      type: 'output',
-      text: `BashLab Cloud Shell v2.4 (Ubuntu 24.04 LTS x86_64)\nWorkspace: /home/learner/workspace\nType "help" for a list of commands. Focus commands for this lab: ${currentLab.commands.join(', ')}`
-    }
-  ]);
+  const currentDir = terminal.cwd;
+  const terminalLogs = terminal.log;
 
   const terminalEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -132,33 +141,56 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
     inputRef.current?.focus();
   }
 
-  // Toggle step completion manually
-  function toggleStep(stepId) {
-    setCompletedSteps((prev) => {
-      const next = prev.includes(stepId)
-        ? prev.filter((id) => id !== stepId)
-        : [...prev, stepId];
-
-      if (currentLab.steps && next.length === currentLab.steps.length) {
-        setIsLabSolved(true);
-      }
-      return next;
-    });
+  async function complete() {
+    const { error } = await markLessonDone(user.id, currentLab.id);
+    if (error) {
+      setCheckMessage(error.message);
+      return false;
+    }
+    setIsLabSolved(true);
+    return true;
   }
 
-  // Check solution button
-  function handleCheckSolution() {
-    if (currentLab.steps) {
-      const allIds = currentLab.steps.map((s) => s.id);
-      setCompletedSteps(allIds);
-      setIsLabSolved(true);
-      setTerminalLogs((prev) => [
-        ...prev,
-        {
-          type: 'output',
-          text: `\n[VERIFICATION PASSED] All ${allIds.length} validation checks succeeded!\n✓ Sandbox state matches expected solution.\n🎉 Lab #${currentLab.id} completed.`
+  // Toggle step completion manually — only used for labs without an automatic
+  // verifier; ticking every step marks the lab solved for real.
+  async function toggleStep(stepId) {
+    const next = completedSteps.includes(stepId)
+      ? completedSteps.filter((id) => id !== stepId)
+      : [...completedSteps, stepId];
+    setCompletedSteps(next);
+    if (currentLab.steps && next.length === currentLab.steps.length && !currentLab.verifier) {
+      await complete();
+    }
+  }
+
+  // Check Solution — real sandbox check when the lesson has a verifier,
+  // otherwise ticks every step and records completion directly.
+  async function handleCheckSolution() {
+    if (checking) return;
+    setChecking(true);
+    setCheckMessage('');
+    try {
+      if (currentLab.verifier) {
+        if (!terminal.sessionId) {
+          setCheckMessage('The sandbox is not connected, so your work cannot be checked.');
+          return;
         }
-      ]);
+        const result = await checkSolution(terminal.sessionId, currentLab.verifier);
+        if (result.passed) {
+          setCompletedSteps((currentLab.steps || []).map((s) => s.id));
+          await complete();
+        } else {
+          const failed = result.checks.filter((c) => !c.passed).map((c) => c.name).join('; ');
+          setCheckMessage(`Not quite yet — ${failed || 'some checks did not pass'}.`);
+        }
+      } else if (currentLab.steps) {
+        setCompletedSteps(currentLab.steps.map((s) => s.id));
+        await complete();
+      }
+    } catch (error) {
+      setCheckMessage(error.message);
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -171,161 +203,25 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
     }
   }
 
-  // Reset terminal
-  function handleReset() {
-    setTerminalLogs([
-      {
-        type: 'output',
-        text: `Session reset.\nWorkspace: /home/learner/workspace\nType "help" for available commands.`
-      }
-    ]);
-    setCurrentDir('/home/learner/workspace');
-  }
-
-  // Command execution engine
+  // Command execution — runs for real in the sandbox; matches completed steps
+  // against the real command text as before.
   function handleCommandSubmit(e) {
     e.preventDefault();
     const rawCmd = terminalInput.trim();
     if (!rawCmd) return;
-
-    // Add to history
     setCmdHistory((prev) => [...prev, rawCmd]);
     setHistoryIndex(-1);
-
-    const promptText = `learner@bashlab:${currentDir.replace('/home/learner', '~')}$`;
-    const newLogs = [...terminalLogs, { type: 'cmd', prompt: promptText, text: rawCmd }];
-
-    const [cmd, ...args] = rawCmd.split(' ');
-
-    // Match steps for auto-check
-    if (currentLab.steps) {
-      currentLab.steps.forEach((step) => {
-        if (rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase())) {
-          if (!completedSteps.includes(step.id)) {
-            setCompletedSteps((prev) => [...prev, step.id]);
-          }
-        }
-      });
-    }
-
-    // Evaluate command
-    if (cmd === 'clear') {
-      setTerminalLogs([]);
-      setTerminalInput('');
-      return;
-    } else if (cmd === 'help') {
-      newLogs.push({
-        type: 'output',
-        text: 'Available Commands:\n  pwd, ls [-la], cd [path], cat [file], head, tail, grep, awk, cut, sed, chmod, touch, mkdir, cp, mv, rm, whoami, date, echo, clear, help\nPress Ctrl+L to clear screen.'
-      });
-    } else if (cmd === 'pwd') {
-      newLogs.push({ type: 'output', text: currentDir });
-    } else if (cmd === 'whoami') {
-      newLogs.push({ type: 'output', text: 'learner (uid=1000 gid=1000 groups=sudo,docker)' });
-    } else if (cmd === 'date') {
-      newLogs.push({ type: 'output', text: new Date().toUTCString() });
-    } else if (cmd === 'cd') {
-      const target = args[0] || '~';
-      if (target === '~' || target === '/home/learner') {
-        setCurrentDir('/home/learner');
-        newLogs.push({ type: 'output', text: '' });
-      } else if (target === '..' || target === '../') {
-        const parts = currentDir.split('/').filter(Boolean);
-        parts.pop();
-        setCurrentDir('/' + parts.join('/'));
-        newLogs.push({ type: 'output', text: '' });
-      } else if (target.startsWith('/')) {
-        setCurrentDir(target);
-        newLogs.push({ type: 'output', text: '' });
-      } else {
-        const next = `${currentDir}/${target}`.replace(/\/+/g, '/');
-        setCurrentDir(next);
-        newLogs.push({ type: 'output', text: '' });
-      }
-    } else if (cmd === 'ls') {
-      const hasAll = rawCmd.includes('-a') || rawCmd.includes('-la') || rawCmd.includes('-lah');
-      const hasLong = rawCmd.includes('-l') || rawCmd.includes('-la') || rawCmd.includes('-lah');
-
-      if (hasAll && hasLong) {
-        newLogs.push({
-          type: 'output',
-          text: `total 48\ndrwxr-xr-x 6 learner learner 4096 Sep 29 22:00 .\ndrwxr-xr-x 3 learner learner 4096 Sep 29 21:00 ..\n-rw-r--r-- 1 learner learner  220 Sep 29 21:00 .bashrc\n-rw-r--r-- 1 learner learner  807 Sep 29 21:00 .profile\n-rw-r--r-- 1 learner learner  145 Sep 29 21:15 app.env\n-rw-r--r-- 1 learner learner 3420 Sep 29 21:30 audit.log\n-rwxr-xr-x 1 learner learner  512 Sep 29 21:45 deploy.sh\n-rw------- 1 learner learner 1675 Sep 29 21:10 id_rsa\n-rw-r--r-- 1 learner learner  940 Sep 29 21:20 package.json\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 src\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 tests`
-        });
-      } else if (hasLong) {
-        newLogs.push({
-          type: 'output',
-          text: `total 36\n-rw-r--r-- 1 learner learner  145 Sep 29 21:15 app.env\n-rw-r--r-- 1 learner learner 3420 Sep 29 21:30 audit.log\n-rwxr-xr-x 1 learner learner  512 Sep 29 21:45 deploy.sh\n-rw------- 1 learner learner 1675 Sep 29 21:10 id_rsa\n-rw-r--r-- 1 learner learner  940 Sep 29 21:20 package.json\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 src\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 tests`
-        });
-      } else if (hasAll) {
-        newLogs.push({
-          type: 'output',
-          text: `.  ..  .bashrc  .profile  app.env  audit.log  deploy.sh  id_rsa  package.json  src  tests`
-        });
-      } else {
-        newLogs.push({
-          type: 'output',
-          text: `app.env  audit.log  deploy.sh  id_rsa  package.json  src/  tests/`
-        });
-      }
-    } else if (cmd === 'cat') {
-      const targetFile = args[0] || '';
-      if (targetFile.includes('app.env') || targetFile.includes('env')) {
-        newLogs.push({
-          type: 'output',
-          text: `PORT=3000\nNODE_ENV=production\nDATABASE_URL=postgres://db-local:5432/bashlab\nVERBOSE=true\nLOG_LEVEL=info`
-        });
-      } else if (targetFile.includes('audit.log') || targetFile.includes('log')) {
-        newLogs.push({
-          type: 'output',
-          text: `2026-09-29T21:00:01Z user=alex ip=192.168.1.100 status=200 action=login\n2026-09-29T21:00:05Z user=root ip=10.0.0.1 status=401 action=ssh_auth\n2026-09-29T21:00:12Z user=alex ip=192.168.1.100 status=200 action=fetch_course\n2026-09-29T21:00:25Z user=guest ip=172.16.0.4 status=403 action=admin_access\n2026-09-29T21:00:44Z user=root ip=10.0.0.1 status=401 action=ssh_auth`
-        });
-      } else {
-        newLogs.push({
-          type: 'output',
-          text: `# Sample file: ${targetFile}\n// Created for BashLab interactive practice.\nconsole.log("Ready.");`
-        });
-      }
-    } else if (cmd === 'head') {
-      newLogs.push({
-        type: 'output',
-        text: `2026-09-29T21:00:01Z user=alex ip=192.168.1.100 status=200 action=login\n2026-09-29T21:00:05Z user=root ip=10.0.0.1 status=401 action=ssh_auth\n2026-09-29T21:00:12Z user=alex ip=192.168.1.100 status=200 action=fetch_course`
-      });
-    } else if (cmd === 'tail') {
-      newLogs.push({
-        type: 'output',
-        text: `2026-09-29T21:05:10Z user=alex ip=192.168.1.100 status=200 action=terminal_exec\n2026-09-29T21:05:44Z user=system status=200 action=health_check_ok`
-      });
-    } else if (cmd === 'echo') {
-      newLogs.push({ type: 'output', text: args.join(' ').replace(/^["']|["']$/g, '') });
-    } else if (cmd === 'chmod') {
-      newLogs.push({
-        type: 'output',
-        text: `Permissions updated successfully: ${args.join(' ')}`
-      });
-    } else if (cmd === 'mkdir') {
-      newLogs.push({
-        type: 'output',
-        text: `Directory created: ${args.join(' ')}`
-      });
-    } else if (cmd === 'touch') {
-      newLogs.push({
-        type: 'output',
-        text: `File updated: ${args.join(' ')}`
-      });
-    } else if (cmd.includes('grep')) {
-      newLogs.push({
-        type: 'output',
-        text: `app.env:3: DATABASE_URL=postgres://db-local:5432/bashlab\napp.env:5: LOG_LEVEL=info`
-      });
-    } else {
-      newLogs.push({
-        type: 'output',
-        text: `[sandbox] executed: ${rawCmd}`
-      });
-    }
-
-    setTerminalLogs(newLogs);
     setTerminalInput('');
+
+    if (currentLab.steps) {
+      const newlyDone = currentLab.steps
+        .filter((step) => rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()))
+        .map((step) => step.id)
+        .filter((id) => !completedSteps.includes(id));
+      if (newlyDone.length) setCompletedSteps((prev) => [...prev, ...newlyDone]);
+    }
+
+    terminal.run(rawCmd);
   }
 
   // Handle arrow up / arrow down command history
@@ -349,7 +245,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
       }
     } else if (e.ctrlKey && e.key === 'l') {
       e.preventDefault();
-      setTerminalLogs([]);
+      terminal.clear();
     }
   }
 
@@ -359,47 +255,47 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
     inputRef.current?.focus();
   }
 
-  const prevLabId = currentLab.id > 1 ? currentLab.id - 1 : null;
-  const nextLabId = currentLab.id < totalLabs ? currentLab.id + 1 : null;
+  const prevLab = labs[index - 1] || null;
+  const nextLab = labs[index + 1] || null;
 
   return (
     <div className={styles.workspacePage} data-lenis-prevent="true">
       {/* Top Workspace Header Bar */}
       <header className={styles.topBar}>
         <div className={styles.topLeft}>
-          <Link href="/courses/shell-101" className={styles.backBtn}>
+          <Link href={`/courses/${courseId}`} className={styles.backBtn}>
             <span className="material-symbols-outlined text-sm">arrow_back</span>
-            <span>Shell 101</span>
+            <span>{courseId}</span>
           </Link>
 
           <div className={styles.courseDivider} />
 
           <div className={styles.labNavGroup}>
             <Link
-              href={prevLabId ? `/courses/${courseId}/labs/${prevLabId}` : '#'}
+              href={prevLab ? `/courses/${courseId}/labs/${prevLab.slug}` : '#'}
               className={styles.navArrowBtn}
-              aria-disabled={!prevLabId}
-              title={prevLabId ? `Previous Lab #${prevLabId}` : 'First Lab'}
+              aria-disabled={!prevLab}
+              title={prevLab ? `Previous: ${prevLab.title}` : 'First Lab'}
             >
               <span className="material-symbols-outlined text-sm">chevron_left</span>
             </Link>
 
             <span className="font-code text-xs text-on-surface-variant font-medium">
-              {currentLab.id} / {totalLabs}
+              {index + 1} / {totalLabs}
             </span>
 
             <Link
-              href={nextLabId ? `/courses/${courseId}/labs/${nextLabId}` : '#'}
+              href={nextLab ? `/courses/${courseId}/labs/${nextLab.slug}` : '#'}
               className={styles.navArrowBtn}
-              aria-disabled={!nextLabId}
-              title={nextLabId ? `Next Lab #${nextLabId}` : 'Last Lab'}
+              aria-disabled={!nextLab}
+              title={nextLab ? `Next: ${nextLab.title}` : 'Last Lab'}
             >
               <span className="material-symbols-outlined text-sm">chevron_right</span>
             </Link>
           </div>
 
           <h1 className={styles.labTitleHeader}>
-            Lab #{currentLab.id}: {currentLab.title}
+            Lab #{index + 1}: {currentLab.title}
           </h1>
 
           <span
@@ -427,10 +323,11 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
             type="button"
             className={styles.checkSolutionBtn}
             onClick={handleCheckSolution}
+            disabled={checking || isLabSolved || (currentLab.verifier && !terminal.sessionId)}
             title="Validate completed tasks and check solution"
           >
             <span className="material-symbols-outlined">verified</span>
-            <span>Check Solution</span>
+            <span>{checking ? 'Checking…' : isLabSolved ? 'Completed' : 'Check Solution'}</span>
           </button>
         </div>
       </header>
@@ -465,14 +362,18 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
             {activeTab === 'instructions' ? (
               <>
                 <div className={styles.sectionHeader}>
-                  <div className={styles.labNumber}>Interactive Terminal Lab · Shell 101</div>
+                  <div className={styles.labNumber}>Interactive Terminal Lab · {courseId}</div>
                   <h2 className={styles.labTitle}>{currentLab.title}</h2>
                   <div className={styles.metaRow}>
                     <span>Track: <strong>{currentLab.category}</strong></span>
                     <span>·</span>
-                    <span>Acceptance: <strong>{currentLab.acceptance}</strong></span>
+                    <span>Grading: <strong>{currentLab.verifier ? 'Automatic' : 'Manual'}</strong></span>
                   </div>
                 </div>
+
+                {checkMessage && !isLabSolved && (
+                  <p role="alert" style={{ color: '#ff8a80', fontSize: 13, margin: '0 0 16px' }}>{checkMessage}</p>
+                )}
 
                 {/* Scenario / Story */}
                 <div className={styles.scenarioCard}>
@@ -605,8 +506,8 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
                         </p>
                       </div>
                     </div>
-                    {nextLabId && (
-                      <Link href={`/courses/${courseId}/labs/${nextLabId}`} className={styles.nextLabBtn}>
+                    {nextLab && (
+                      <Link href={`/courses/${courseId}/labs/${nextLab.slug}`} className={styles.nextLabBtn}>
                         <span>Next Lab</span>
                         <span className="material-symbols-outlined text-sm">arrow_forward</span>
                       </Link>
@@ -755,7 +656,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
               <button
                 type="button"
                 className={styles.termActionBtn}
-                onClick={() => setTerminalLogs([])}
+                onClick={terminal.clear}
                 title="Clear screen (Ctrl+L)"
               >
                 <span className="material-symbols-outlined">mop</span>
@@ -766,8 +667,8 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
 
           {/* Terminal Screen Output Area */}
           <div className={styles.termScreen} data-lenis-prevent="true">
-            {terminalLogs.map((log, index) => (
-              <div key={index} className={styles.termRow}>
+            {terminalLogs.map((log, logIndex) => (
+              <div key={logIndex} className={styles.termRow}>
                 {log.type === 'cmd' ? (
                   <div className={styles.termCmdLine}>
                     <span className={styles.termPrompt}>{log.prompt}</span>
@@ -789,7 +690,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
                 <button
                   type="button"
                   className={styles.startInstanceBtn}
-                  onClick={handleStartInstance}
+                  onClick={terminal.retry}
                 >
                   <span className="material-symbols-outlined text-xs">play_arrow</span>
                   <span>Start Instance</span>
@@ -846,4 +747,114 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
       </div>
     </div>
   );
+}
+
+const STATUS_TEXT = {
+  disabled: 'Sandbox not configured',
+  connecting: 'Starting sandbox…',
+  ready: 'Sandbox ready',
+  offline: 'Sandbox offline',
+};
+
+// Owns the real sandbox session for this lab: creates it, runs commands,
+// keeps practice_sessions (My Learning / Activity) in sync, cleans up on leave.
+function useSandbox(user, lab) {
+  const [status, setStatus] = useState(sandboxEnabled ? 'connecting' : 'disabled');
+  const [sessionId, setSessionId] = useState(null);
+  const [cwd, setCwd] = useState(HOME);
+  const [log, setLog] = useState([
+    { type: 'output', text: STATUS_TEXT[sandboxEnabled ? 'connecting' : 'disabled'] },
+  ]);
+  const [busy, setBusy] = useState(false);
+  const recordRef = useRef(null);
+
+  const openSession = useCallback(async () => {
+    setStatus('connecting');
+    try {
+      const session = await createSession();
+      setSessionId(session.sessionId);
+      setCwd(session.cwd || HOME);
+      setStatus('ready');
+      const { data } = await supabase.from('practice_sessions').insert({
+        user_id: user.id, lesson_id: lab.id, sandbox_session_id: session.sessionId, status: 'active',
+      }).select('id').single();
+      recordRef.current = data?.id || null;
+      return session.sessionId;
+    } catch {
+      setStatus('offline');
+      return null;
+    }
+  }, [user.id, lab.id]);
+
+  useEffect(() => {
+    if (!sandboxEnabled) return undefined;
+    let id = null;
+    openSession().then((value) => { id = value; });
+    return () => {
+      if (id) endSession(id);
+      if (recordRef.current) {
+        supabase.from('practice_sessions').update({ status: 'stopped', last_active_at: new Date().toISOString() })
+          .eq('id', recordRef.current).then(() => {});
+      }
+    };
+  }, [openSession]);
+
+  const touch = () => {
+    if (recordRef.current) {
+      supabase.from('practice_sessions').update({ last_active_at: new Date().toISOString() })
+        .eq('id', recordRef.current).then(() => {});
+    }
+  };
+
+  const run = async (command) => {
+    const prompt = `learner@bashlab:${shortCwd(cwd)}$`;
+    setLog((prev) => [...prev, { type: 'cmd', prompt, text: command }]);
+    if (!sessionId) {
+      setLog((prev) => [...prev, { type: 'output', text: 'Sandbox is not connected.' }]);
+      return;
+    }
+    setBusy(true);
+    try {
+      let result;
+      try {
+        result = await runCommand(sessionId, command);
+      } catch (error) {
+        if (error.code !== 'SESSION_NOT_FOUND') throw error;
+        const fresh = await openSession();
+        if (!fresh) throw error;
+        setLog((prev) => [...prev, { type: 'output', text: 'Session expired — started a new sandbox (files were reset).' }]);
+        result = await runCommand(fresh, command);
+      }
+      const lines = [];
+      if (result.stdout) lines.push({ type: 'output', text: result.stdout.replace(/\n$/, '') });
+      if (result.stderr) lines.push({ type: 'output', text: result.stderr.replace(/\n$/, '') });
+      if (result.termination === 'timeout') lines.push({ type: 'output', text: 'Command timed out.' });
+      if (result.quotaExceeded) lines.push({ type: 'output', text: result.quotaError });
+      setLog((prev) => [...prev, ...lines]);
+      if (result.cwdUpdated && result.cwd) setCwd(result.cwd);
+      touch();
+    } catch (error) {
+      setLog((prev) => [...prev, { type: 'output', text: error.message }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return {
+    status, sessionId, cwd, log, busy, run,
+    clear: () => setLog([]),
+    reset: async () => {
+      if (!sessionId) return;
+      await resetSession(sessionId).catch(() => {});
+      setCwd(HOME);
+      setLog([{ type: 'output', text: 'Workspace reset.' }]);
+    },
+    stop: () => {
+      if (sessionId) endSession(sessionId);
+      setSessionId(null);
+      setStatus('offline');
+      setLog((prev) => [...prev, { type: 'output', text: 'Instance stopped.' }]);
+    },
+    retry: openSession,
+  };
 }
