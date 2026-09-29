@@ -31,7 +31,7 @@ function toCourse(row) {
     lessons,
     duration: formatDuration(row.duration_minutes),
     description: row.description || '',
-    status: row.status === 'published' ? 'available' : 'locked',
+    status: row.status,
   };
 }
 
@@ -54,8 +54,8 @@ export default function CourseCatalog() {
   const visibleCourses = courses.filter((course) => filter === 'All'
     || (filter === 'Core Tracks' && course.category === 'Core Track')
     || course.category === filter);
-  const availableCourses = visibleCourses.filter((course) => course.status === 'available');
-  const upcomingCourses = visibleCourses.filter((course) => course.status === 'locked');
+  const availableCourses = visibleCourses.filter((course) => course.status === 'published');
+  const upcomingCourses = visibleCourses.filter((course) => course.status === 'upcoming');
 
   if (loading) return null;
 

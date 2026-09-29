@@ -7,6 +7,15 @@ import AuthField from '@/components/auth/AuthField';
 import styles from '@/components/auth/Auth.module.css';
 import { supabase } from '@/lib/supabaseClient';
 
+async function getLandingPage(userId) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  return profile?.role === 'admin' ? '/admin/content' : '/';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -17,8 +26,8 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/my-learning');
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) router.replace(await getLandingPage(data.session.user.id));
     });
   }, [router]);
 
@@ -33,7 +42,7 @@ export default function LoginPage() {
       return;
     }
     setStatus('loading');
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) {
       setErrorMessage(/banned/i.test(error.message)
         ? 'Your account has been locked by an administrator.'
@@ -41,7 +50,7 @@ export default function LoginPage() {
       setStatus('error');
       return;
     }
-    router.push('/my-learning');
+    router.replace(await getLandingPage(data.user.id));
   }
 
   return <AuthShell title="Welcome back" description="Log in to continue learning and return to your workspace.">

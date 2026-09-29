@@ -71,20 +71,27 @@ async function loadDashboard(userId) {
 export default function LearningDashboard() {
   const router = useRouter();
   const [data, setData] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-    getCurrentUser().then(async (user) => {
-      if (!user) {
-        router.push('/login');
-        return;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          router.replace('/login');
+          return;
+        }
+        const loaded = await loadDashboard(user.id);
+        if (!cancelled) setData(loaded);
+      } catch {
+        if (!cancelled) setLoadError('We could not load your learning data. Please refresh and try again.');
       }
-      const loaded = await loadDashboard(user.id);
-      if (!cancelled) setData(loaded);
-    });
+    })();
     return () => { cancelled = true; };
   }, [router]);
 
+  if (loadError) return <main className={styles.page}><p role="alert">{loadError}</p></main>;
   if (!data) return null;
   return <Dashboard {...data} />;
 }

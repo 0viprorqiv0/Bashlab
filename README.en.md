@@ -2,7 +2,7 @@
 
 [Tiếng Việt](README.md) | English
 
-BashLab aims to teach Bash through short lessons, hands-on practice, and feedback on learning goals. The frontend currently includes a landing page, login and registration interfaces, a course catalog, and an Account & Security page. Backend authentication and a real Bash sandbox are not implemented yet.
+BashLab teaches Bash through short lessons and hands-on practice. The frontend uses Supabase Auth and database; a Node.js backend provides a Docker-based Bash sandbox API.
 
 ## What works today
 
@@ -11,17 +11,17 @@ BashLab aims to teach Bash through short lessons, hands-on practice, and feedbac
 | Home page `/` | `app/(site)/page.js` renders `components/landing/Lookbook.jsx`: introduction, command demo, learning method, Shell 101, and FAQ; Lookbook snapping can be toggled |
 | Home page terminal | A simulation with predefined responses. It does not run operating system commands |
 | Visual effects | Lookbook navigation, terminal resize controls, and visual components; check scripts exist for curiosity and backdrop effects |
-| Login `/login` and registration `/register` | Forms and client-side validation are implemented; submissions only simulate an unavailable authentication service |
-| Email verification and password recovery | `/verify-email`, `/forgot-password`, and `/reset-password` have demo interfaces and states; no email is sent, link is verified, or password is changed |
-| Course catalog `/courses` | Three courses with All/Core Tracks/Security filters and progress/coming-soon states; View course leads to `/login` |
-| My Learning `/my-learning` | Separate overview with four sample metrics, a sample 12-month activity calendar, and a course catalog link; real progress data is not connected |
-| Account & Security `/account` | Profile editing/avatar, account details, password-reset request, and logout confirmation; profile uses localStorage, email/logout are demos |
+| Login `/login` and registration `/register` | Supabase Auth; learners land on `/` after login and admins on `/admin/content` |
+| Email verification and password recovery | Supabase Auth sends verification/reset emails and handles their links |
+| Course catalog `/courses` | Reads courses from Supabase; `published` courses are available, while `upcoming` teasers show to guests and learners after migration 013 |
+| My Learning `/my-learning` | Reads progress and activity from Supabase for the current account |
+| Account & Security `/account` | Reads and updates the Supabase profile/avatar; supports password reset and sign out |
 | 404 page | Implemented in `app/not-found.js` |
 | 403 interface | Present in `app/forbidden.js`, but there is no implemented backend permission flow or dedicated route using it |
-| Course detail, lesson workspace, and admin pages | Documented in the designs; not implemented yet |
-| Backend, database, email, and sandbox | Plans only; see [backend/README.md](backend/README.md) |
+| Courses, lessons, and admin pages | Course details, lesson workspace, and admin content/users/activity pages are implemented |
+| Backend sandbox | Express API and Docker runner; see [backend/RUNNING.md](backend/RUNNING.md). Workspaces are not yet tied to BashLab accounts |
 
-Real sandbox and saved-progress copy describes planned product behavior; those services are not active. `/courses/shell-101` and other course-learning detail pages are not implemented yet.
+The landing page terminal is simulated and does not execute operating-system commands. The lesson workspace uses the backend sandbox.
 
 ## Feature groups
 
@@ -45,20 +45,20 @@ This table describes design requirements, not a list of completed features.
 | Page | Group | Screen | Name | What it should do |
 | --- | --- | --- | --- | --- |
 | 01 | A | 01 | Landing | Introduce BashLab; offer a simulated command demo; present Shell 101 and FAQ; guide visitors to courses |
-| 02 | B | 02 | Login | `/login` interface implemented: email/password, show/hide password, remember device, loading/error states, and links to registration and password recovery. Backend authentication is not implemented |
-| 03 | B | 03 | Register | `/register` interface implemented: email/password confirmation, client-side validation, and error states. Backend account creation is not implemented |
-| 04 | B | 04 | Verify Email | `/verify-email` shows inbox, resend cooldown, success, and expired-link demo states; no email is sent or verified |
-| 05 | B | 05 | Forgot Password | `/forgot-password` validates an email and shows a neutral response; sending email is a demo |
-| 06 | B | 06 | Reset Password | `/reset-password` validates new passwords and shows a demo result; tokens are not verified and no password is changed |
-| 07 | C | 07 | Course Catalog | `/courses` implemented with three courses, All/Core Tracks/Security filters, level, duration, progress, and coming-soon status; View course leads to login |
+| 02 | B | 02 | Login | `/login` authenticates with Supabase Auth; learners land on `/`, admins on `/admin/content` |
+| 03 | B | 03 | Register | `/register` creates accounts through Supabase Auth and validates form data |
+| 04 | B | 04 | Verify Email | `/verify-email` handles verification and resend through Supabase Auth |
+| 05 | B | 05 | Forgot Password | `/forgot-password` requests a password reset through Supabase Auth |
+| 06 | B | 06 | Reset Password | `/reset-password` updates the password through Supabase Auth after a valid link |
+| 07 | C | 07 | Course Catalog | `/courses` reads courses from Supabase, with All/Core Tracks/Security filters and Coming next teasers |
 | 08 | C | 08 | Course Overview | Explain the course and learning outcomes; show chapters, lesson states, and progress; continue learning |
-| 09 | D | 09 | My Learning | `/my-learning` shows four sample metrics, a sample 12-month activity calendar, and a catalog link; resume lesson and real progress are not implemented yet |
+| 09 | D | 09 | My Learning | `/my-learning` displays the account's progress and activity from Supabase with a course catalog link |
 | 10 | D | 10 | Interactive Lesson Workspace | Read and navigate lessons; view goals and hints; use a sandbox terminal; view session state; check solutions and receive feedback |
-| 11 | E | 12 | Account | `/account` interface implemented: view/edit profile and avatar, role, and security settings; password-reset email and logout confirmation are demos, not connected to a backend |
-| 12 | F | 14 | Content | Manage the course/chapter/lesson tree; create and edit content; change order and publication status; open the lesson editor |
+| 11 | E | 12 | Account | `/account` reads and updates the Supabase profile/avatar and supports password settings and sign out |
+| 12 | F | 14 | Content | Admin page manages courses, chapters, lessons, ordering, and publication status |
 | 13 | F | 16 | Lesson Editor | Edit lesson details, Markdown, goals, and check templates; preview content; manage drafts/publication; save or cancel |
-| 14 | G | 17 | Users | Search and paginate users; change roles; lock/unlock accounts with confirmation and a reason; protect the last active administrator |
-| 15 | G | 18 | Activity | Sessions tab: manage and stop sessions with a reason. Admin log tab: filter logs and view event details |
+| 14 | G | 17 | Users | Admin page searches users, changes roles, and locks/unlocks accounts |
+| 15 | G | 18 | Activity | Admin page views/stops sessions and filters the admin log |
 | 16 | H | 20 | Access Denied | Explain that the user does not have permission to access the page |
 | 17 | H | 21 | Page Not Found | Explain that the requested page or path does not exist |
 
@@ -99,7 +99,7 @@ Versions declared in [frontend/package.json](frontend/package.json):
 - Three.js `^0.170.0`; Tailwind CSS `^3.4.13`, PostCSS, and Autoprefixer.
 - ESLint `8.57.0` with the Next.js configuration.
 
-The planned backend uses Node.js/Express, PostgreSQL, REST/WebSocket, and Docker sandboxes. These are plans, not running services in this repository.
+The frontend uses Supabase Auth/Postgres; the backend uses Node.js/Express and a Docker sandbox. See [backend/RUNNING.md](backend/RUNNING.md) to run the API and runner.
 
 ## Run the frontend locally
 
@@ -112,7 +112,18 @@ npm ci
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Run npm commands inside `frontend`; the repository root has no `package.json`. The current demo does not need database or email configuration.
+Create `frontend/.env.local` with the project URL and anon key from Supabase **Project Settings → API**:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable-anon-key>
+```
+
+Open [localhost:3000](http://localhost:3000). Run npm commands inside `frontend`; the repository root has no `package.json`. Never put the service-role key or database password in the frontend.
+
+### Applying Supabase schema migrations
+
+Migrations are in `backend/db/migrations/` and should be applied in numeric order on a new database. To enable the Coming next catalog for guests and learners on a database that already has migrations 001–012, open the correct project in **Supabase Dashboard → SQL Editor** and run `backend/db/migrations/013_public_upcoming_courses.sql`. Confirm `shell-201` and `linux-security` have status `upcoming`. This only makes course metadata public; chapter and lesson policies remain unchanged.
 
 | Command | Purpose |
 | --- | --- |
