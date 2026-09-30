@@ -20,3 +20,17 @@ export function createSupabaseAnonFactory() {
   if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be set');
   return () => createClient(url, key, stateless);
 }
+
+// Client that acts *as the caller*: anon key + the caller's own access token,
+// so auth.uid()/is_admin() inside security-definer RPCs (admin_set_user_role,
+// admin_stop_session…) see the real user and write their audit log row.
+// New client per call for the same reason as the anon factory above.
+export function createSupabaseUserFactory() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be set');
+  return (accessToken) => createClient(url, key, {
+    ...stateless,
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}

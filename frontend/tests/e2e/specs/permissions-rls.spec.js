@@ -5,7 +5,7 @@
 // could try to bypass the UI.
 const path = require('path');
 const { test, expect } = require('@playwright/test');
-const { signIn, forToken } = require('../support/apiClient');
+const { signIn, forToken, forBackend } = require('../support/apiClient');
 const { adminClient } = require('../support/supabaseAdmin');
 const { loadUsers } = require('../support/testUsers');
 
@@ -52,9 +52,10 @@ test.describe('admin UI guard (admin allowed)', () => {
 
 test.describe('RLS / RPC boundary — learner token, bypassing the UI entirely', () => {
   let api;
+  let session;
 
   test.beforeAll(async () => {
-    const session = await signIn(users.learner.email, users.learner.password);
+    session = await signIn(users.learner.email, users.learner.password);
     api = forToken(session.access_token);
   });
 
@@ -99,15 +100,19 @@ test.describe('RLS / RPC boundary — learner token, bypassing the UI entirely',
     expect(data[0].id).toBe(users.learner.id);
   });
 
-  test('progress: a learner can write their own row but not impersonate another user', async () => {
+  test('progress: written through the API for the caller only; direct writes and impersonation are refused', async () => {
     const [{ data: lessons }] = await Promise.all([
       adminClient.from('lessons').select('id').eq('slug', 'hello-bashlab').limit(1).then((r) => r),
     ]);
     const lessonId = lessons[0].id;
+    const backend = forBackend(session.access_token);
 
-    const own = await api.insert('progress', { user_id: users.learner.id, lesson_id: lessonId, status: 'done', completed_at: new Date().toISOString() });
-    expect(own.status).toBe(201);
+    const own = await backend('PUT', `/api/progress/${lessonId}`, { status: 'done' });
+    expect(own.status).toBe(204);
 
+    // Direct PostgREST writes no longer exist for browser tokens (migration 017).
+    const direct = await api.insert('progress', { user_id: users.learner.id, lesson_id: lessonId, status: 'done' });
+    expect(direct.status).toBe(403);
     const spoofed = await api.insert('progress', { user_id: users.target.id, lesson_id: lessonId, status: 'done' });
     expect(spoofed.status).toBe(403);
 

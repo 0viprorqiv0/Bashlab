@@ -39,7 +39,7 @@ test('solving a lab from the table updates the row, the counters, and My Learnin
   // toggleSolveStatus (CourseDetail.jsx) updates the row optimistically
   // *then* awaits the `progress` upsert — wait for that request to actually
   // land before navigating away, instead of racing it.
-  const write = page.waitForResponse((res) => res.url().includes('/rest/v1/progress') && res.request().method() === 'POST');
+  const write = page.waitForResponse((res) => res.url().includes('/api/progress/') && res.request().method() === 'PUT');
   await row.getByTitle('Not Started').click();
   await write;
 

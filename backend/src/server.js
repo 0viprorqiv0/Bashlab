@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import fs from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { SessionManager } from './services/sessionManager.js';
@@ -11,8 +12,10 @@ import { HttpError } from './errors.js';
 import { isActiveAdmin, requireAuth } from './middleware/auth.js';
 import { rateLimiter } from './middleware/rateLimit.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createContentRouter } from './routes/content.js';
+import { createContentService, isUuid } from './services/contentService.js';
 import { createAuthService } from './services/authService.js';
-import { createSupabaseAdmin, createSupabaseAnonFactory } from './lib/supabaseAdmin.js';
+import { createSupabaseAdmin, createSupabaseAnonFactory, createSupabaseUserFactory } from './lib/supabaseAdmin.js';
 
 // `auth` decides who may use the sandbox:
 //   { authenticate, isAdmin, maxSessionsPerUser } — every /api route needs a
@@ -25,7 +28,7 @@ import { createSupabaseAdmin, createSupabaseAnonFactory } from './lib/supabaseAd
 // talks to for authentication. `sandbox: false` keeps the API up on machines
 // without Docker/Linux; the sandbox endpoints then answer 503.
 export function createApp({ manager = new SessionManager(), runner = new SandboxRunner(),
-  rateMax = Number(process.env.RATE_LIMIT_MAX || 30), auth, authApi = null, sandbox = true } = {}) {
+  rateMax = Number(process.env.RATE_LIMIT_MAX || 30), auth, authApi = null, content = null, sandbox = true } = {}) {
   if (!Number.isInteger(rateMax) || rateMax < 1) throw new Error('RATE_LIMIT_MAX must be a positive integer');
   if (auth === undefined) throw new Error('createApp needs an explicit auth option (or auth: false)');
   const app = express();
@@ -33,7 +36,15 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   // No implicit trust of X-Forwarded-For; configure a known proxy at deployment.
   app.set('trust proxy', false);
   const origins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000').split(',');
-  app.use(cors({ origin: origins, methods: ['GET', 'POST', 'PATCH', 'DELETE'] }));
+  // This server only ever answers JSON, so the policy is "nothing may load
+  // or frame anything from here". CORP stays cross-origin: the Next.js app on
+  // another origin fetches these endpoints (CORS below is the real gate).
+  app.use(helmet({
+    contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"], formAction: ["'none'"] } },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'no-referrer' },
+  }));
+  app.use(cors({ origin: origins, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
   // Prometheus and JSON metrics endpoint
@@ -74,10 +85,19 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   // sessionId -> userId. Kept here (not in SessionManager) so ownership is an
   // API concern layered on top of the sandbox services.
   const owners = new Map();
+  // sandbox session id -> practice_sessions row, so the admin Activity page
+  // reflects reality without the browser writing those rows itself.
+  const records = new Map();
+  const closeRecord = (sessionId) => {
+    const recordId = records.get(sessionId);
+    if (!recordId) return;
+    records.delete(sessionId);
+    content.service.closePracticeRecord(recordId).catch(() => {});
+  };
   const liveSessionsOf = (userId) => {
     let count = 0;
     for (const [id, owner] of owners) {
-      if (!manager.sessions.has(id)) owners.delete(id); // expired/reaped
+      if (!manager.sessions.has(id)) { owners.delete(id); closeRecord(id); } // expired/reaped
       else if (owner === userId) count++;
     }
     return count;
@@ -90,6 +110,17 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     }
     next();
   };
+  // Progress + admin writes (own body parser, own auth): before the global one.
+  if (auth && content) {
+    app.use('/api', createContentRouter({ service: content.service, authenticate: auth.authenticate, isAdmin: auth.isAdmin }));
+    // An admin stopping a learner's session also ends the sandbox behind it.
+    app.on('practice-session-stopped', (sandboxSessionId) => {
+      if (!sandboxSessionId || !manager.sessions.has(sandboxSessionId)) return;
+      manager.withSession(sandboxSessionId, (session) => manager.remove(session)).catch(() => {});
+      owners.delete(sandboxSessionId);
+      records.delete(sandboxSessionId);
+    });
+  }
   if (auth) app.use('/api', auth.authenticate);
 
   app.use(express.json({ limit: '16kb', strict: true }));
@@ -97,8 +128,16 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     if (auth && liveSessionsOf(req.user.id) >= (auth.maxSessionsPerUser ?? 3)) {
       throw new HttpError(429, 'SESSION_LIMIT', 'Too many open sandbox sessions — close another lab tab first');
     }
+    const lessonId = req.body?.lessonId;
+    if (lessonId !== undefined && lessonId !== null && !isUuid(lessonId)) {
+      throw new HttpError(400, 'INVALID_INPUT', 'lessonId must be a valid id');
+    }
     const session = await manager.create();
     if (auth) owners.set(session.id, req.user.id);
+    if (auth && content) {
+      const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
+      if (recordId) records.set(session.id, recordId);
+    }
     res.status(201).json(manager.describe(session));
   });
   app.get('/api/sessions/:id', ownSession, (req, res) => res.json(manager.describe(manager.get(req.params.id))));
@@ -133,6 +172,8 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       }
       return output;
     });
+    const recordId = records.get(req.params.id);
+    if (recordId) content.service.touchPracticeRecord(recordId).catch(() => {});
     res.json(result);
   });
   app.post('/api/sessions/:id/check', ownSession, async (req, res) => {
@@ -154,6 +195,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     }
     await manager.withSession(req.params.id, session => manager.remove(session));
     owners.delete(req.params.id);
+    closeRecord(req.params.id);
     res.sendStatus(204);
   });
   app.use((_req, _res, next) => next(new HttpError(404, 'NOT_FOUND', 'Endpoint not found')));
@@ -174,6 +216,7 @@ function servicesFromEnv() {
     const admin = createSupabaseAdmin();
     const authenticate = requireAuth(admin);
     return {
+      content: { service: createContentService({ admin, userClient: createSupabaseUserFactory() }) },
       auth: {
         authenticate,
         isAdmin: (userId) => isActiveAdmin(admin, userId),
@@ -192,14 +235,14 @@ function servicesFromEnv() {
   }
   if (process.env.SANDBOX_REQUIRE_AUTH === 'false') {
     console.warn('WARNING: API running WITHOUT authentication (SANDBOX_REQUIRE_AUTH=false) — /api/auth is disabled.');
-    return { auth: false, authApi: null };
+    return { auth: false, authApi: null, content: null };
   }
   throw new Error('Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_ANON_KEY (see RUNNING.md), '
     + 'or SANDBOX_REQUIRE_AUTH=false for an unauthenticated benchmark run');
 }
 
 export async function startServer() {
-  const { auth, authApi } = servicesFromEnv();
+  const { auth, authApi, content } = servicesFromEnv();
   const manager = new SessionManager();
   const runner = new SandboxRunner();
   // Machines without Docker/Linux (e.g. a Windows dev box) still run the auth
@@ -229,7 +272,7 @@ export async function startServer() {
     console.warn('Sandbox disabled (SANDBOX_ENABLED=false): only the auth API is served.');
   }
   const host = process.env.HOST || '0.0.0.0';
-  const server = createApp({ manager, runner, auth, authApi, sandbox }).listen(Number(process.env.PORT || 3001), host, () => {
+  const server = createApp({ manager, runner, auth, authApi, content, sandbox }).listen(Number(process.env.PORT || 3001), host, () => {
     console.log(`BashLab API listening on http://${host}:${server.address().port}`);
   });
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {

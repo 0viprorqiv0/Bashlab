@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { adminApi } from '@/lib/writeApi';
 import styles from './Admin.module.css';
 import content from './ContentManager.module.css';
 import { isValidSlug, slugify } from './slug';
@@ -89,13 +90,12 @@ export default function ContentManager() {
       const slug = slugify(title);
       if (!slug) return setError('Add a title with at least one letter or number.');
       if (courses.some((item) => item.slug === slug)) return setError(`A course with slug "${slug}" already exists.`);
-      result = await supabase.from('courses')
-        .insert({ title, slug, status: 'draft', sort_order: nextOrder(courses) }).select('id').single();
+      result = await adminApi.createCourse({ title, slug, status: 'draft', sort_order: nextOrder(courses) });
       if (!result.error) setSelectedId(result.data.id);
     } else if (dialog.type === 'chapter') {
-      result = await supabase.from('chapters').insert({ course_id: course.id, title, sort_order: nextOrder(course.chapters) });
+      result = await adminApi.createChapter(course.id, { title, sort_order: nextOrder(course.chapters) });
     } else if (dialog.type === 'rename') {
-      result = await supabase.from('chapters').update({ title }).eq('id', dialog.target.id);
+      result = await adminApi.updateChapter(dialog.target.id, { title });
     } else {
       const chapter = dialog.target;
       const taken = new Set(course.chapters.flatMap((item) => item.lessons.map((lesson) => lesson.slug)));
@@ -104,10 +104,10 @@ export default function ContentManager() {
       for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
       // New lessons start as structured labs (draft), so they render in the
       // learner workspace the same way the seeded labs do once published.
-      result = await supabase.from('lessons').insert({
-        chapter_id: chapter.id, title, slug, status: 'draft', sort_order: nextOrder(chapter.lessons),
+      result = await adminApi.createLesson(chapter.id, {
+        title, slug, status: 'draft', sort_order: nextOrder(chapter.lessons),
         lesson_content: { ...emptyLessonContent(), track: chapter.title },
-      }).select('id').single();
+      });
       if (!result.error) {
         router.push(`/admin/lessons/${result.data.id}`);
         return;
@@ -121,10 +121,8 @@ export default function ContentManager() {
 
   async function swap(table, a, b) {
     if (!a || !b) return;
-    await mutate(Promise.all([
-      supabase.from(table).update({ sort_order: b.sort_order }).eq('id', a.id),
-      supabase.from(table).update({ sort_order: a.sort_order }).eq('id', b.id),
-    ]).then((results) => results.find((result) => result.error) || { error: null }));
+    // The two rows trade places: each takes the other's sort_order.
+    await mutate(adminApi.swap(table, { id: a.id, sort_order: b.sort_order }, { id: b.id, sort_order: a.sort_order }));
   }
 
   if (!courses) return error ? <p className={styles.errorText}>{error}</p> : null;
@@ -276,7 +274,7 @@ function CourseForm({ course, courses, onDirty, mutate }) {
     if (!form.title.trim()) return setMessage('Title is required.');
     if (!isValidSlug(form.slug)) return setMessage('Slug may only contain lowercase letters, numbers and single hyphens.');
     if (courses.some((item) => item.id !== course.id && item.slug === form.slug)) return setMessage('Another course already uses this slug.');
-    const ok = await mutate(supabase.from('courses').update({
+    const ok = await mutate(adminApi.updateCourse(course.id, {
       title: form.title.trim(),
       slug: form.slug,
       description: form.description.trim() || null,
@@ -284,7 +282,7 @@ function CourseForm({ course, courses, onDirty, mutate }) {
       category: form.category || null,
       duration_minutes: form.duration_minutes === '' ? null : Number(form.duration_minutes),
       status: form.status,
-    }).eq('id', course.id));
+    }));
     if (ok) {
       const next = { ...form, title: form.title.trim() };
       setSaved(next);

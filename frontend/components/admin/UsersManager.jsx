@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { adminApi } from '@/lib/writeApi';
 import styles from './Admin.module.css';
 import ReasonDialog from './ReasonDialog';
 import { useAdmin } from './AdminGate';
@@ -44,7 +45,7 @@ export default function UsersManager() {
       description: newRole === 'admin' ? 'Admins can edit all content and manage users.' : 'They will lose access to the admin pages.',
       confirmLabel: newRole === 'admin' ? 'Make admin' : 'Make learner',
       danger: newRole === 'learner',
-      run: (reason) => supabase.rpc('admin_set_user_role', { target: user.id, new_role: newRole, reason }),
+      run: (reason) => adminApi.setUserRole(user.id, newRole, reason),
       done: `Role of ${user.email} changed to ${newRole}.`,
     });
   }
@@ -56,7 +57,7 @@ export default function UsersManager() {
       description: lock ? 'They will be signed out and unable to log in until unlocked.' : 'They will be able to log in again.',
       confirmLabel: lock ? 'Lock account' : 'Unlock account',
       danger: lock,
-      run: (reason) => supabase.rpc('admin_set_user_lock', { target: user.id, locked: lock, reason }),
+      run: (reason) => adminApi.setUserLock(user.id, lock, reason),
       done: `${user.email} ${lock ? 'locked' : 'unlocked'}.`,
     });
   }

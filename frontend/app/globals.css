@@ -29,6 +29,7 @@
 html {
   /* Tự động scale theo độ phân giải & tỉ lệ màn hình, phóng to tổng thể ~12-15% */
   font-size: clamp(16.5px, calc(0.98rem + 0.22vw + 0.1vh), 20.5px);
+  scroll-behavior: smooth;
   scrollbar-gutter: stable;
   overflow-y: scroll;
 }

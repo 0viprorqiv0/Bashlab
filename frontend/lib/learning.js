@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { progressApi } from './writeApi';
 
 // Single source of truth for what a learner sees: every *published* lesson of
 // a course, in the chapter/lesson order the admin set in Content. The course
@@ -107,26 +108,17 @@ export function toDisplayLab(lesson, progressMap = new Map()) {
   };
 }
 
-export async function markLessonDone(userId, lessonId) {
-  const now = new Date().toISOString();
-  return supabase.from('progress').upsert({
-    user_id: userId,
-    lesson_id: lessonId,
-    status: 'done',
-    completed_at: now,
-    updated_at: now,
-  });
+// Progress writes go through the API, which takes the user from the token
+// (the userId argument is kept only so callers did not need to change).
+export async function markLessonDone(_userId, lessonId) {
+  return progressApi.done(lessonId);
 }
 
-export async function markLessonUndone(userId, lessonId) {
-  return supabase.from('progress').delete().eq('user_id', userId).eq('lesson_id', lessonId);
+export async function markLessonUndone(_userId, lessonId) {
+  return progressApi.clear(lessonId);
 }
 
-export async function markLessonStarted(userId, lessonId) {
-  // Never downgrades an already-done lesson — ignoreDuplicates only inserts
-  // when no row exists yet for this (user, lesson) pair.
-  return supabase.from('progress').upsert(
-    { user_id: userId, lesson_id: lessonId, status: 'in_progress', updated_at: new Date().toISOString() },
-    { onConflict: 'user_id,lesson_id', ignoreDuplicates: true },
-  );
+// The API never downgrades an already-done lesson.
+export async function markLessonStarted(_userId, lessonId) {
+  return progressApi.started(lessonId);
 }

@@ -36,6 +36,10 @@ function forToken(accessToken) {
       const res = await fetch(`${rest(table)}${query}`, { method: 'PATCH', headers: { ...headers, Prefer: 'return=representation' }, body: JSON.stringify(patch) });
       return { status: res.status, data: await res.json() };
     },
+    async remove(table, query) {
+      const res = await fetch(`${rest(table)}${query}`, { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } });
+      return { status: res.status, data: await res.json().catch(() => null) };
+    },
     async rpc(fn, args = {}) {
       const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers, body: JSON.stringify(args) });
       const data = await res.json().catch(() => null);
@@ -44,4 +48,18 @@ function forToken(accessToken) {
   };
 }
 
-module.exports = { signIn, forToken };
+// The BashLab backend API (writes: progress, content authoring, admin actions).
+const API_BASE = process.env.E2E_API_URL || 'http://127.0.0.1:3001';
+function forBackend(accessToken) {
+  return async function call(method, path, body) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = res.status === 204 ? null : await res.json().catch(() => null);
+    return { status: res.status, data };
+  };
+}
+
+module.exports = { signIn, forToken, forBackend };

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { endSession, sandboxEnabled } from '@/lib/sandbox';
+import { adminApi } from '@/lib/writeApi';
 import styles from './Admin.module.css';
 import ReasonDialog from './ReasonDialog';
 
@@ -67,9 +67,9 @@ function SessionsTab() {
 
   async function stop(reason) {
     const session = dialog.session;
-    const { error } = await supabase.rpc('admin_stop_session', { p_session: session.id, p_reason: reason });
+    // The API stops the row (audited) and ends the sandbox behind it.
+    const { error } = await adminApi.stopSession(session.id, reason);
     if (error) return error.message;
-    if (sandboxEnabled && session.sandbox_session_id) endSession(session.sandbox_session_id);
     setNotice(`Session of ${session.email || 'learner'} stopped.`);
     setDialog(null);
     await load();

@@ -28,7 +28,8 @@ async function call(path, options = {}) {
   return body;
 }
 
-export const createSession = () => call('/api/sessions', { method: 'POST' });
+// lessonId lets the API record the practice session (admin Activity page).
+export const createSession = (lessonId) => call('/api/sessions', { method: 'POST', body: JSON.stringify({ lessonId }) });
 
 export const runCommand = (sessionId, command) =>
   call(`/api/sessions/${sessionId}/execute`, { method: 'POST', body: JSON.stringify({ command }) });

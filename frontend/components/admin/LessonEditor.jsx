@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { adminApi } from '@/lib/writeApi';
 import Markdown from '@/components/shared/Markdown';
 import { PageLoading } from '@/components/shared/Loading';
 import styles from './Admin.module.css';
@@ -140,7 +141,7 @@ function EditorForm({ lesson, course, chapters }) {
 
     setStatus({ type: 'saving' });
     const objectives = form.objectives.map((item) => item.trim()).filter(Boolean);
-    const { data: row, error } = await supabase.from('lessons').update({
+    const { data: row, error } = await adminApi.updateLesson(lesson.id, {
       title: form.title.trim(),
       slug: form.slug,
       chapter_id: form.chapter_id,
@@ -150,7 +151,7 @@ function EditorForm({ lesson, course, chapters }) {
       ...(structured
         ? { lesson_content: form.content }
         : { content_md: form.content_md, objectives }),
-    }).eq('id', lesson.id).select(LESSON_FIELDS).single();
+    });
     if (error) return setStatus({ type: 'error', message: error.message });
     // Re-sync from what the database stored, not from what we sent.
     const next = toForm(row);

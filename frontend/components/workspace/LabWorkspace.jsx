@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import styles from './LabWorkspace.module.css';
-import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { authClient } from '@/lib/authClient';
 import Markdown from '@/components/shared/Markdown';
@@ -829,37 +828,21 @@ function useSandbox(user, lab) {
     { type: 'output', text: STATUS_TEXT.connecting },
   ]);
   const [busy, setBusy] = useState(false);
-  const recordRef = useRef(null);
-
-  // Marks a practice_sessions row stopped so admin Activity never shows a
-  // session as "active" after the learner stopped it, left, or it expired.
-  const closeRecord = useCallback((recordId) => {
-    if (!recordId) return;
-    supabase.from('practice_sessions').update({ status: 'stopped', last_active_at: new Date().toISOString() })
-      .eq('id', recordId).then(() => {});
-    if (recordRef.current === recordId) recordRef.current = null;
-  }, []);
-
   const openSession = useCallback(async () => {
     setStatus('connecting');
     try {
-      const session = await createSession();
-      closeRecord(recordRef.current); // the session it replaces, if any
+      const session = await createSession(lab.id); // the API records the practice session
       setSessionId(session.sessionId);
       setCwd(session.cwd || HOME);
       setStatus('ready');
-      const { data } = await supabase.from('practice_sessions').insert({
-        user_id: user.id, lesson_id: lab.id, sandbox_session_id: session.sessionId, status: 'active',
-      }).select('id').single();
-      recordRef.current = data?.id || null;
-      return { sessionId: session.sessionId, recordId: recordRef.current };
+      return { sessionId: session.sessionId };
     } catch (error) {
       const failed = error.code === 'SANDBOX_DISABLED' ? 'disabled' : 'offline';
       setStatus(failed);
       setLog((prev) => [...prev, { type: 'output', text: STATUS_TEXT[failed] }]);
       return null;
     }
-  }, [user.id, lab.id, closeRecord]);
+  }, [lab.id]);
 
   useEffect(() => {
     // If the page unmounts before the session finishes opening (fast
@@ -870,26 +853,15 @@ function useSandbox(user, lab) {
     openSession().then((value) => {
       if (cancelled && value) {
         endSession(value.sessionId);
-        closeRecord(value.recordId);
       } else {
         opened = value;
       }
     });
     return () => {
       cancelled = true;
-      if (opened) {
-        endSession(opened.sessionId);
-        closeRecord(opened.recordId);
-      }
+      if (opened) endSession(opened.sessionId);
     };
-  }, [openSession, closeRecord]);
-
-  const touch = () => {
-    if (recordRef.current) {
-      supabase.from('practice_sessions').update({ last_active_at: new Date().toISOString() })
-        .eq('id', recordRef.current).then(() => {});
-    }
-  };
+  }, [openSession]);
 
   const run = async (command) => {
     const prompt = `learner@bashlab:${shortCwd(cwd)}$`;
@@ -917,7 +889,6 @@ function useSandbox(user, lab) {
       if (result.quotaExceeded) lines.push({ type: 'output', text: result.quotaError });
       setLog((prev) => [...prev, ...lines]);
       if (result.cwdUpdated && result.cwd) setCwd(result.cwd);
-      touch();
     } catch (error) {
       setLog((prev) => [...prev, { type: 'output', text: error.message }]);
     } finally {
@@ -935,8 +906,7 @@ function useSandbox(user, lab) {
       setLog([{ type: 'output', text: 'Workspace reset.' }]);
     },
     stop: () => {
-      if (sessionId) endSession(sessionId);
-      closeRecord(recordRef.current);
+      if (sessionId) endSession(sessionId); // the API also closes the practice record
       setSessionId(null);
       // 'stopped' (by the learner), not 'offline': the sandbox is still reachable.
       setStatus('stopped');

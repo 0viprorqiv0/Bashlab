@@ -44,6 +44,24 @@ role/khoá tài khoản vẫn chỉ qua RPC admin (009/012).
 
 Row `profiles` được **tự động tạo** khi `signUp` thành công (trigger DB).
 
+## 1b. Ghi dữ liệu — qua backend API (migration 017), FE chỉ ĐỌC từ Supabase
+
+Trình duyệt (anon/authenticated key) **không còn INSERT/UPDATE/DELETE** trên `courses`, `chapters`, `lessons`, `progress`, `practice_sessions`, `admin_logs`. Mọi thao tác ghi đi qua API (service role + validate whitelist; trigger DB vẫn là lớp thứ hai). Header `Authorization: Bearer <access_token>`.
+
+| Method + path | Ai | Ghi chú |
+|---|---|---|
+| `PUT /api/progress/:lessonId` `{status:'done'\|'in_progress'}` | learner | Chỉ bài đã published của khoá đã published (admin: mọi bài). `in_progress` không hạ bài đã `done`. `user_id` luôn lấy từ token. |
+| `DELETE /api/progress/:lessonId` | learner | Chỉ xoá dòng của chính mình. |
+| `POST /api/admin/courses`, `PATCH /api/admin/courses/:id` | admin | title, slug, description, level, category, duration_minutes, status, sort_order. |
+| `POST /api/admin/courses/:id/chapters`, `PATCH /api/admin/chapters/:id` | admin | title, sort_order. |
+| `POST /api/admin/chapters/:id/lessons`, `PATCH /api/admin/lessons/:id` | admin | title, slug, chapter_id, sort_order, status, test_template `{verifier}`, lesson_content, content_md, objectives. PATCH trả về dòng kèm `chapters(courses(...))`. Body tối đa 512kb. |
+| `POST /api/admin/{courses\|chapters\|lessons}/swap` `{items:[{id,sort_order},{id,sort_order}]}` | admin | Đổi chỗ 2 mục. |
+| `POST /api/admin/users/:id/role` `{role, reason}` · `POST /api/admin/users/:id/lock` `{locked, reason}` | admin | Gọi RPC `admin_set_user_role/lock` **bằng token của chính admin** → `admin_logs` ghi đúng actor. |
+| `POST /api/admin/sessions/:id/stop` `{reason}` | admin | RPC `admin_stop_session` + tắt luôn sandbox session phía sau. |
+| `POST /api/sessions` `{lessonId}` | learner | Backend tự ghi `practice_sessions` (active → cập nhật `last_active_at` mỗi lệnh → `stopped` khi xoá/hết hạn). FE không ghi bảng này nữa. |
+
+Lỗi: `400 INVALID_INPUT` (validate / trigger DB), `403 FORBIDDEN` (không phải admin), `404` (bài không thấy được), `409 CONFLICT` (trùng slug). Header bảo mật: backend dùng Helmet (CSP `default-src 'none'`, HSTS, nosniff, no-referrer…); frontend đặt CSP/X-Frame-Options/HSTS/Permissions-Policy trong `frontend/next.config.js`.
+
 ## 2. Đọc dữ liệu khoá học (Screen 07, 08, 09)
 
 Đọc thẳng qua `supabase-js`, cần user đã đăng nhập (có access token):
