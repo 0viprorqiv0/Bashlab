@@ -44,3 +44,17 @@ test('progress made on the course page is what the workspace shows', async ({ pa
   await page.goto('/courses/shell-101/labs/1');
   await expect(page.getByText('Objective Tasks (4 of 4 completed)')).toBeVisible();
 });
+
+test('the workspace lists the same labs as the course page, in the same order', async ({ page }) => {
+  await page.goto('/courses/shell-101');
+  await expect(page.locator('tbody tr').first()).toBeVisible();
+  const rows = await page.locator('tbody tr').count();
+  expect(rows).toBeGreaterThan(0);
+  await page.goto('/courses/shell-101/labs/1');
+  await expect(page.getByText(`1 / ${rows}`)).toBeVisible();
+  await page.getByRole('button', { name: 'Lessons' }).click();
+  await expect(page.getByRole('link', { name: /Terminal Fundamentals/ }).first()).toBeVisible();
+  await expect(page.locator('ol > li')).toHaveCount(rows);
+  await page.goto(`/courses/shell-101/labs/${rows + 1}`);
+  await expect(page.getByText('404')).toBeVisible();
+});

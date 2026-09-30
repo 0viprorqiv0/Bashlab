@@ -166,17 +166,24 @@ test('once the course is published, learners see the admin-authored lab — same
   await expect(publicPage.getByText('0 / 1 (0%)')).toBeVisible();
   await anon.close();
 
-  // The lab workspace page is the frontend's own static Shell 101 workspace,
-  // so what the learner-facing DATA contract guarantees is checked at the
-  // database boundary instead: the authored content is readable by a learner.
-  const { signIn, forToken } = require('../support/apiClient');
-  const { loadUsers } = require('../support/testUsers');
-  const users = loadUsers();
-  const learnerApi = forToken((await signIn(users.learner.email, users.learner.password)).access_token);
-  const lessons = await learnerApi.select('lessons', '?select=title,slug,lesson_content&slug=eq.first-lesson');
-  expect(lessons.data).toHaveLength(1);
-  expect(lessons.data[0].lesson_content.scenario).toContain('You just logged in to a');
-  expect(lessons.data[0].lesson_content.steps).toHaveLength(2);
+  // Lab workspace: the authored content is rendered, for a course the
+  // frontend has never heard of. The course-page link (slug) lands on /labs/1.
+  const learner = await browser.newContext({ storageState: path.join(__dirname, '..', '.auth', 'learner.json') });
+  const lab = await learner.newPage();
+  await lab.goto(`/courses/${courseSlug}`);
+  await lab.getByText('First Lesson').first().click();
+  await lab.waitForURL(`**/courses/${courseSlug}/labs/1`);
+  await expect(lab.getByText('Mission Scenario')).toBeVisible();
+  await expect(lab.getByText('You just logged in to a')).toBeVisible();
+  await expect(lab.getByText('Objective Tasks (0 of 2 completed)')).toBeVisible();
+  await expect(lab.getByText('Print working directory')).toBeVisible();
+  await expect(lab.getByText('Where am I?', { exact: true })).toBeVisible();
+  await expect(lab.getByRole('button', { name: 'Check Solution' })).toBeVisible();
+  await lab.goto(`/courses/${courseSlug}/labs/first-lesson`); // a slug also works and normalises to the number
+  await lab.waitForURL(`**/courses/${courseSlug}/labs/1`);
+  await lab.goto(`/courses/${courseSlug}/labs/2`);
+  await expect(lab.getByText('404')).toBeVisible();
+  await learner.close();
 });
 
 test('unpublishing the lesson in the editor removes it from the learner course page immediately', async ({ page, browser }) => {
@@ -193,5 +200,8 @@ test('unpublishing the lesson in the editor removes it from the learner course p
   await publicPage.goto(`/courses/${courseSlug}`);
   await expect(publicPage.getByText('0 / 0 (0%)')).toBeVisible();
   await expect(publicPage.locator('tr', { hasText: 'First Lesson' })).toHaveCount(0);
+  // ...and the workspace stops serving it (404), not just the list.
+  await publicPage.goto(`/courses/${courseSlug}/labs/1`);
+  await expect(publicPage.getByText('404')).toBeVisible();
   await anon.close();
 });

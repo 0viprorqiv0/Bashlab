@@ -2,12 +2,33 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { initialLabs, getLabById } from '@/data/labsData';
-import { useLabProgress } from '@/lib/labProgress';
+import { useRouter, notFound } from 'next/navigation';
+import { useCourseLabs } from '@/lib/courseLabs';
+import { PageError, PageLoading } from '@/components/shared/Loading';
 import styles from './LabWorkspace.module.css';
 
-export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
-  const currentLab = getLabById(labId);
+// Loads the course's labs from the database (see lib/courseLabs.js) and hands
+// them to the workspace below. /labs/<n> is the lab's position; a lab slug in
+// the URL is redirected to its number.
+export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
+  const router = useRouter();
+  const { loading, missing, error, labs, markDone, retry } = useCourseLabs(courseId);
+  const lab = labs.find((item) => String(item.id) === String(labId) || item.slug === labId);
+
+  useEffect(() => {
+    if (lab && String(lab.id) !== String(labId)) router.replace(`/courses/${courseId}/labs/${lab.id}`);
+  }, [lab, labId, courseId, router]);
+
+  if (loading) return <PageLoading label="Loading lab…" />;
+  if (error) return <PageError message={`Could not load this lab: ${error}`} onRetry={retry} />;
+  if (missing || !lab) notFound();
+  if (String(lab.id) !== String(labId)) return <PageLoading label="Loading lab…" />;
+  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} />;
+}
+
+function Workspace({ courseId, labId, labs, markDone }) {
+  const initialLabs = labs;
+  const currentLab = initialLabs.find((item) => item.id === labId);
   const totalLabs = initialLabs.length;
 
   // Active tab on left pane
@@ -69,15 +90,6 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
   });
 
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
-
-  // A signed-in learner's real progress (database) replaces the built-in defaults.
-  const { doneSlugs, markDone } = useLabProgress(courseId);
-  useEffect(() => {
-    if (!doneSlugs) return;
-    const done = doneSlugs.has(currentLab.slug);
-    setIsLabSolved(done);
-    setCompletedSteps(done ? (currentLab.steps || []).map((s) => s.id) : []);
-  }, [doneSlugs, currentLab]);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [instanceStatus, setInstanceStatus] = useState('running'); // 'running' | 'stopped' | 'restarting'
@@ -208,7 +220,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
       const allIds = currentLab.steps.map((s) => s.id);
       setCompletedSteps(allIds);
       setIsLabSolved(true);
-      markDone(currentLab.slug).then(({ error }) => {
+      markDone(currentLab).then(({ error }) => {
         if (error) setTerminalLogs((prev) => [...prev, { type: 'output', text: `
 [warning] Your progress could not be saved: ${error.message}` }]);
       });
@@ -559,7 +571,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
                 </div>
                 <ol className={styles.lessonList}>
                   {initialLabs.map((lab) => {
-                    const completed = lab.id === currentLab.id ? isLabSolved : (doneSlugs ? doneSlugs.has(lab.slug) : lab.status === 'solved');
+                    const completed = lab.id === currentLab.id ? isLabSolved : lab.status === 'solved';
                     return (
                       <li key={lab.id}>
                         <Link href={`/courses/${courseId}/labs/${lab.id}`} className={`${styles.lessonRow} ${lab.id === currentLab.id ? styles.currentLesson : ''} ${completed ? styles.completedLesson : ''}`}
@@ -583,7 +595,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
                   <div className={styles.metaRow}>
                     <span>Track: <strong>{currentLab.category}</strong></span>
                     <span>·</span>
-                    <span>Acceptance: <strong>{currentLab.acceptance}</strong></span>
+                    {currentLab.acceptance && <span>Acceptance: <strong>{currentLab.acceptance}</strong></span>}
                   </div>
                 </div>
 

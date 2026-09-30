@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient';
 import { progressApi } from './writeApi';
-import { initialLabs } from '@/data/labsData';
 
 // Single source of truth for what a learner sees: every *published* lesson of
 // a course, in the chapter/lesson order the admin set in Content. The course
@@ -76,11 +75,10 @@ export function courseCode(slug) {
   return slug.match(/\d+/)?.[0] || slug.slice(0, 3).toUpperCase();
 }
 
+// The workspace resolves a lab slug to its position and redirects to
+// /labs/<n> (the canonical URL, used by its own prev/next/sidebar links).
 export function lessonHref(courseSlug, lessonSlug) {
-  const labId = courseSlug === 'shell-101'
-    ? initialLabs.find((lab) => lab.slug === lessonSlug)?.id || 1
-    : lessonSlug;
-  return `/courses/${courseSlug}/labs/${labId}`;
+  return `/courses/${courseSlug}/labs/${lessonSlug}`;
 }
 
 const capitalize = (value) => (value ? value[0].toUpperCase() + value.slice(1) : '');
