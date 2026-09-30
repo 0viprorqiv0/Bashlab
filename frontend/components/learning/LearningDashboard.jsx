@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './LearningDashboard.module.css';
 import { supabase } from '@/lib/supabaseClient';
-import { getFirstIncompleteLab } from '@/data/labsData';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { authClient } from '@/lib/authClient';
+import { PageError, PageLoading } from '@/components/shared/Loading';
 import {
-  courseCode, courseStats, fetchProgressMap, fetchPublishedCourses, getCurrentUser, lessonHref,
+  courseCode, courseStats, fetchProgressMap, fetchPublishedCourses, lessonHref,
 } from '@/lib/learning';
 
 const dateLabel = (date, options) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { ...options, timeZone: 'UTC' });
@@ -65,36 +67,40 @@ async function loadDashboard(userId) {
     current,
     completedCourses: withStats.filter((item) => item.total > 0 && item.done === item.total).length,
     totalCourses: withStats.length,
-    lessonsDone: [...progressMap.values()].filter((row) => row.status === 'done').length,
+    // Counted against published lessons only, the same list the course pages show.
+    lessonsDone: withStats.reduce((sum, item) => sum + item.done, 0),
     days: buildDays(sessionsResult.data || [], [...progressMap.values()]),
   };
 }
 
 export default function LearningDashboard() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+
+  // Start loading as soon as there is a stored session; the API's identity
+  // check (useAuth) runs in parallel and can still bounce us to /login.
+  useEffect(() => {
+    const userId = authClient.peekUserId();
+    if (!userId) {
+      router.replace('/login?next=%2Fmy-learning');
+      return undefined;
+    }
+    let cancelled = false;
+    loadDashboard(userId)
+      .then((loaded) => { if (!cancelled) setData(loaded); })
+      .catch(() => { if (!cancelled) setLoadError('We could not load your learning data.'); });
+    return () => { cancelled = true; };
+  }, [router, attempt]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const user = await getCurrentUser();
-        if (!user) {
-          router.replace('/login');
-          return;
-        }
-        const loaded = await loadDashboard(user.id);
-        if (!cancelled) setData(loaded);
-      } catch {
-        if (!cancelled) setLoadError('We could not load your learning data. Please refresh and try again.');
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [router]);
+    if (!authLoading && !user) router.replace('/login?next=%2Fmy-learning');
+  }, [authLoading, user, router]);
 
-  if (loadError) return <main className={styles.page}><p role="alert">{loadError}</p></main>;
-  if (!data) return null;
+  if (loadError) return <PageError message={loadError} onRetry={() => { setLoadError(''); setAttempt((n) => n + 1); }} />;
+  if (!data) return <PageLoading label="Loading your progress…" />;
   return <Dashboard {...data} />;
 }
 
@@ -112,14 +118,10 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
   for (let index = days.length - 1; index >= 0 && days[index].level > 0; index--) streak++;
   const percent = current && current.total ? Math.round((current.done / current.total) * 100) : 0;
   const courseState = !current || current.done === 0 ? 'Not started' : current.done === current.total ? 'Completed' : 'In progress';
-  const firstIncompleteLab = current?.course.slug === 'shell-101'
-    ? getFirstIncompleteLab()
-    : null;
-  const startHref = firstIncompleteLab
-    ? `/courses/${current.course.slug}/labs/${firstIncompleteLab.id}`
-    : current?.next
-      ? lessonHref(current.course.slug, current.next.slug)
-      : `/courses/${current?.course.slug}`;
+  // Next unfinished lesson from real progress; a finished course reopens its overview.
+  const startHref = current?.next
+    ? lessonHref(current.course.slug, current.next.slug)
+    : `/courses/${current?.course.slug}`;
 
   useEffect(() => {
     if (calendarRef.current) calendarRef.current.scrollLeft = calendarRef.current.scrollWidth;

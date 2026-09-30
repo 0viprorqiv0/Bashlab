@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './Admin.module.css';
 import content from './ContentManager.module.css';
 import { isValidSlug, slugify } from './slug';
+import { emptyLessonContent } from './lessonContent';
 
 function Icon({ name }) { return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>; }
 
@@ -14,17 +16,11 @@ const bySort = (a, b) => a.sort_order - b.sort_order;
 const nextOrder = (rows) => rows.reduce((max, row) => Math.max(max, row.sort_order), 0) + 1;
 
 async function loadCourses() {
-  const fields = 'id, slug, title, description, level, category, duration_minutes, status, sort_order, '
-    + 'chapters(id, title, sort_order, lessons(id, slug, title, status, sort_order, lesson_content))';
-  let result = await supabase
+  const result = await supabase
     .from('courses')
-    .select(fields)
+    .select('id, slug, title, description, level, category, duration_minutes, status, sort_order, '
+      + 'chapters(id, title, sort_order, lessons(id, slug, title, status, sort_order, lesson_content))')
     .order('sort_order');
-  if (result.error && (['42703', 'PGRST204'].includes(result.error.code) || /lesson_content.*(schema cache|column|field)|column.*lesson_content/i.test(result.error.message))) {
-    result = await supabase.from('courses')
-      .select(fields.replace(', lesson_content', ''))
-      .order('sort_order');
-  }
   if (result.error) throw result.error;
   return result.data.map((course) => ({
     ...course,
@@ -106,8 +102,11 @@ export default function ContentManager() {
       const base = slugify(title) || 'lesson';
       let slug = base;
       for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+      // New lessons start as structured labs (draft), so they render in the
+      // learner workspace the same way the seeded labs do once published.
       result = await supabase.from('lessons').insert({
-        chapter_id: chapter.id, title, slug, status: 'draft', sort_order: nextOrder(chapter.lessons), content_md: `# ${title}\n`,
+        chapter_id: chapter.id, title, slug, status: 'draft', sort_order: nextOrder(chapter.lessons),
+        lesson_content: { ...emptyLessonContent(), track: chapter.title },
       }).select('id').single();
       if (!result.error) {
         router.push(`/admin/lessons/${result.data.id}`);
@@ -201,17 +200,21 @@ export default function ContentManager() {
                   {!collapsed.has(chapter.id) && <ol className={content.lessons}>
                     {chapter.lessons.map((lesson, lessonIndex) => (
                       <li key={lesson.id} className={content.lessonRow}>
-                        <a className={content.lessonMain} href={`/admin/lessons/${lesson.id}`} onClick={(event) => { if (!confirmLeave()) event.preventDefault(); }}>
+                        <Link className={content.lessonMain} href={`/admin/lessons/${lesson.id}`} onClick={(event) => { if (!confirmLeave()) event.preventDefault(); }}>
                           <span>{lesson.title}</span>
                           {!!lesson.lesson_content?.commands?.length && <small>{lesson.lesson_content.commands.join(' · ')}</small>}
-                        </a>
+                        </Link>
                         <span className={`${styles.badge} ${STATUS_BADGE[lesson.status]}`}>{lesson.status}</span>
                         <div className={content.rowActions}>
                           <button type="button" className={styles.ghostButton} aria-label="Move lesson up" disabled={lessonIndex === 0}
                             onClick={() => swap('lessons', lesson, chapter.lessons[lessonIndex - 1])}><Icon name="arrow_upward" /></button>
                           <button type="button" className={styles.ghostButton} aria-label="Move lesson down" disabled={lessonIndex === chapter.lessons.length - 1}
                             onClick={() => swap('lessons', lesson, chapter.lessons[lessonIndex + 1])}><Icon name="arrow_downward" /></button>
-                          <a className={styles.ghostButton} href={`/admin/lessons/${lesson.id}`} onClick={(event) => { if (!confirmLeave()) event.preventDefault(); }}><Icon name="edit_note" /> Edit</a>
+                          <Link className={styles.ghostButton} href={`/admin/lessons/${lesson.id}`} onClick={(event) => { if (!confirmLeave()) event.preventDefault(); }}><Icon name="edit_note" /> Edit</Link>
+                          {/* Only lessons learners can actually open get a View link. */}
+                          {lesson.status === 'published' && course.status === 'published' && (
+                            <Link className={styles.ghostButton} href={`/courses/${course.slug}/labs/${lesson.slug}`} aria-label={`View ${lesson.title} as a learner`}><Icon name="visibility" /> View</Link>
+                          )}
                         </div>
                       </li>
                     ))}

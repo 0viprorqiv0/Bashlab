@@ -49,4 +49,18 @@ async function deleteTestUserSafe(user) {
   await deleteTestUser(user.id);
 }
 
-module.exports = { adminClient, createTestUser, deleteTestUser, deleteTestUserSafe, TEST_PASSWORD, EMAIL_DOMAIN };
+// Real emailed-link flows without an inbox: generateLink returns the same
+// action_link the email would contain. Opening it in a browser makes Supabase
+// verify it and redirect to the app with the session in the URL fragment.
+async function emailLink(type, email, { redirectPath, password } = {}) {
+  const { data, error } = await adminClient.auth.admin.generateLink({
+    type,
+    email,
+    ...(password ? { password } : {}),
+    options: { redirectTo: `http://localhost:3000${redirectPath}` },
+  });
+  if (error) throw new Error(`generateLink(${type}): ${error.message}`);
+  return data.properties.action_link;
+}
+
+module.exports = { emailLink, adminClient, createTestUser, deleteTestUser, deleteTestUserSafe, TEST_PASSWORD, EMAIL_DOMAIN };

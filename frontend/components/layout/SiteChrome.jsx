@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import SmoothScroll from './SmoothScroll';
@@ -13,9 +14,12 @@ export default function SiteChrome({ children }) {
     .some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const isWorkspace = pathname?.includes('/labs/');
 
+  // Lenis (eased wheel scrolling + a permanent rAF loop) suits the landing
+  // page's scroll-driven sections; on app pages it made every scroll lag
+  // behind the wheel, so everywhere else uses native scrolling.
   return (
-    <>
-      {!isWorkspace && <SmoothScroll />}
+    <AuthProvider>
+      {pathname === '/' && <SmoothScroll />}
       <Navbar isTransparent={pathname === '/'} />
       <main
         className={
@@ -31,6 +35,6 @@ export default function SiteChrome({ children }) {
         {children}
       </main>
       {!isWorkspace && <Footer />}
-    </>
+    </AuthProvider>
   );
 }

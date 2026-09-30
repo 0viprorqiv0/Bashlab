@@ -1,9 +1,11 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { ErrorContent } from '@/components/shared/ErrorPage';
+import { PageLoading } from '@/components/shared/Loading';
 import styles from './Admin.module.css';
 
 const AdminContext = createContext(null);
@@ -20,40 +22,27 @@ const SECTIONS = [
 export default function AdminGate({ children }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [state, setState] = useState({ status: 'loading' });
+  const { loading, user, profile, isAdmin } = useAuth();
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      const { data: profile } = await supabase
-        .from('profiles').select('role, is_locked, name').eq('id', user.id).single();
-      if (cancelled) return;
-      const isAdmin = profile?.role === 'admin' && !profile.is_locked;
-      setState(isAdmin ? { status: 'admin', user: { id: user.id, email: user.email, name: profile.name } } : { status: 'denied' });
-    })();
-    return () => { cancelled = true; };
-  }, [router]);
+    if (!loading && !user) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [loading, user, pathname, router]);
 
-  if (state.status === 'loading') return null;
-  if (state.status === 'denied') {
+  if (loading || !user) return <PageLoading label="Checking access…" />;
+  if (!isAdmin) {
     return <ErrorContent code="403" message="You do not have permission to access this page." />;
   }
 
   return (
-    <AdminContext.Provider value={state.user}>
+    <AdminContext.Provider value={{ id: user.id, email: user.email, name: profile?.name }}>
       <div className={styles.shell}>
         <nav className={styles.subnav} aria-label="Admin sections">
           <span className={styles.subnavLabel}>Admin</span>
           {SECTIONS.map((section) => (
-            <a key={section.href} href={section.href}
+            <Link key={section.href} href={section.href}
               className={pathname.startsWith(section.href) || (section.href === '/admin/content' && pathname.startsWith('/admin/lessons')) ? styles.subnavActive : ''}>
               <span className="material-symbols-outlined" aria-hidden="true">{section.icon}</span>{section.label}
-            </a>
+            </Link>
           ))}
         </nav>
         {children}

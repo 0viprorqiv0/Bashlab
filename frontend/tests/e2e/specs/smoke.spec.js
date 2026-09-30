@@ -39,11 +39,11 @@ test.describe('anonymous visitor', () => {
 
   test('/my-learning redirects to /login when not authenticated', async ({ page }) => {
     await page.goto('/my-learning');
-    await page.waitForURL('**/login');
+    await page.waitForURL('**/login**');
   });
 
   test('/admin redirects to /login when not authenticated (guard runs before the 403 branch)', async ({ page }) => {
     await page.goto('/admin/content');
-    await page.waitForURL('**/login');
+    await page.waitForURL('**/login**');
   });
 });

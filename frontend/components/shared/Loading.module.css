@@ -1,0 +1,39 @@
+.page {
+  display: flex;
+  flex: 1;
+  min-height: 40vh;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(104, 223, 160, 0.25);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.retry {
+  border: 1px solid #394049;
+  background: #171c23;
+  color: #e1e4e8;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.retry:hover {
+  background: #1d232b;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

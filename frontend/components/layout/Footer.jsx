@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React from 'react';
 import BrandLogo from '../shared/BrandLogo';
 import styles from './Footer.module.css';
@@ -56,9 +57,9 @@ export default function Footer({ className = '' }) {
     <footer className={`${styles.footer} ${className}`.trim()} role="contentinfo">
       <div className={styles.grid}>
         <section className={styles.brand} aria-label="About BashLab">
-          <a href="/" className={styles.logo} aria-label="BashLab home">
+          <Link href="/" className={styles.logo} aria-label="BashLab home">
             <BrandLogo />
-          </a>
+          </Link>
           <p className={styles.description}>
             Interactive Linux &amp; Bash learning environment powered by isolated Docker sandboxes. Master shell commands by doing.
           </p>
@@ -72,9 +73,9 @@ export default function Footer({ className = '' }) {
           <nav className={styles.column} key={title} aria-label={title}>
             <h2>[{title}]</h2>
             {links.map(([label, href]) => (
-              <a href={href} key={label} target={href.startsWith('http') ? '_blank' : undefined} rel={href.startsWith('http') ? 'noreferrer' : undefined}>
+              <Link href={href} key={label} target={href.startsWith('http') ? '_blank' : undefined} rel={href.startsWith('http') ? 'noreferrer' : undefined}>
                 {label}
-              </a>
+              </Link>
             ))}
           </nav>
         ))}
@@ -103,7 +104,7 @@ export default function Footer({ className = '' }) {
         </div>
 
         <div className={styles.copyright}>
-          <span>© 2026 <a href="/" onClick={handleEasterEggClick}>BashLab</a>.</span>
+          <span>© 2026 <Link href="/" onClick={handleEasterEggClick}>BashLab</Link>.</span>
           <span>Learn Bash by doing. All rights reserved.</span>
         </div>
       </div>

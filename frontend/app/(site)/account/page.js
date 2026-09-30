@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './Account.module.css';
-import { supabase } from '@/lib/supabaseClient';
+import { authClient } from '@/lib/authClient';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { PageLoading } from '@/components/shared/Loading';
 
 const EMPTY_USER = {
   name: '',
@@ -21,6 +23,20 @@ const EMPTY_USER = {
   isVerified: false,
   joinedDate: '',
 };
+
+// Center-crops to a square and scales to `size` px, returning a JPEG data URL.
+async function downscaleImage(file, size) {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  canvas.getContext('2d').drawImage(
+    bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size,
+  );
+  bitmap.close();
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
 
 function getInitials(fullName) {
   const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
@@ -74,28 +90,31 @@ export default function AccountPage() {
     occupation: '',
   });
 
-  // Load the real signed-in user + their profile row from Supabase.
+  // Signed-in user comes from the shared AuthProvider (no extra auth round
+  // trip); only the full profile row is fetched here.
+  const { user: authUser, loading: authLoading } = useAuth();
+  const [saving, setSaving] = useState(false);
   useEffect(() => {
+    if (authLoading) return undefined;
+    if (!authUser) {
+      router.replace('/login?next=%2Faccount');
+      return undefined;
+    }
     let cancelled = false;
-    async function load() {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        router.push('/login');
-        return;
-      }
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, bio, avatar_url, age, location, occupation, role')
-        .eq('id', authUser.id)
-        .single();
-      if (!cancelled) {
+    authClient.fetchProfile()
+      .then((profile) => {
+        if (cancelled) return;
         setUser(toUser(authUser, profile));
         setLoading(false);
-      }
-    }
-    load();
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setToast({ type: 'error', title: 'Could not load profile', message: error.message });
+        setUser(toUser(authUser, null));
+        setLoading(false);
+      });
     return () => { cancelled = true; };
-  }, [router]);
+  }, [authLoading, authUser, router]);
 
   // Auto hide toast after 5 seconds
   useEffect(() => {
@@ -120,75 +139,91 @@ export default function AccountPage() {
     setShowEditModal(true);
   };
 
-  // Save Profile Changes — writes straight to `profiles`; RLS + column grants
-  // only let a user touch their own row's name/bio/avatar_url/age/location/occupation.
+  // Save Profile Changes — via the API (PATCH /api/auth/profile), which
+  // validates the fields and only ever writes name/bio/age/location/occupation/avatar.
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!editForm.name.trim()) {
       setToast({ type: 'error', title: 'Validation Error', message: 'Full Name cannot be empty.' });
       return;
     }
-
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('profiles').update({
-      name: editForm.name.trim(),
-      bio: editForm.bio.trim(),
-      age: editForm.age === '' ? null : Number(editForm.age),
-      location: editForm.location.trim(),
-      occupation: editForm.occupation.trim(),
-    }).eq('id', authUser.id);
-
-    if (error) {
-      setToast({ type: 'error', title: 'Save failed', message: error.message });
+    const age = editForm.age === '' ? null : Number(editForm.age);
+    if (age !== null && (!Number.isInteger(age) || age < 1 || age > 120)) {
+      setToast({ type: 'error', title: 'Validation Error', message: 'Age must be a whole number between 1 and 120.' });
       return;
     }
 
+    setSaving(true);
+    let saved;
+    try {
+      // authClient tells the rest of the app (navbar) about the new name.
+      saved = await authClient.updateProfile({
+        name: editForm.name.trim(),
+        bio: editForm.bio.trim(),
+        age,
+        location: editForm.location.trim(),
+        occupation: editForm.occupation.trim(),
+      });
+    } catch (error) {
+      setSaving(false);
+      setToast({ type: 'error', title: 'Save failed', message: error.message });
+      return;
+    }
+    setSaving(false);
+
     setUser((prev) => ({
       ...prev,
-      name: editForm.name.trim(),
-      bio: editForm.bio.trim(),
-      age: editForm.age === '' ? '' : Number(editForm.age),
-      location: editForm.location.trim(),
-      occupation: editForm.occupation.trim(),
-      initials: getInitials(editForm.name),
+      name: saved.name,
+      bio: saved.bio,
+      age: saved.age ?? '',
+      location: saved.location,
+      occupation: saved.occupation,
+      initials: getInitials(saved.name),
     }));
     setShowEditModal(false);
     setToast({ type: 'success', title: 'Profile Updated', message: 'Your account information has been saved successfully.' });
-    // The navbar loads its own copy of the profile and has no other way to
-    // know it just went stale (no Supabase auth event fires for this).
-    window.dispatchEvent(new Event('bashlab:profile-updated'));
   };
 
   // Handle Avatar Image Upload — stored as a base64 data URL directly in
-  // `avatar_url` (text column). No file storage bucket for this project.
-  const handleAvatarChange = (e) => {
+  // `avatar_url` (text column; no storage bucket in this project). The image
+  // is downscaled to 256px JPEG first: a raw 5MB photo as base64 made the
+  // profile row ~7MB and every read of it slow.
+  const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-
+    if (!file.type.startsWith('image/')) {
+      setToast({ type: 'error', title: 'Not an image', message: 'Please choose a PNG, JPEG, GIF or WebP image.' });
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       setToast({ type: 'error', title: 'File Too Large', message: 'Please choose an image under 5MB.' });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('profiles').update({ avatar_url: reader.result }).eq('id', authUser.id);
-      if (error) {
-        setToast({ type: 'error', title: 'Avatar update failed', message: error.message });
-        return;
-      }
-      setUser((prev) => ({ ...prev, avatarUrl: reader.result }));
-      setToast({ type: 'success', title: 'Avatar Updated', message: 'Your profile picture has been updated.' });
-    };
-    reader.readAsDataURL(file);
+    let dataUrl;
+    try {
+      dataUrl = await downscaleImage(file, 256);
+    } catch {
+      setToast({ type: 'error', title: 'Avatar update failed', message: 'That image could not be read.' });
+      return;
+    }
+    try {
+      await authClient.updateProfile({ avatar_url: dataUrl });
+    } catch (error) {
+      setToast({ type: 'error', title: 'Avatar update failed', message: error.message });
+      return;
+    }
+    setUser((prev) => ({ ...prev, avatarUrl: dataUrl }));
+    setToast({ type: 'success', title: 'Avatar Updated', message: 'Your profile picture has been updated.' });
   };
 
   // Remove Custom Avatar
   const handleRemoveAvatar = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', authUser.id);
-    if (error) {
+    try {
+      await authClient.updateProfile({ avatar_url: null });
+    } catch (error) {
       setToast({ type: 'error', title: 'Avatar reset failed', message: error.message });
       return;
     }
@@ -200,9 +235,13 @@ export default function AccountPage() {
   const handleSendResetEmail = async () => {
     if (resetStatus === 'loading') return;
     setResetStatus('loading');
-    await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      await authClient.forgotPassword(user.email);
+    } catch (error) {
+      setResetStatus('idle');
+      setToast({ type: 'error', title: 'Could not send the email', message: error.message });
+      return;
+    }
     setResetStatus('success');
     setToast({
       type: 'success',
@@ -216,11 +255,11 @@ export default function AccountPage() {
   const handleConfirmLogout = async () => {
     setShowLogoutModal(false);
     setToast({ type: 'info', title: 'Session Terminated', message: 'Logging out and clearing active session tokens...' });
-    await supabase.auth.signOut();
+    await authClient.logout();
     router.push('/login');
   };
 
-  if (loading) return null;
+  if (loading) return <PageLoading label="Loading your account…" />;
 
   return (
     <div className={styles.page}>
@@ -263,7 +302,7 @@ export default function AccountPage() {
                 <label htmlFor="edit-occupation-input">Occupation<input id="edit-occupation-input" value={editForm.occupation} onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })} /></label>
                 <label className={styles.bioField} htmlFor="edit-bio-input">Bio<textarea id="edit-bio-input" rows={3} value={editForm.bio} onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })} /></label>
               </div>
-              <div className={styles.actions}><button type="button" className={styles.button} onClick={() => setShowEditModal(false)}>Cancel</button><button id="save-profile-btn" type="submit" className={styles.primaryButton}>Save changes</button></div>
+              <div className={styles.actions}><button type="button" className={styles.button} onClick={() => setShowEditModal(false)}>Cancel</button><button id="save-profile-btn" type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></div>
             </form>}
             <div className={styles.sectionHeading}><h3>Account details</h3><p>The information associated with your BashLab account.</p></div>
             <dl className={styles.details}>

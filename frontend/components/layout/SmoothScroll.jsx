@@ -88,6 +88,8 @@ export default function SmoothScroll() {
       document.removeEventListener('click', handleAnchorClick);
       lenis.destroy();
       delete window.lenis;
+      // Only the landing page opts out of the browser's scroll restoration.
+      if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'auto';
     };
   }, []);
 

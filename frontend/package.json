@@ -11,7 +11,8 @@
     "test:backdrop": "node scripts/check-backdrop.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report tests/e2e/report"
+    "test:e2e:report": "playwright show-report tests/e2e/report",
+    "perf:pages": "node tests/e2e/tools/measure-pages.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

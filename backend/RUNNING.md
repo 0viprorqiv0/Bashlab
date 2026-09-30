@@ -207,6 +207,16 @@ và ghi rõ máy/runtime/workload khi thuyết trình.
 `CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000`.
 Biến được đọc từ environment; không tự nạp `.env`.
 
+**Xác thực (bắt buộc từ 2026-09-30):** API sandbox chỉ nhận request có
+`Authorization: Bearer <Supabase access token>` của người dùng đã đăng nhập;
+mỗi phiên thuộc về user đã tạo nó (user khác gọi → 404), tối đa
+`SANDBOX_MAX_SESSIONS_PER_USER` (mặc định 3) phiên mở cùng lúc, admin được
+xoá phiên của người khác (trang Activity). Cần export `SUPABASE_URL` và
+`SUPABASE_SERVICE_ROLE_KEY` (giống `backend/.env`) trước `npm start`; thiếu
+thì server từ chối khởi động. Chỉ khi chạy `npm run benchmark` hoặc
+`tests/stress_attack_sim.js` (không có token) mới đặt
+`SANDBOX_REQUIRE_AUTH=false` để tắt xác thực.
+
 Để rebuild runner sau thay đổi helper, dừng API, rồi:
 
 ```bash

@@ -123,11 +123,11 @@ test.describe('login', () => {
 
       await page.getByRole('button', { name: 'User menu' }).click();
       await page.getByRole('button', { name: 'Log out' }).click();
-      await page.waitForURL('**/login');
+      await page.waitForURL('**/login**');
 
       // Session is really gone, not just a client-side redirect.
       await page.goto('/my-learning');
-      await page.waitForURL('**/login');
+      await page.waitForURL('**/login**');
     } finally {
       await deleteTestUserSafe(user);
     }

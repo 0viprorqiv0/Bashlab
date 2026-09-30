@@ -4,21 +4,45 @@ Tài liệu này mô tả những gì backend đã chuẩn bị và cách fronte
 Không có phần nào trong đây đã được nối vào `frontend/` — đây là bàn giao, chưa
 phải đã tích hợp.
 
-## 1. Auth (Supabase, gọi thẳng từ frontend, không qua Express)
+## 1. Auth — qua backend API (`/api/auth/*`), frontend KHÔNG gọi Supabase Auth
 
-Frontend dùng `@supabase/supabase-js` với `NEXT_PUBLIC_SUPABASE_URL` +
-`NEXT_PUBLIC_SUPABASE_ANON_KEY` (lấy từ Project Settings > API, key `anon`).
+Từ 2026-09-30 mọi thao tác đăng nhập/tài khoản đi qua Express
+(`backend/src/routes/auth.js` → `services/authService.js`); trình duyệt không
+còn gọi `supabase.auth.*` (client Supabase ở frontend được cấu hình
+`accessToken` nên gọi auth sẽ throw). Frontend chỉ giữ token do API trả về
+(`lib/authClient.js`, localStorage `bashlab.session`) và dùng nó cho các truy
+vấn dữ liệu qua Supabase + RLS.
 
-| Hành động | Hàm | Ghi chú |
+Lỗi luôn có dạng `{ "error": { "code": "...", "message": "..." } }`.
+
+| Endpoint | Auth | Body → kết quả |
 |---|---|---|
-| Đăng ký (Screen 03) | `supabase.auth.signUp({ email, password })` | Supabase tự gửi mail xác minh |
-| Đăng nhập (Screen 02) | `supabase.auth.signInWithPassword({ email, password })` | |
-| Quên mật khẩu (Screen 05) | `supabase.auth.resetPasswordForEmail(email)` | Luôn trả thành công dù email có tồn tại hay không — đúng yêu cầu "thông báo trung lập" |
-| Đặt lại mật khẩu (Screen 06) | `supabase.auth.updateUser({ password })` | Gọi sau khi user bấm link trong mail, Supabase tự set session tạm |
-| Xác minh email (Screen 04) | không cần gọi gì thêm | Supabase xử lý qua link redirect, chỉ cần trang đích hiển thị trạng thái |
-| Lấy user hiện tại / role | `supabase.auth.getUser()` + `select role from profiles` | `profiles.role` là `'learner'` hoặc `'admin'` |
+| `POST /api/auth/register` | – | `{email, password}` → 202 `{status:'verification_sent'}`. Giống hệt nhau cho email mới và email đã có (chống dò tài khoản), không bao giờ trả session |
+| `POST /api/auth/login` | – | `{email, password}` → `{session:{access_token,refresh_token,expires_at,expires_in}, user, profile:{name,role}}`. Lỗi: 401 `INVALID_CREDENTIALS` (không phân biệt sai mật khẩu/không có user), 403 `EMAIL_NOT_CONFIRMED`, 403 `ACCOUNT_LOCKED`, 429 |
+| `POST /api/auth/refresh` | – | `{refresh_token}` → `{session}`; 401 nếu token bị thu hồi |
+| `POST /api/auth/logout` | Bearer | thu hồi session hiện tại |
+| `POST /api/auth/forgot-password` | – | `{email}` → luôn 200 `{status:'sent'}` |
+| `POST /api/auth/resend-verification` | – | `{email}` → luôn 200 |
+| `POST /api/auth/reset-password` | Bearer = **token trong link mail** | `{password}`. Token đăng nhập thường bị từ chối (403 `RECOVERY_REQUIRED`); link quá 1 giờ → 401 `RECOVERY_EXPIRED`; thành công thì thu hồi mọi session |
+| `GET /api/auth/me` | Bearer | `{user, profile:{name,role}}`; 403 nếu tài khoản bị khoá |
+| `GET /api/auth/profile` | Bearer | hồ sơ đầy đủ (bio, avatar_url, age, location, occupation) |
+| `PATCH /api/auth/profile` | Bearer | chỉ nhận `name, bio, age, location, occupation, avatar_url` (validate ở server; `role`, `is_locked`, `email`, `id` bị từ chối 400). Avatar: data URL png/jpeg/webp ≤ 300k ký tự |
 
-Row `profiles` được **tự động tạo** khi `signUp` thành công (trigger DB), không cần frontend tự insert.
+Giới hạn: theo IP (300/phút chung, 60/phút cho login/register/forgot/resend/reset)
+và **8 lần login/phút cho mỗi cặp (IP, email)**; chỉnh bằng
+`AUTH_RATE_LIMIT_GENERAL|SENSITIVE|LOGIN`. Link trong email luôn trỏ về origin
+nằm trong `CORS_ORIGINS` (Origin lạ bị thay bằng origin đầu tiên).
+
+Luồng link email: Supabase xác minh link rồi chuyển về
+`/verify-email#access_token=…` hoặc `/reset-password#access_token=…&type=recovery`.
+Frontend đọc token từ fragment, xoá nó khỏi thanh địa chỉ ngay, rồi gọi
+`/api/auth/me` (verify → đăng nhập luôn) hoặc `/api/auth/reset-password`.
+
+Cột `profiles` **không còn UPDATE được từ trình duyệt** (migration 016); ghi hồ
+sơ chỉ qua `PATCH /api/auth/profile` (service role, whitelist cột). Đổi
+role/khoá tài khoản vẫn chỉ qua RPC admin (009/012).
+
+Row `profiles` được **tự động tạo** khi `signUp` thành công (trigger DB).
 
 ## 2. Đọc dữ liệu khoá học (Screen 07, 08, 09)
 
@@ -138,6 +162,11 @@ Admin đầu tiên phải tạo bằng SQL (chưa có admin nào để cấp quy
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=<Project URL>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-NEXT_PUBLIC_SANDBOX_API_URL=http://127.0.0.1:3001   # tuỳ chọn, cần backend chạy trên Linux/WSL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>          # chỉ để đọc dữ liệu dưới RLS
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3001         # BẮT BUỘC: backend API (auth, profile, sandbox)
 ```
+
+Backend cần chạy cùng lúc: `cd backend && npm run start:api` (Windows/không
+Docker: đặt `SANDBOX_ENABLED=false` trong `backend/.env` — chỉ phục vụ
+`/api/auth/*`, các endpoint sandbox trả 503 và bài lab chuyển sang hoàn thành thủ
+công). Backend cần `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`.

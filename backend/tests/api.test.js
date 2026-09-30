@@ -12,7 +12,7 @@ test('API validates requests, stores cwd, grades and resets sessions', async t =
   const manager = new SessionManager({ root });
   const runner = new SandboxRunner({ transport: async () => ({ stdout: '', stderr: '', exitCode: 0,
     cwd: '/home/student/demo', cwdUpdated: true, outputTruncated: false, termination: 'completed' }) });
-  const server = createApp({ manager, runner, rateMax: 100 }).listen(0, '127.0.0.1');
+  const server = createApp({ manager, runner, rateMax: 100, auth: false }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -32,7 +32,7 @@ test('API validates requests, stores cwd, grades and resets sessions', async t =
   assert.equal((await response.json()).cwd, '/home/student');
 });
 test('IP rate limiter returns 429 with Retry-After', async t => {
-  const server = createApp({ rateMax: 1 }).listen(0, '127.0.0.1');
+  const server = createApp({ rateMax: 1, auth: false }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const url = `http://127.0.0.1:${server.address().port}/api/sessions/missing`;

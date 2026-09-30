@@ -4,18 +4,22 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './CourseDetail.module.css';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { authClient } from '@/lib/authClient';
+import { PageError, PageLoading } from '@/components/shared/Loading';
 import {
-  fetchCourseLabs, fetchProgressMap, getCurrentUser, markLessonDone, markLessonUndone, toDisplayLab,
+  fetchCourseWithLessons, fetchProgressMap, lessonHref, markLessonDone, markLessonUndone, toDisplayLab,
 } from '@/lib/learning';
 
-const categoryTabs = [
-  { id: 'All', label: 'All Topics', icon: 'grid_view' },
-  { id: 'Core Commands', label: 'Core Commands', icon: 'terminal' },
-  { id: 'Streams & Redirection', label: 'Pipes & Streams', icon: 'alt_route' },
-  { id: 'Text Processing', label: 'Text Manipulation', icon: 'manage_search' },
-  { id: 'Security & Permissions', label: 'Security & Permissions', icon: 'lock' },
-  { id: 'Automation & Scripting', label: 'Shell Scripting', icon: 'code' },
-];
+// Tracks come from the lessons themselves (admin-editable); these only pick
+// a nicer label/icon for the tracks we know about.
+const TRACK_STYLE = {
+  'Core Commands': { label: 'Core Commands', icon: 'terminal' },
+  'Streams & Redirection': { label: 'Pipes & Streams', icon: 'alt_route' },
+  'Text Processing': { label: 'Text Manipulation', icon: 'manage_search' },
+  'Security & Permissions': { label: 'Security & Permissions', icon: 'lock' },
+  'Automation & Scripting': { label: 'Shell Scripting', icon: 'code' },
+};
 
 const bashTips = [
   {
@@ -78,9 +82,9 @@ const bashTips = [
 
 export default function CourseDetail({ courseId = 'shell-101' }) {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState({ loading: true });
-  const [labs, setLabs] = useState([]);
-  const [user, setUser] = useState(null);
+  const [progressMap, setProgressMap] = useState(() => new Map());
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeTag, setActiveTag] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,19 +97,43 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
 
   const currentTip = bashTips[tipIndex];
 
+  // Course + lessons (one request) and the learner's progress load in parallel.
   const load = useCallback(async () => {
-    const [course, currentUser] = await Promise.all([fetchCourseLabs(courseId), getCurrentUser()]);
-    setUser(currentUser);
-    if (!course) {
-      setState({ loading: false, notFound: true });
-      return;
+    setState({ loading: true });
+    try {
+      const course = await fetchCourseWithLessons(courseId);
+      setState(course ? { loading: false, course } : { loading: false, notFound: true });
+    } catch (error) {
+      setState({ loading: false, error: error.message });
     }
-    const progressMap = currentUser ? await fetchProgressMap(currentUser.id) : new Map();
-    setLabs(course.labs.map((row) => toDisplayLab(row, progressMap)));
-    setState({ loading: false, courseTitle: course.title });
   }, [courseId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Progress is fetched right away from the stored session (in parallel with
+  // the course), and refetched when someone signs in or out.
+  useEffect(() => {
+    let active = true;
+    const loadProgress = () => fetchProgressMap(authClient.peekUserId())
+      .then((map) => { if (active) setProgressMap(map); })
+      .catch(() => {});
+    loadProgress();
+    const unsubscribe = authClient.subscribe((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') loadProgress();
+    });
+    return () => { active = false; unsubscribe(); };
+  }, []);
+
+  const labs = useMemo(
+    () => (state.course?.lessons || []).map((lesson) => toDisplayLab(lesson, progressMap)),
+    [state.course, progressMap],
+  );
+  const categoryTabs = useMemo(() => [
+    { id: 'All', label: 'All Topics', icon: 'grid_view' },
+    ...[...new Set(labs.map((lab) => lab.category).filter(Boolean))].map((track) => ({
+      id: track, label: TRACK_STYLE[track]?.label || track, icon: TRACK_STYLE[track]?.icon || 'folder',
+    })),
+  ], [labs]);
 
   function handleNextTip() {
     setTipIndex((prev) => (prev + 1) % bashTips.length);
@@ -181,26 +209,30 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
     const unsolved = labs.filter((l) => l.status !== 'solved');
     const pool = unsolved.length > 0 ? unsolved : labs;
     const randomIndex = Math.floor(Math.random() * pool.length);
-    router.push(`/courses/${courseId}/labs/${pool[randomIndex].slug}`);
+    router.push(lessonHref(courseId, pool[randomIndex].slug));
   }
 
   // Toggle solve status directly from table checkbox — writes straight to
   // `progress` (RLS lets a learner touch only their own rows).
   async function toggleSolveStatus(lab) {
     if (!user) {
-      router.push('/login');
+      router.push(`/login?next=${encodeURIComponent(`/courses/${courseId}`)}`);
       return;
     }
     const willSolve = lab.status !== 'solved';
-    setLabs((prev) => prev.map((item) => (item.id === lab.id ? { ...item, status: willSolve ? 'solved' : 'todo' } : item)));
+    const previous = progressMap.get(lab.id);
+    const apply = (row) => setProgressMap((prev) => {
+      const next = new Map(prev);
+      if (row) next.set(lab.id, row); else next.delete(lab.id);
+      return next;
+    });
+    apply(willSolve ? { lesson_id: lab.id, status: 'done', updated_at: new Date().toISOString() } : null);
     const { error } = willSolve ? await markLessonDone(user.id, lab.id) : await markLessonUndone(user.id, lab.id);
-    if (error) {
-      // Roll back optimistic update on failure.
-      setLabs((prev) => prev.map((item) => (item.id === lab.id ? { ...item, status: lab.status } : item)));
-    }
+    if (error) apply(previous); // Roll back the optimistic update.
   }
 
-  if (state.loading) return null;
+  if (state.loading) return <PageLoading label="Loading course…" />;
+  if (state.error) return <PageError message={`Could not load this course: ${state.error}`} onRetry={load} />;
   if (state.notFound) {
     return (
       <div className={styles.page}>
@@ -225,13 +257,13 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
               Courses
             </Link>
             <span className="separator">/</span>
-            <span className="current">{state.courseTitle}</span>
+            <span className="current">{state.course.title}</span>
           </div>
 
           <div className={styles.courseHeaderRight}>
             <span className={styles.trackBadge}>
               <span className={styles.trackBadgeDot} />
-              Core Track · Interactive Mode
+              {state.course.category || 'Course'} · {state.course.status === 'upcoming' ? 'Coming soon' : 'Interactive Mode'}
             </span>
           </div>
         </div>
@@ -242,7 +274,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
           <aside className={styles.leftSidebar} aria-label="Course navigation">
             <div className={styles.courseSummaryCard}>
               <div className={styles.summaryCode}>{courseId.toUpperCase()}</div>
-              <h2 className={styles.summaryTitle}>{state.courseTitle}</h2>
+              <h2 className={styles.summaryTitle}>{state.course.title}</h2>
               <div className={styles.summaryProgress}>
                 <div className={styles.summaryProgressBar}>
                   <div className={styles.summaryProgressFill} style={{ width: `${progressPercent}%` }} />
@@ -469,17 +501,19 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                         </td>
 
                         <td className={styles.difficultyCell}>
-                          <span
-                            className={`${styles.diffBadge} ${
-                              lab.difficulty === 'Easy'
-                                ? styles.diffEasy
-                                : lab.difficulty === 'Medium'
-                                ? styles.diffMedium
-                                : styles.diffHard
-                            }`}
-                          >
-                            {lab.difficulty}
-                          </span>
+                          {lab.difficulty ? (
+                            <span
+                              className={`${styles.diffBadge} ${
+                                lab.difficulty === 'Easy'
+                                  ? styles.diffEasy
+                                  : lab.difficulty === 'Medium'
+                                  ? styles.diffMedium
+                                  : styles.diffHard
+                              }`}
+                            >
+                              {lab.difficulty}
+                            </span>
+                          ) : '—'}
                         </td>
 
                         <td

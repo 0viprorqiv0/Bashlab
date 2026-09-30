@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import BrandLogo from '@/components/shared/BrandLogo';
 import styles from './Auth.module.css';
 
@@ -9,7 +10,7 @@ export default function AuthShell({ children, title, description, demoNote }) {
           <div className={styles.storyRule} aria-hidden="true" />
           <p className={styles.storyTitle}>Learn Bash<br />by doing<span className={styles.storyPeriod}>.</span></p>
           <p className={styles.storyText}>Short lessons, hands-on practice, and clear feedback for every step.</p>
-          <a href="/" className={styles.storyLogo} aria-label="BashLab home"><BrandLogo /></a>
+          <Link href="/" className={styles.storyLogo} aria-label="BashLab home"><BrandLogo /></Link>
         </aside>
         <section className={styles.formRegion} aria-labelledby="auth-title">
           <h1 id="auth-title" className={styles.title}>{title}</h1>

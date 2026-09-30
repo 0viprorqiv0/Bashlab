@@ -3,7 +3,8 @@
 // the neutral (anti-enumeration) response, and reset-password's behavior
 // with no recovery session (the state anyone hitting the page directly is in).
 const { test, expect } = require('@playwright/test');
-const { createTestUser, deleteTestUserSafe } = require('../support/supabaseAdmin');
+const { createTestUser, deleteTestUserSafe, emailLink } = require('../support/supabaseAdmin');
+const { signIn } = require('../support/apiClient');
 
 // The footer's newsletter field shares the "Email address" label with the
 // auth form, so lookups on this page are scoped to <main>.
@@ -63,6 +64,54 @@ test.describe('reset password', () => {
     await page.getByRole('button', { name: 'Update password' }).click();
     // Next.js's own (empty) route announcer also has role="alert"; match the
     // one with actual text.
-    await expect(page.getByText('Auth session missing!')).toBeVisible();
+    await expect(page.getByText('This reset link is invalid or has expired. Request a new one.')).toBeVisible();
+  });
+
+  test('the emailed link resets the password end to end, then old password stops working', async ({ page }) => {
+    const user = await createTestUser({ prefix: 'resetflow' });
+    const newPassword = 'Brand-New-Pass-2026!';
+    try {
+      // Same link the email contains; Supabase verifies it and redirects here
+      // with a one-time recovery token in the URL fragment.
+      await page.goto(await emailLink('recovery', user.email, { redirectPath: '/reset-password' }));
+      await page.waitForURL('**/reset-password');
+      // The token is scrubbed from the address bar straight away.
+      await expect.poll(() => new URL(page.url()).hash).toBe('');
+
+      await page.getByLabel('New password', { exact: true }).fill(newPassword);
+      await page.getByLabel('Confirm new password', { exact: true }).fill(newPassword);
+      await page.getByRole('button', { name: 'Update password' }).click();
+      await expect(page.getByText('Your password has been updated.')).toBeVisible();
+
+      await expect(signIn(user.email, user.password)).rejects.toThrow();
+      await expect(signIn(user.email, newPassword)).resolves.toBeTruthy();
+    } finally {
+      await deleteTestUserSafe(user);
+    }
+  });
+
+  test('a recovery link cannot be replayed after it has been used', async ({ page, context }) => {
+    const user = await createTestUser({ prefix: 'resetreplay' });
+    try {
+      const link = await emailLink('recovery', user.email, { redirectPath: '/reset-password' });
+      await page.goto(link);
+      await page.waitForURL('**/reset-password');
+      await page.getByLabel('New password', { exact: true }).fill('First-New-Pass-2026!');
+      await page.getByLabel('Confirm new password', { exact: true }).fill('First-New-Pass-2026!');
+      await page.getByRole('button', { name: 'Update password' }).click();
+      await expect(page.getByText('Your password has been updated.')).toBeVisible();
+
+      // Opening the same one-time link again must not lead to another reset.
+      const second = await context.newPage();
+      await second.goto(link);
+      await second.waitForLoadState('networkidle');
+      await second.getByLabel('New password', { exact: true }).fill('Second-New-Pass-2026!');
+      await second.getByLabel('Confirm new password', { exact: true }).fill('Second-New-Pass-2026!');
+      await second.getByRole('button', { name: 'Update password' }).click();
+      await expect(second.getByText('This reset link is invalid or has expired. Request a new one.')).toBeVisible();
+      await expect(signIn(user.email, 'Second-New-Pass-2026!')).rejects.toThrow();
+    } finally {
+      await deleteTestUserSafe(user);
+    }
   });
 });

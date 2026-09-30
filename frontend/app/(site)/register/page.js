@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthShell from '@/components/auth/AuthShell';
 import AuthField from '@/components/auth/AuthField';
 import styles from '@/components/auth/Auth.module.css';
-import { supabase } from '@/lib/supabaseClient';
+import { authClient } from '@/lib/authClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,11 +19,10 @@ export default function RegisterPage() {
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
+  const { user, loading: authLoading } = useAuth();
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/my-learning');
-    });
-  }, [router]);
+    if (!authLoading && user) router.replace('/my-learning');
+  }, [authLoading, user, router]);
 
   async function submit(event) {
     event.preventDefault();
@@ -36,12 +37,9 @@ export default function RegisterPage() {
       return;
     }
     setStatus('loading');
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/verify-email` },
-    });
-    if (error) {
+    try {
+      await authClient.register(email.trim(), password);
+    } catch (error) {
       setErrorMessage(error.message);
       setStatus('error');
       return;
@@ -61,6 +59,6 @@ export default function RegisterPage() {
       </div>
       <button className={styles.button} type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Creating account…' : 'Create account'}</button>
     </form>
-    <p className={styles.bottomLink}>Already have an account? <a className={styles.textLink} href="/login">Log in</a></p>
+    <p className={styles.bottomLink}>Already have an account? <Link className={styles.textLink} href="/login">Log in</Link></p>
   </AuthShell>;
 }

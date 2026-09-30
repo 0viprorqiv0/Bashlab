@@ -1,47 +1,54 @@
 import { supabase } from './supabaseClient';
 
-const COURSE_FIELDS = 'id, slug, title, description, level, category, duration_minutes, status, sort_order, '
-  + 'chapters(id, title, sort_order, lessons(id, slug, title, status, sort_order, objectives))';
+// Single source of truth for what a learner sees: every *published* lesson of
+// a course, in the chapter/lesson order the admin set in Content. The course
+// page, lab workspace, My Learning and the catalog all go through here, so an
+// admin change shows up identically everywhere. A lesson's lab content lives
+// in lessons.lesson_content (contract v1); lessons without it are legacy
+// Markdown lessons (content_md) and are shown as such, not hidden.
+
+const LESSON_FIELDS = 'id, slug, title, status, sort_order, objectives, content_md, test_template, lesson_content';
+const LESSON_SUMMARY_FIELDS = 'id, slug, title, status, sort_order';
+const COURSE_FIELDS = 'id, slug, title, description, level, category, duration_minutes, status, sort_order';
 
 const bySort = (a, b) => a.sort_order - b.sort_order;
 
-// Learner pages only ever show published lessons, even to admins (who can read drafts via RLS).
 function normalizeCourse(row) {
   const chapters = (row.chapters || []).slice().sort(bySort).map((chapter) => ({
     ...chapter,
-    lessons: (chapter.lessons || []).filter((lesson) => lesson.status === 'published'
-      && !(row.slug === 'shell-101' && lesson.slug === 'hello-bashlab')).sort(bySort),
+    lessons: (chapter.lessons || [])
+      .filter((lesson) => lesson.status === 'published')
+      .sort(bySort)
+      .map((lesson) => ({ ...lesson, chapterTitle: chapter.title })),
   }));
   return { ...row, chapters, lessons: chapters.flatMap((chapter) => chapter.lessons) };
 }
 
-export async function getCurrentUser() {
-  const { data } = await supabase.auth.getUser();
-  return data.user;
+// Course page + lab workspace: one request for the course and its lessons.
+export async function fetchCourseWithLessons(slug) {
+  const { data, error } = await supabase
+    .from('courses')
+    .select(`${COURSE_FIELDS}, chapters(id, title, sort_order, lessons(${LESSON_FIELDS}))`)
+    .eq('slug', slug)
+    .in('status', ['published', 'upcoming'])
+    .maybeSingle();
+  if (error) throw error;
+  return data ? normalizeCourse(data) : null;
 }
 
+// My Learning: every published course with a light lesson list (no content).
 export async function fetchPublishedCourses() {
   const { data, error } = await supabase
     .from('courses')
-    .select(COURSE_FIELDS)
+    .select(`${COURSE_FIELDS}, chapters(id, title, sort_order, lessons(${LESSON_SUMMARY_FIELDS}))`)
     .eq('status', 'published')
     .order('sort_order');
   if (error) throw error;
   return data.map(normalizeCourse);
 }
 
-export async function fetchCourse(slug) {
-  const { data, error } = await supabase
-    .from('courses')
-    .select(COURSE_FIELDS)
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle();
-  if (error) throw error;
-  return data ? normalizeCourse(data) : null;
-}
-
 export async function fetchProgressMap(userId) {
+  if (!userId) return new Map();
   const { data, error } = await supabase
     .from('progress')
     .select('lesson_id, status, completed_at, updated_at')
@@ -50,26 +57,17 @@ export async function fetchProgressMap(userId) {
   return new Map(data.map((row) => [row.lesson_id, row]));
 }
 
+export function labProgressStatus(lesson, progressMap) {
+  const row = progressMap.get(lesson.id);
+  if (row?.status === 'done') return 'solved';
+  return row ? 'in_progress' : 'todo';
+}
+
 export function courseStats(course, progressMap) {
   const isDone = (lesson) => progressMap.get(lesson.id)?.status === 'done';
   const done = course.lessons.filter(isDone).length;
-  const next = course.lessons.find((lesson) => !isDone(lesson)) || course.lessons[0] || null;
+  const next = course.lessons.find((lesson) => !isDone(lesson)) || null;
   return { total: course.lessons.length, done, next };
-}
-
-// Lessons unlock in order: everything done stays open, the first unfinished
-// lesson is "current", and anything after it is locked.
-export function lessonStates(course, progressMap) {
-  const states = new Map();
-  let reachedCurrent = false;
-  for (const lesson of course.lessons) {
-    if (progressMap.get(lesson.id)?.status === 'done') states.set(lesson.id, 'done');
-    else if (!reachedCurrent) {
-      states.set(lesson.id, 'current');
-      reachedCurrent = true;
-    } else states.set(lesson.id, 'locked');
-  }
-  return states;
 }
 
 export function courseCode(slug) {
@@ -78,6 +76,35 @@ export function courseCode(slug) {
 
 export function lessonHref(courseSlug, lessonSlug) {
   return `/courses/${courseSlug}/labs/${lessonSlug}`;
+}
+
+const capitalize = (value) => (value ? value[0].toUpperCase() + value.slice(1) : '');
+
+// Shape consumed by CourseDetail/LabWorkspace, from either a structured lab
+// (lesson_content v1) or a legacy Markdown lesson.
+export function toDisplayLab(lesson, progressMap = new Map()) {
+  const content = lesson.lesson_content?.version === 1 ? lesson.lesson_content : null;
+  return {
+    id: lesson.id,
+    slug: lesson.slug,
+    title: lesson.title,
+    structured: Boolean(content),
+    status: labProgressStatus(lesson, progressMap),
+    verifier: lesson.test_template?.verifier || null,
+    category: content?.track || lesson.chapterTitle || '',
+    tag: content?.tag || lesson.chapterTitle || '',
+    difficulty: capitalize(content?.difficulty),
+    commands: content?.commands || [],
+    shortObjective: content?.short_objective || lesson.objectives?.[0] || '',
+    scenario: content?.scenario || '',
+    steps: (content?.steps || []).map((step) => ({ id: step.id, text: step.text, targetCmd: step.target_cmd || '' })),
+    commandSyntax: (content?.command_syntax || []).map((row) => ({ cmd: row.command, desc: row.description })),
+    examples: content?.examples || [],
+    hint: content?.hint || lesson.test_template?.hint || '',
+    solutionExplanation: content?.solution_explanation || '',
+    contentMd: lesson.content_md || '',
+    objectives: lesson.objectives || [],
+  };
 }
 
 export async function markLessonDone(userId, lessonId) {
@@ -102,55 +129,4 @@ export async function markLessonStarted(userId, lessonId) {
     { user_id: userId, lesson_id: lessonId, status: 'in_progress', updated_at: new Date().toISOString() },
     { onConflict: 'user_id,lesson_id', ignoreDuplicates: true },
   );
-}
-
-const LAB_FIELDS = 'id, slug, title, status, sort_order, category, tag, difficulty, commands, lab, test_template, objectives, '
-  + 'chapter_id, chapters!inner(course_id, sort_order)';
-
-// Flat, LeetCode-style list of labs for a course — only lessons authored with
-// lab content (category set). Order: chapter.sort_order, then lesson.sort_order.
-export async function fetchCourseLabs(courseSlug) {
-  const { data: course, error: courseError } = await supabase
-    .from('courses')
-    .select('id, slug, title')
-    .eq('slug', courseSlug)
-    .in('status', ['published', 'upcoming'])
-    .maybeSingle();
-  if (courseError) throw courseError;
-  if (!course) return null;
-
-  const { data, error } = await supabase
-    .from('lessons')
-    .select(LAB_FIELDS)
-    .eq('status', 'published')
-    .eq('chapters.course_id', course.id)
-    .not('category', 'is', null);
-  if (error) throw error;
-
-  const labs = data
-    .slice()
-    .sort((a, b) => (a.chapters.sort_order - b.chapters.sort_order) || (a.sort_order - b.sort_order));
-  return { ...course, labs };
-}
-
-export function labProgressStatus(lab, progressMap) {
-  return progressMap.get(lab.id)?.status === 'done' ? 'solved'
-    : progressMap.get(lab.id) ? 'in_progress' : 'todo';
-}
-
-// Shape expected by CourseDetail/LabWorkspace (mirrors the old frontend/data/labsData.js entries).
-export function toDisplayLab(row, progressMap) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    commands: row.commands || [],
-    category: row.category,
-    tag: row.tag,
-    difficulty: row.difficulty,
-    status: labProgressStatus(row, progressMap),
-    verifier: row.test_template?.verifier || null,
-    shortObjective: row.objectives?.[0] || '',
-    ...row.lab,
-  };
 }

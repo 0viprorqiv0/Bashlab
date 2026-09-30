@@ -4,7 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import BrandLogo from '../shared/BrandLogo';
-import { supabase } from '@/lib/supabaseClient';
+import { authClient } from '@/lib/authClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 function getInitials(nameOrEmail) {
   if (!nameOrEmail) return 'U';
@@ -16,79 +17,21 @@ function getInitials(nameOrEmail) {
 export default function Navbar({ isTransparent = false }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
-  const [user, setUser] = React.useState(null);
-  const [authReady, setAuthReady] = React.useState(false);
   const router = useRouter();
   const dropdownRef = React.useRef(null);
+  const auth = useAuth();
+  const authReady = !auth.loading;
+  const displayName = auth.profile?.name || auth.user?.email;
+  const user = auth.user ? {
+    name: displayName,
+    email: auth.user.email,
+    initials: getInitials(displayName),
+    role: auth.isAdmin ? 'Admin' : 'Learner',
+  } : null;
 
   const navLinks = [
     { href: '/courses', label: 'Courses' },
   ];
-
-  // Real auth state — checked once on mount and kept in sync with
-  // login/logout happening anywhere else in the app.
-  React.useEffect(() => {
-    let cancelled = false;
-
-    async function loadUser(session) {
-      if (!session?.user) {
-        if (!cancelled) {
-          setUser(null);
-          setAuthReady(true);
-        }
-        return;
-      }
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, role, is_locked')
-          .eq('id', session.user.id)
-          .single();
-        if (cancelled) return;
-        if (profile?.is_locked) {
-          await supabase.auth.signOut();
-          setUser(null);
-          return;
-        }
-        const displayName = profile?.name || session.user.email;
-        setUser({
-          name: displayName,
-          email: session.user.email,
-          initials: getInitials(displayName),
-          role: profile?.role === 'admin' ? 'Admin' : 'Learner',
-        });
-      } catch {
-        if (!cancelled) {
-          setUser({
-            name: session.user.email,
-            email: session.user.email,
-            initials: getInitials(session.user.email),
-            role: 'Learner',
-          });
-        }
-      } finally {
-        if (!cancelled) setAuthReady(true);
-      }
-    }
-
-    supabase.auth.getSession()
-      .then(({ data }) => loadUser(data.session))
-      .catch(() => { if (!cancelled) setAuthReady(true); });
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => loadUser(session));
-
-    // Editing the profile (Account page) writes straight to `profiles` and
-    // doesn't fire a Supabase auth event, so the navbar would otherwise only
-    // pick up the new name/initials after a full reload. Account page
-    // dispatches this event right after a successful save.
-    const onProfileUpdated = () => supabase.auth.getSession().then(({ data }) => loadUser(data.session));
-    window.addEventListener('bashlab:profile-updated', onProfileUpdated);
-
-    return () => {
-      cancelled = true;
-      subscription.subscription.unsubscribe();
-      window.removeEventListener('bashlab:profile-updated', onProfileUpdated);
-    };
-  }, []);
 
   React.useEffect(() => {
     function handleClickOutside(event) {
@@ -103,7 +46,7 @@ export default function Navbar({ isTransparent = false }) {
   async function handleLogout() {
     setUserDropdownOpen(false);
     setMobileOpen(false);
-    await supabase.auth.signOut();
+    await authClient.logout();
     router.push('/login');
   }
 

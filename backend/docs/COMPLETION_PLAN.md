@@ -70,6 +70,39 @@
 >
 > Test E2E cập nhật lại theo (dialog thay `window.prompt` ở admin Content,
 > số liệu 13/14 tuỳ trang) — **44/44 pass** sau khi sửa.
+>
+> **Cập nhật 2026-09-30 (3) — rà soát toàn site + đăng nhập chuyển sang API**
+>
+> - **Auth qua backend API**: login/register/verify/forgot/reset/refresh/logout và
+>   sửa hồ sơ giờ đi qua `/api/auth/*` (Express), trình duyệt không gọi
+>   Supabase Auth nữa (chi tiết: `API_CONTRACT.md` §1). Migration 016 thu quyền
+>   UPDATE `profiles` của trình duyệt. Backend cần chạy cùng frontend
+>   (`cd backend && npm run start:api`, `SANDBOX_ENABLED=false` khi không có Docker).
+> - **Admin ↔ khoá học ngoài dùng chung một nguồn**: `lessons.lesson_content`
+>   (contract v1, migration 015; 14 lab cũ đã backfill). Lesson Editor là form
+>   có cấu trúc + preview đúng bố cục màn học; trang khoá học, lab workspace, My
+>   Learning, Catalog đều đọc cùng danh sách bài published theo thứ tự admin xếp
+>   (`lib/learning.js`). Validation nằm ở DB (publish thiếu nội dung, step id trùng,
+>   slug trùng trong cùng course, slug sai định dạng đều bị từ chối).
+> - **Vá phân quyền (015)**: bài published trong course draft/hidden/upcoming không
+>   còn đọc được; progress chỉ ghi được cho bài nhìn thấy và xoá được của chính
+>   mình (trước đó bỏ tick không lưu được); learner không mở lại được phiên
+>   sandbox admin đã dừng. Sandbox API bắt buộc token, phiên thuộc về chủ nhân
+>   (user khác nhận 404), tối đa 3 phiên/user.
+> - **Hiệu năng**: Lenis chỉ chạy ở trang chủ; font icon 1.1MB → ~320KB, font chữ
+>   qua `next/font`; `AuthProvider` dùng chung thay cho 3–5 lượt gọi auth tuần tự
+>   mỗi trang; dữ liệu trang được tải song song với bước xác minh danh tính; link
+>   nội bộ dùng `<Link>`; avatar thu về 256px. Đo bản production trước → sau:
+>   `/courses` 930→~390ms, `/courses/shell-101` 990→~330ms, `/account` 920→~360ms,
+>   `/admin/users` 400→~150ms, landing 700→~280ms (còn lại chủ yếu là độ trễ mạng
+>   tới Supabase). `npm run dev` vẫn nặng hơn nhiều so với bản build.
+> - **Test**: E2E 90 test (auth qua API, phiên/refresh/khoá tài khoản, luồng link
+>   email thật bằng `generateLink`, phân quyền nội dung/progress/sessions, admin soạn
+>   bài → người học thấy đúng), backend 29 test cho API auth + sandbox.
+> - **Còn lại**: khoá tài khoản chỉ chặn truy cập dữ liệu trực tiếp khi token hết
+>   hạn (~1h) vì PostgREST không biết `is_locked` cho đọc dữ liệu cá nhân (đăng nhập
+>   mới, `/api/auth/*`, sandbox và mọi RPC/đọc của admin bị chặn ngay); `labsData.js`
+>   không còn ai dùng — xoá được.
 
 Audit ngày 2026-09-28. Mức độ: đồ án môn học — đủ chạy, đủ demo 17 trang, không nhắm chuẩn production.
 

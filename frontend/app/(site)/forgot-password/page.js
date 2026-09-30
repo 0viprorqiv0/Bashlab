@@ -1,10 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import AuthShell from '@/components/auth/AuthShell';
 import AuthField from '@/components/auth/AuthField';
 import styles from '@/components/auth/Auth.module.css';
-import { supabase } from '@/lib/supabaseClient';
+import { authClient } from '@/lib/authClient';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -27,11 +28,15 @@ export default function ForgotPasswordPage() {
     }
     setError('');
     setStatus('loading');
-    // Neutral outcome by design: always the same message whether or not the
-    // account exists — never reveal that here.
-    await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    // The API answers identically whether or not the account exists, so this
+    // page can't be used to find out who is registered.
+    try {
+      await authClient.forgotPassword(email.trim());
+    } catch (requestError) {
+      setError(requestError.message);
+      setStatus('idle');
+      return;
+    }
     setStatus('sent');
     setSecondsLeft(45);
   }
@@ -44,6 +49,6 @@ export default function ForgotPasswordPage() {
       <AuthField id="email" label="Email address" type="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(value) => { setEmail(value); setError(''); }} error={error} />
       <button className={styles.button} type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Preparing request…' : 'Request reset link'}</button>
     </form>}
-    <p className={styles.bottomLink}><a className={styles.textLink} href="/login">Back to log in</a></p>
+    <p className={styles.bottomLink}><Link className={styles.textLink} href="/login">Back to log in</Link></p>
   </AuthShell>;
 }

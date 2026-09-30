@@ -2,14 +2,18 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import styles from './LabWorkspace.module.css';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { authClient } from '@/lib/authClient';
+import Markdown from '@/components/shared/Markdown';
+import { PageError, PageLoading } from '@/components/shared/Loading';
 import {
-  fetchCourseLabs, fetchProgressMap, getCurrentUser, markLessonDone, markLessonStarted, toDisplayLab,
+  fetchCourseWithLessons, fetchProgressMap, lessonHref, markLessonDone, markLessonStarted, toDisplayLab,
 } from '@/lib/learning';
 import {
-  checkSolution, createSession, endSession, resetSession, runCommand, sandboxEnabled,
+  checkSolution, createSession, endSession, resetSession, runCommand,
 } from '@/lib/sandbox';
 
 const HOME = '/home/student';
@@ -17,31 +21,47 @@ const shortCwd = (cwd) => (cwd === HOME ? '~' : cwd?.startsWith(`${HOME}/`) ? `~
 
 export default function LabWorkspace({ courseId = 'shell-101', labId }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState({ loading: true });
+  const [attempt, setAttempt] = useState(0);
+
+  // Load from the stored session immediately; the API identity check (useAuth)
+  // runs in parallel and bounces to /login if it disagrees.
+  useEffect(() => {
+    if (!authLoading && !user) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [authLoading, user, pathname, router]);
 
   useEffect(() => {
+    const userId = authClient.peekUserId();
+    if (!userId) {
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      return undefined;
+    }
     let cancelled = false;
     (async () => {
-      const user = await getCurrentUser();
-      if (!user) {
-        router.push('/login');
-        return;
+      try {
+        // Course + lessons and progress in parallel instead of one after another.
+        const [course, progressMap] = await Promise.all([fetchCourseWithLessons(courseId), fetchProgressMap(userId)]);
+        const labs = course?.lessons || [];
+        const index = labs.findIndex((item) => item.slug === labId);
+        if (cancelled) return;
+        if (index === -1) {
+          setState({ loading: false, notFound: true });
+          return;
+        }
+        setState({ loading: false, labs, index, progressMap, userId });
+        // Recording "started" must not hold up the page.
+        markLessonStarted(userId, labs[index].id).then(() => {});
+      } catch (error) {
+        if (!cancelled) setState({ loading: false, error: error.message });
       }
-      const course = await fetchCourseLabs(courseId);
-      const labs = course?.labs || [];
-      const index = labs.findIndex((item) => item.slug === labId);
-      if (index === -1) {
-        if (!cancelled) setState({ loading: false, notFound: true });
-        return;
-      }
-      const progressMap = await fetchProgressMap(user.id);
-      await markLessonStarted(user.id, labs[index].id);
-      if (!cancelled) setState({ loading: false, user, labs, index, progressMap });
     })();
     return () => { cancelled = true; };
-  }, [courseId, labId, router]);
+  }, [courseId, labId, pathname, router, attempt]);
 
-  if (state.loading) return null;
+  if (state.loading) return <PageLoading label="Opening lab…" />;
+  if (state.error) return <PageError message={`Could not load this lab: ${state.error}`} onRetry={() => { setState({ loading: true }); setAttempt((n) => n + 1); }} />;
   if (state.notFound) {
     return (
       <div className={styles.workspacePage}>
@@ -51,7 +71,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId }) {
       </div>
     );
   }
-  return <Workspace key={state.labs[state.index].id} courseId={courseId} {...state} />;
+  return <Workspace key={state.labs[state.index].id} courseId={courseId} user={{ id: state.userId }} {...state} />;
 }
 
 function Workspace({ courseId, user, labs, index, progressMap }) {
@@ -151,39 +171,45 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
     return true;
   }
 
+  // Without a reachable sandbox (not configured on this machine, or offline)
+  // an automatic check is impossible; the learner may complete it by hand, as
+  // before the lab redesign. Progress is not anti-cheat protected anyway.
+  const sandboxDown = terminal.status === 'disabled' || terminal.status === 'offline';
+  const autoCheck = Boolean(currentLab.verifier) && !sandboxDown;
+
   // Toggle step completion manually — only used for labs without an automatic
-  // verifier; ticking every step marks the lab solved for real.
+  // check; ticking every step marks the lab solved for real.
   async function toggleStep(stepId) {
     const next = completedSteps.includes(stepId)
       ? completedSteps.filter((id) => id !== stepId)
       : [...completedSteps, stepId];
     setCompletedSteps(next);
-    if (currentLab.steps && next.length === currentLab.steps.length && !currentLab.verifier) {
+    if (!autoCheck && currentLab.steps.length && next.length === currentLab.steps.length) {
       await complete();
     }
   }
 
-  // Check Solution — real sandbox check when the lesson has a verifier,
-  // otherwise ticks every step and records completion directly.
+  // Check Solution — real sandbox check when the lesson has a verifier and the
+  // sandbox is up; otherwise ticks every step and records completion directly.
   async function handleCheckSolution() {
     if (checking) return;
     setChecking(true);
     setCheckMessage('');
     try {
-      if (currentLab.verifier) {
+      if (autoCheck) {
         if (!terminal.sessionId) {
-          setCheckMessage('The sandbox is not connected, so your work cannot be checked.');
+          setCheckMessage('The sandbox is still starting — try again in a moment.');
           return;
         }
         const result = await checkSolution(terminal.sessionId, currentLab.verifier);
         if (result.passed) {
-          setCompletedSteps((currentLab.steps || []).map((s) => s.id));
+          setCompletedSteps(currentLab.steps.map((s) => s.id));
           await complete();
         } else {
           const failed = result.checks.filter((c) => !c.passed).map((c) => c.name).join('; ');
           setCheckMessage(`Not quite yet — ${failed || 'some checks did not pass'}.`);
         }
-      } else if (currentLab.steps) {
+      } else {
         setCompletedSteps(currentLab.steps.map((s) => s.id));
         await complete();
       }
@@ -194,12 +220,13 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
     }
   }
 
-  // Copy code snippet helper
-  function handleCopy(text) {
+  // Copy code snippet helper — remembers which snippet was copied so only
+  // that one flips to "Copied".
+  function handleCopy(text, key) {
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(text);
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
+      setCopiedCode(key);
+      setTimeout(() => setCopiedCode((current) => (current === key ? false : current)), 2000);
     }
   }
 
@@ -213,9 +240,10 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
     setHistoryIndex(-1);
     setTerminalInput('');
 
-    if (currentLab.steps) {
+    if (currentLab.steps.length) {
+      // target_cmd is optional in lesson_content; steps without one are ticked by hand.
       const newlyDone = currentLab.steps
-        .filter((step) => rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()))
+        .filter((step) => step.targetCmd && rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()))
         .map((step) => step.id)
         .filter((id) => !completedSteps.includes(id));
       if (newlyDone.length) setCompletedSteps((prev) => [...prev, ...newlyDone]);
@@ -272,7 +300,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
 
           <div className={styles.labNavGroup}>
             <Link
-              href={prevLab ? `/courses/${courseId}/labs/${prevLab.slug}` : '#'}
+              href={prevLab ? lessonHref(courseId, prevLab.slug) : '#'}
               className={styles.navArrowBtn}
               aria-disabled={!prevLab}
               title={prevLab ? `Previous: ${prevLab.title}` : 'First Lab'}
@@ -285,7 +313,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             </span>
 
             <Link
-              href={nextLab ? `/courses/${courseId}/labs/${nextLab.slug}` : '#'}
+              href={nextLab ? lessonHref(courseId, nextLab.slug) : '#'}
               className={styles.navArrowBtn}
               aria-disabled={!nextLab}
               title={nextLab ? `Next: ${nextLab.title}` : 'Last Lab'}
@@ -298,17 +326,19 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             Lab #{index + 1}: {currentLab.title}
           </h1>
 
-          <span
-            className={`${styles.diffBadge} ${
-              currentLab.difficulty === 'Easy'
-                ? styles.diffEasy
-                : currentLab.difficulty === 'Medium'
-                ? styles.diffMedium
-                : styles.diffHard
-            }`}
-          >
-            {currentLab.difficulty}
-          </span>
+          {currentLab.difficulty && (
+            <span
+              className={`${styles.diffBadge} ${
+                currentLab.difficulty === 'Easy'
+                  ? styles.diffEasy
+                  : currentLab.difficulty === 'Medium'
+                  ? styles.diffMedium
+                  : styles.diffHard
+              }`}
+            >
+              {currentLab.difficulty}
+            </span>
+          )}
         </div>
 
         <div className={styles.topRight}>
@@ -323,11 +353,11 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             type="button"
             className={styles.checkSolutionBtn}
             onClick={handleCheckSolution}
-            disabled={checking || isLabSolved || (currentLab.verifier && !terminal.sessionId)}
+            disabled={checking || isLabSolved || (autoCheck && !terminal.sessionId)}
             title="Validate completed tasks and check solution"
           >
             <span className="material-symbols-outlined">verified</span>
-            <span>{checking ? 'Checking…' : isLabSolved ? 'Completed' : 'Check Solution'}</span>
+            <span>{checking ? 'Checking…' : isLabSolved ? 'Completed' : autoCheck ? 'Check Solution' : 'Mark as complete'}</span>
           </button>
         </div>
       </header>
@@ -367,7 +397,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                   <div className={styles.metaRow}>
                     <span>Track: <strong>{currentLab.category}</strong></span>
                     <span>·</span>
-                    <span>Grading: <strong>{currentLab.verifier ? 'Automatic' : 'Manual'}</strong></span>
+                    <span>Grading: <strong>{autoCheck ? 'Automatic' : currentLab.verifier ? 'Manual (sandbox unavailable)' : 'Manual'}</strong></span>
                   </div>
                 </div>
 
@@ -375,17 +405,35 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                   <p role="alert" style={{ color: '#ff8a80', fontSize: 13, margin: '0 0 16px' }}>{checkMessage}</p>
                 )}
 
+                {/* Legacy Markdown lesson (no lesson_content yet) */}
+                {!currentLab.structured && (
+                  <div className={styles.scenarioCard}>
+                    {currentLab.contentMd
+                      ? <Markdown>{currentLab.contentMd}</Markdown>
+                      : <p className={styles.scenarioText}>This lesson has no written instructions yet.</p>}
+                    {currentLab.objectives.length > 0 && (
+                      <ul style={{ margin: '12px 0 0', paddingLeft: 18 }}>
+                        {currentLab.objectives.map((item) => <li key={item}>{formatInlineCode(item)}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
                 {/* Scenario / Story */}
-                <div className={styles.scenarioCard}>
-                  <div className={styles.scenarioTitle}>Mission Scenario</div>
-                  <p className={styles.scenarioText}>{currentLab.scenario}</p>
-                </div>
+                {currentLab.scenario && (
+                  <div className={styles.scenarioCard}>
+                    <div className={styles.scenarioTitle}>Mission Scenario</div>
+                    <p className={styles.scenarioText}>{formatInlineCode(currentLab.scenario)}</p>
+                  </div>
+                )}
 
                 {/* Checklist Steps */}
+                {currentLab.steps.length > 0 && (
                 <h3 className={styles.subSectionTitle}>
                   <span className="material-symbols-outlined">checklist</span>
-                  <span>Objective Tasks ({completedSteps.length} of {(currentLab.steps || []).length} completed)</span>
+                  <span>Objective Tasks ({completedSteps.length} of {currentLab.steps.length} completed)</span>
                 </h3>
+                )}
 
                 <div className={styles.stepList}>
                   {(currentLab.steps || []).map((step, idx) => {
@@ -412,6 +460,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                 </div>
 
                 {/* Command Syntax Table */}
+                {currentLab.commandSyntax.length > 0 && (<>
                 <h3 className={styles.subSectionTitle}>
                   <span className="material-symbols-outlined">code</span>
                   <span>Command Syntax &amp; Usage</span>
@@ -424,17 +473,20 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                         <td className={styles.syntaxCmd}>
                           <code>{item.cmd}</code>
                         </td>
-                        <td className={styles.syntaxDesc}>{item.desc}</td>
+                        <td className={styles.syntaxDesc}>{formatInlineCode(item.desc)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </>)}
 
                 {/* Examples */}
+                {currentLab.examples.length > 0 && (
                 <h3 className={styles.subSectionTitle}>
                   <span className="material-symbols-outlined">terminal</span>
                   <span>Example Walkthrough</span>
                 </h3>
+                )}
 
                 {(currentLab.examples || []).map((ex, i) => (
                   <div key={i} className={styles.codeCard}>
@@ -443,19 +495,19 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                       <button
                         type="button"
                         className={styles.copyCodeBtn}
-                        onClick={() => handleCopy(ex.code)}
+                        onClick={() => handleCopy(ex.code, i)}
                         title="Copy command to clipboard"
                       >
                         <span className="material-symbols-outlined text-xs">
-                          {copiedCode ? 'check' : 'content_copy'}
+                          {copiedCode === i ? 'check' : 'content_copy'}
                         </span>
-                        <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+                        <span>{copiedCode === i ? 'Copied' : 'Copy'}</span>
                       </button>
                     </div>
                     <div className={styles.codeCardBody}>
                       <code>$ {ex.code}</code>
                     </div>
-                    <div className={styles.codeExplanation}>{ex.explanation}</div>
+                    <div className={styles.codeExplanation}>{formatInlineCode(ex.explanation)}</div>
                   </div>
                 ))}
 
@@ -507,7 +559,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                       </div>
                     </div>
                     {nextLab && (
-                      <Link href={`/courses/${courseId}/labs/${nextLab.slug}`} className={styles.nextLabBtn}>
+                      <Link href={lessonHref(courseId, nextLab.slug)} className={styles.nextLabBtn}>
                         <span>Next Lab</span>
                         <span className="material-symbols-outlined text-sm">arrow_forward</span>
                       </Link>
@@ -525,18 +577,22 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
 
                 <div className={styles.scenarioCard}>
                   <div className={styles.scenarioTitle}>POSIX Architecture Notes</div>
-                  <p className={styles.scenarioText}>{currentLab.solutionExplanation}</p>
+                  <p className={styles.scenarioText}>
+                    {currentLab.solutionExplanation ? formatInlineCode(currentLab.solutionExplanation) : 'No solution walkthrough has been written for this lab yet.'}
+                  </p>
                 </div>
 
-                <h3 className={styles.subSectionTitle}>
-                  <span className="material-symbols-outlined">check_circle</span>
-                  <span>Reference Command Sequence</span>
-                </h3>
+                {currentLab.steps.some((step) => step.targetCmd) && (
+                  <h3 className={styles.subSectionTitle}>
+                    <span className="material-symbols-outlined">check_circle</span>
+                    <span>Reference Command Sequence</span>
+                  </h3>
+                )}
 
-                {(currentLab.steps || []).map((step, idx) => (
+                {currentLab.steps.filter((step) => step.targetCmd).map((step) => (
                   <div key={step.id} className={styles.codeCard}>
                     <div className={styles.codeCardHeader}>
-                      <span>Step {idx + 1} Solution</span>
+                      <span>Step {currentLab.steps.indexOf(step) + 1} Solution</span>
                     </div>
                     <div className={styles.codeCardBody}>
                       <code>$ {step.targetCmd}</code>
@@ -681,11 +737,18 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             ))}
 
             {/* Terminal Input Line or Stopped Barrier */}
-            {instanceStatus === 'stopped' ? (
+            {terminal.status === 'disabled' ? (
               <div className={styles.stoppedBanner}>
                 <div className={styles.stoppedInfo}>
                   <span className="material-symbols-outlined text-base">power_off</span>
-                  <span>Instance is stopped. Start instance to run commands.</span>
+                  <span>The practice sandbox is not configured on this server. Read the lab and mark it complete when you are done.</span>
+                </div>
+              </div>
+            ) : instanceStatus === 'stopped' ? (
+              <div className={styles.stoppedBanner}>
+                <div className={styles.stoppedInfo}>
+                  <span className="material-symbols-outlined text-base">power_off</span>
+                  <span>{terminal.status === 'offline' ? 'The sandbox could not be reached.' : 'Instance is stopped.'} Start the instance to run commands.</span>
                 </div>
                 <button
                   type="button"
@@ -699,7 +762,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             ) : (
               <form onSubmit={handleCommandSubmit} className={styles.termInputForm}>
                 <span className={styles.termPrompt}>
-                  learner@bashlab:{currentDir.replace('/home/learner', '~')}$
+                  learner@bashlab:{shortCwd(currentDir)}$
                 </span>
                 <input
                   ref={inputRef}
@@ -759,19 +822,29 @@ const STATUS_TEXT = {
 // Owns the real sandbox session for this lab: creates it, runs commands,
 // keeps practice_sessions (My Learning / Activity) in sync, cleans up on leave.
 function useSandbox(user, lab) {
-  const [status, setStatus] = useState(sandboxEnabled ? 'connecting' : 'disabled');
+  const [status, setStatus] = useState('connecting');
   const [sessionId, setSessionId] = useState(null);
   const [cwd, setCwd] = useState(HOME);
   const [log, setLog] = useState([
-    { type: 'output', text: STATUS_TEXT[sandboxEnabled ? 'connecting' : 'disabled'] },
+    { type: 'output', text: STATUS_TEXT.connecting },
   ]);
   const [busy, setBusy] = useState(false);
   const recordRef = useRef(null);
+
+  // Marks a practice_sessions row stopped so admin Activity never shows a
+  // session as "active" after the learner stopped it, left, or it expired.
+  const closeRecord = useCallback((recordId) => {
+    if (!recordId) return;
+    supabase.from('practice_sessions').update({ status: 'stopped', last_active_at: new Date().toISOString() })
+      .eq('id', recordId).then(() => {});
+    if (recordRef.current === recordId) recordRef.current = null;
+  }, []);
 
   const openSession = useCallback(async () => {
     setStatus('connecting');
     try {
       const session = await createSession();
+      closeRecord(recordRef.current); // the session it replaces, if any
       setSessionId(session.sessionId);
       setCwd(session.cwd || HOME);
       setStatus('ready');
@@ -779,25 +852,37 @@ function useSandbox(user, lab) {
         user_id: user.id, lesson_id: lab.id, sandbox_session_id: session.sessionId, status: 'active',
       }).select('id').single();
       recordRef.current = data?.id || null;
-      return session.sessionId;
-    } catch {
-      setStatus('offline');
+      return { sessionId: session.sessionId, recordId: recordRef.current };
+    } catch (error) {
+      const failed = error.code === 'SANDBOX_DISABLED' ? 'disabled' : 'offline';
+      setStatus(failed);
+      setLog((prev) => [...prev, { type: 'output', text: STATUS_TEXT[failed] }]);
       return null;
     }
-  }, [user.id, lab.id]);
+  }, [user.id, lab.id, closeRecord]);
 
   useEffect(() => {
-    if (!sandboxEnabled) return undefined;
-    let id = null;
-    openSession().then((value) => { id = value; });
+    // If the page unmounts before the session finishes opening (fast
+    // navigation, React dev double-mount), end that session too instead of
+    // leaking a sandbox and an "active" row.
+    let cancelled = false;
+    let opened = null;
+    openSession().then((value) => {
+      if (cancelled && value) {
+        endSession(value.sessionId);
+        closeRecord(value.recordId);
+      } else {
+        opened = value;
+      }
+    });
     return () => {
-      if (id) endSession(id);
-      if (recordRef.current) {
-        supabase.from('practice_sessions').update({ status: 'stopped', last_active_at: new Date().toISOString() })
-          .eq('id', recordRef.current).then(() => {});
+      cancelled = true;
+      if (opened) {
+        endSession(opened.sessionId);
+        closeRecord(opened.recordId);
       }
     };
-  }, [openSession]);
+  }, [openSession, closeRecord]);
 
   const touch = () => {
     if (recordRef.current) {
@@ -823,7 +908,7 @@ function useSandbox(user, lab) {
         const fresh = await openSession();
         if (!fresh) throw error;
         setLog((prev) => [...prev, { type: 'output', text: 'Session expired — started a new sandbox (files were reset).' }]);
-        result = await runCommand(fresh, command);
+        result = await runCommand(fresh.sessionId, command);
       }
       const lines = [];
       if (result.stdout) lines.push({ type: 'output', text: result.stdout.replace(/\n$/, '') });
@@ -851,8 +936,10 @@ function useSandbox(user, lab) {
     },
     stop: () => {
       if (sessionId) endSession(sessionId);
+      closeRecord(recordRef.current);
       setSessionId(null);
-      setStatus('offline');
+      // 'stopped' (by the learner), not 'offline': the sandbox is still reachable.
+      setStatus('stopped');
       setLog((prev) => [...prev, { type: 'output', text: 'Instance stopped.' }]);
     },
     retry: openSession,

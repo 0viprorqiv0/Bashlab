@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './CourseCatalog.module.css';
 import { supabase } from '@/lib/supabaseClient';
+import { PageError, PageLoading } from '@/components/shared/Loading';
 
 const filters = ['All', 'Core Tracks', 'Security'];
 
@@ -19,18 +20,20 @@ function formatDuration(minutes) {
   return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hours`;
 }
 
+// Counts only published lessons (and chapters that have one), matching what
+// the course page lists — admins can read drafts, learners can't.
 function toCourse(row) {
-  const chapters = row.chapters || [];
-  const lessons = chapters.reduce((sum, ch) => sum + (ch.lessons || []).filter((lesson) =>
-    row.slug !== 'shell-101' || lesson.slug !== 'hello-bashlab').length, 0);
+  const publishedPerChapter = (row.chapters || [])
+    .map((ch) => (ch.lessons || []).filter((lesson) => lesson.status === 'published').length)
+    .filter((count) => count > 0);
   return {
     id: row.slug,
     code: courseCode(row.slug),
     title: row.title,
     level: row.level ? row.level[0].toUpperCase() + row.level.slice(1) : '',
     category: row.category || '',
-    chapters: chapters.length,
-    lessons,
+    chapters: publishedPerChapter.length,
+    lessons: publishedPerChapter.reduce((sum, count) => sum + count, 0),
     duration: formatDuration(row.duration_minutes),
     description: row.description || '',
     status: row.status,
@@ -42,16 +45,24 @@ export default function CourseCatalog() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+
   useEffect(() => {
+    let active = true;
     supabase
       .from('courses')
-        .select('slug, title, description, level, category, duration_minutes, status, chapters(id, lessons(id, slug))')
+      .select('slug, title, description, level, category, duration_minutes, status, chapters(id, lessons(id, status))')
+      .in('status', ['published', 'upcoming'])
       .order('sort_order')
-      .then(({ data }) => {
-        setCourses((data || []).map(toCourse));
+      .then(({ data, error: loadError }) => {
+        if (!active) return;
+        if (loadError) setError(loadError.message);
+        else setCourses((data || []).map(toCourse));
         setLoading(false);
       });
-  }, []);
+    return () => { active = false; };
+  }, [attempt]);
 
   const visibleCourses = courses.filter((course) => filter === 'All'
     || (filter === 'Core Tracks' && course.category === 'Core Track')
@@ -59,7 +70,8 @@ export default function CourseCatalog() {
   const availableCourses = visibleCourses.filter((course) => course.status === 'published');
   const upcomingCourses = visibleCourses.filter((course) => course.status === 'upcoming');
 
-  if (loading) return null;
+  if (loading) return <PageLoading label="Loading courses…" />;
+  if (error) return <PageError message={`Could not load courses: ${error}`} onRetry={() => { setError(''); setLoading(true); setAttempt((n) => n + 1); }} />;
 
   return (
     <div className={styles.page}>

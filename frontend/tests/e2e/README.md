@@ -14,7 +14,10 @@ npm run test:e2e:ui               # interactive UI mode
 npm run test:e2e:report           # open the last HTML report
 ```
 
-Reuses a `next dev` server already running on `:3000`, or starts one itself.
+Starts (or reuses) two servers: `next dev` on `:3000` and the backend API on `:3001`
+(`npm run start:api` in `backend/`, sandbox disabled). The API is started with high
+per-IP auth rate limits for the suite; the per-account brute-force limit stays default.
+The API is where login/register/reset/profile live, so most auth specs exercise it.
 
 ## What it touches
 
@@ -50,6 +53,13 @@ Reuses a `next dev` server already running on `:3000`, or starts one itself.
   assert an RLS policy or an `admin_*` RPC boundary without going through
   the UI (`AdminGate` is UX-only by design — the RLS/RPC layer is the real
   boundary, see the comment in `components/admin/AdminGate.jsx`).
+- `specs/api-auth.spec.js` — the `/api/auth/*` contract over HTTP (sessions, profile
+  whitelist, lock, register/forgot neutrality, recovery-token rules, rate limits, CORS).
+- `specs/auth-session-browser.spec.js` — browser behaviour: no direct Supabase Auth calls,
+  reload/refresh/logout/lock, real emailed verify/recovery links (via `generateLink`).
+- `specs/permissions-content.spec.js` — RLS for lessons/progress/practice sessions and the
+  DB-enforced `lesson_content`/slug rules.
+- `tools/measure-pages.js` (`npm run perf:pages`) — page-load timing against a production build.
 - `specs/*.spec.js` — one file per area: auth, password recovery, course
   catalog/progress, permissions (the RLS/RPC boundary), admin content,
   admin users, admin activity, error pages. `workspace.spec.js` is a

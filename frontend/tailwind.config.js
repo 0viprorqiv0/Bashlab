@@ -17,9 +17,9 @@ module.exports = {
         'accent-amber': '#F59E0B',
       },
       fontFamily: {
-        headline: ['Space Grotesk', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
-        code: ['JetBrains Mono', 'monospace'],
+        headline: ['var(--font-grotesk)', 'Space Grotesk', 'sans-serif'],
+        body: ['var(--font-inter)', 'Inter', 'sans-serif'],
+        code: ['var(--font-jetbrains)', 'JetBrains Mono', 'monospace'],
       },
     },
   },

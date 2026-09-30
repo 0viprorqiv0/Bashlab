@@ -1,20 +1,23 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthShell from '@/components/auth/AuthShell';
 import AuthField from '@/components/auth/AuthField';
 import styles from '@/components/auth/Auth.module.css';
-import { supabase } from '@/lib/supabaseClient';
+import { authClient } from '@/lib/authClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 
-async function getLandingPage(userId) {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  return profile?.role === 'admin' ? '/admin/content' : '/';
+// Pages that bounce anonymous visitors here pass ?next=<path> so the learner
+// lands back where they were. Only same-site paths are honoured ("/x", not
+// "//evil.com" or "https://…") so this can't be used as an open redirect.
+function requestedNext() {
+  const next = new URLSearchParams(window.location.search).get('next');
+  return next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') ? next : null;
 }
+
+const landingPage = (profile) => requestedNext() || (profile?.role === 'admin' ? '/admin/content' : '/');
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,11 +28,11 @@ export default function LoginPage() {
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Already signed in (or just finished logging in): leave the login page.
+  const { user, profile, loading: authLoading } = useAuth();
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session) router.replace(await getLandingPage(data.session.user.id));
-    });
-  }, [router]);
+    if (!authLoading && user) router.replace(landingPage(profile));
+  }, [authLoading, user, profile, router]);
 
   async function submit(event) {
     event.preventDefault();
@@ -42,25 +45,23 @@ export default function LoginPage() {
       return;
     }
     setStatus('loading');
-    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) {
-      setErrorMessage(/banned/i.test(error.message)
-        ? 'Your account has been locked by an administrator.'
-        : error.message);
+    try {
+      const { profile: signedIn } = await authClient.login(email.trim(), password);
+      router.replace(landingPage(signedIn));
+    } catch (error) {
+      setErrorMessage(error.message);
       setStatus('error');
-      return;
     }
-    router.replace(await getLandingPage(data.user.id));
   }
 
   return <AuthShell title="Welcome back" description="Log in to continue learning and return to your workspace.">
     {status === 'error' && <p className={styles.errorBox} role="alert">{errorMessage || 'Invalid email or password.'}</p>}
     <form className={styles.form} onSubmit={submit} noValidate>
       <AuthField id="email" label="Email address" type="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(value) => { setEmail(value); setErrors({ ...errors, email: '' }); }} error={errors.email} />
-      <AuthField id="password" label="Password" type="password" autoComplete="current-password" value={password} onChange={(value) => { setPassword(value); setErrors({ ...errors, password: '' }); }} error={errors.password} aside={<a className={styles.textLink} href="/forgot-password">Forgot password?</a>} />
+      <AuthField id="password" label="Password" type="password" autoComplete="current-password" value={password} onChange={(value) => { setPassword(value); setErrors({ ...errors, password: '' }); }} error={errors.password} aside={<Link className={styles.textLink} href="/forgot-password">Forgot password?</Link>} />
       <label className={styles.choice}><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember this device</label>
       <button className={styles.button} type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Logging in…' : 'Log in'}</button>
     </form>
-    <p className={styles.bottomLink}>New to BashLab? <a className={styles.textLink} href="/register">Create an account</a></p>
+    <p className={styles.bottomLink}>New to BashLab? <Link className={styles.textLink} href="/register">Create an account</Link></p>
   </AuthShell>;
 }
