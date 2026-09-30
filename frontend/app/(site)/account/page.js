@@ -12,9 +12,6 @@ const EMPTY_USER = {
   avatarUrl: null,
   email: '',
   userId: '',
-  age: '',
-  location: '',
-  occupation: '',
   role: 'learner',
   roleDescription: 'Learner (Managed by platform)',
   roleAccess: 'Read-only',
@@ -35,9 +32,6 @@ function toUser(authUser, profile) {
     name: profile?.name || '',
     bio: profile?.bio || '',
     avatarUrl: profile?.avatar_url || null,
-    age: profile?.age ?? '',
-    location: profile?.location || '',
-    occupation: profile?.occupation || '',
     initials: getInitials(profile?.name || authUser.email),
     email: authUser.email,
     userId: authUser.id,
@@ -69,9 +63,6 @@ export default function AccountPage() {
     name: '',
     bio: '',
     email: '',
-    age: '',
-    location: '',
-    occupation: '',
   });
 
   // Load the real signed-in user + their profile row from Supabase.
@@ -85,7 +76,7 @@ export default function AccountPage() {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, bio, avatar_url, age, location, occupation, role')
+        .select('name, bio, avatar_url, role')
         .eq('id', authUser.id)
         .single();
       if (!cancelled) {
@@ -113,15 +104,12 @@ export default function AccountPage() {
       name: user.name,
       bio: user.bio || '',
       email: user.email,
-      age: user.age || '',
-      location: user.location || '',
-      occupation: user.occupation || '',
     });
     setShowEditModal(true);
   };
 
   // Save Profile Changes — writes straight to `profiles`; RLS + column grants
-  // only let a user touch their own row's name/bio/avatar_url/age/location/occupation.
+  // only let a user touch their own row's display fields.
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     if (!editForm.name.trim()) {
@@ -133,9 +121,6 @@ export default function AccountPage() {
     const { error } = await supabase.from('profiles').update({
       name: editForm.name.trim(),
       bio: editForm.bio.trim(),
-      age: editForm.age === '' ? null : Number(editForm.age),
-      location: editForm.location.trim(),
-      occupation: editForm.occupation.trim(),
     }).eq('id', authUser.id);
 
     if (error) {
@@ -147,9 +132,6 @@ export default function AccountPage() {
       ...prev,
       name: editForm.name.trim(),
       bio: editForm.bio.trim(),
-      age: editForm.age === '' ? '' : Number(editForm.age),
-      location: editForm.location.trim(),
-      occupation: editForm.occupation.trim(),
       initials: getInitials(editForm.name),
     }));
     setShowEditModal(false);
@@ -223,7 +205,7 @@ export default function AccountPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1>Account & Security<span>.</span></h1>
-        <p>Your personal details. Your account, under control.</p>
+        <p>Your profile and account settings.</p>
       </header>
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
@@ -245,8 +227,12 @@ export default function AccountPage() {
               </div>
               <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" hidden />
               <div className={styles.identity}>
-                <div className={styles.nameLine}><h2 id="profile-title">{user.name}</h2>{user.isVerified && <span className={styles.verified}><span className="material-symbols-outlined" aria-hidden="true">verified</span>Verified</span>}</div>
-                {user.bio && <p>{user.bio}</p>}<span className={styles.role}>{user.role}</span>
+                <h2 id="profile-title" className={styles.profileName}>{user.name}</h2>
+                <div className={styles.statusLine}>
+                  {user.isVerified && <span className={styles.verified}><span className="material-symbols-outlined" aria-hidden="true">verified</span>Verified</span>}
+                  <span className={styles.role}>{user.role}</span>
+                </div>
+                {user.bio && <p>{user.bio}</p>}
               </div>
               <button className={styles.button} id="edit-profile-btn" onClick={handleOpenEditModal} aria-expanded={showEditModal} aria-controls="profile-editor">Edit profile<span className="material-symbols-outlined" aria-hidden="true">edit</span></button>
             </div>
@@ -255,9 +241,6 @@ export default function AccountPage() {
               <div className={styles.fields}>
                 <label htmlFor="edit-name-input">Full name<input autoFocus id="edit-name-input" required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></label>
                 <label htmlFor="edit-email-input">Email address<input id="edit-email-input" type="email" readOnly disabled value={editForm.email} title="Changing your sign-in email isn't supported here yet." /></label>
-                <label htmlFor="edit-age-input">Age<input id="edit-age-input" type="number" min="1" max="120" value={editForm.age} onChange={(e) => setEditForm({ ...editForm, age: e.target.value })} /></label>
-                <label htmlFor="edit-location-input">Location<input id="edit-location-input" value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} placeholder="City, country" /></label>
-                <label htmlFor="edit-occupation-input">Occupation<input id="edit-occupation-input" value={editForm.occupation} onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })} /></label>
                 <label className={styles.bioField} htmlFor="edit-bio-input">Bio<textarea id="edit-bio-input" rows={3} value={editForm.bio} onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })} /></label>
               </div>
               <div className={styles.actions}><button type="button" className={styles.button} onClick={() => setShowEditModal(false)}>Cancel</button><button id="save-profile-btn" type="submit" className={styles.primaryButton}>Save changes</button></div>
@@ -267,12 +250,6 @@ export default function AccountPage() {
               <div><dt>Email address</dt><dd>{user.email}<span className={styles.tag}>Primary</span></dd></div>
               <div><dt>Account role</dt><dd><span>{user.role}<small>Managed by platform</small></span><span className={styles.tag}>{user.roleAccess}</span></dd></div>
               <div><dt>User ID</dt><dd>{user.userId || 'Not assigned'}<span className={styles.tag}>Demo</span></dd></div>
-            </dl>
-            <div className={styles.sectionHeading}><h3>Personal information</h3><p>Optional details you can update in your profile.</p></div>
-            <dl className={styles.details}>
-              <div><dt>Age</dt><dd>{user.age || 'Not provided'}</dd></div>
-              <div><dt>Location</dt><dd>{user.location || 'Not provided'}</dd></div>
-              <div><dt>Occupation</dt><dd>{user.occupation || 'Not provided'}</dd></div>
             </dl>
           </section>}
           {activeSection === 'security' && <section id="security" aria-labelledby="security-title" className={styles.security}>

@@ -34,12 +34,12 @@
 .avatar .camera { position: absolute; bottom: -1px; right: -2px; padding: 5px; background: #e1e7e2; color: #202c24; border-radius: 50%; font-size: 13px; }
 .removeAvatar { color: var(--muted); font-size: 11px; margin-top: 9px; text-decoration: underline; text-underline-offset: 3px; }
 .identity { flex: 1; min-width: 0; }
-.nameLine { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.nameLine h2 { font-size: 22px; font-weight: 500; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.profileName { font-size: 22px; font-weight: 500; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.statusLine { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; }
 .verified { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; color: var(--accent); }
 .verified :global(.material-symbols-outlined) { font-size: 15px; }
 .identity p { color: var(--muted); margin-top: 5px; font-size: 12px; overflow-wrap: anywhere; }
-.role { display: inline-block; color: #c4c9cf; margin-top: 10px; font-size: 11px; }
+.role { color: #c4c9cf; font-size: 11px; }
 .button, .primaryButton, .logout { display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 40px; padding: 9px 14px; font-size: 12px; font-weight: 500; border-radius: 6px; white-space: nowrap; transition: background 160ms, border-color 160ms, color 160ms; }
 .button { border: 1px solid #394049; background: #171c23; color: #e1e4e8; }
 .button:hover { background: #252c34; border-color: #5c6671; }
@@ -49,7 +49,6 @@
 .sectionHeading h3 { font-size: 16px; font-weight: 500; letter-spacing: -0.015em; }
 .sectionHeading p { margin-top: 4px; color: var(--muted); font-size: 12px; }
 .details { margin-top: 22px; }
-.details + .sectionHeading { margin-top: 26px; }
 .details > div { display: grid; grid-template-columns: 146px minmax(0, 1fr); gap: 20px; padding: 21px 0; border-top: 1px solid var(--line); }
 .details dt { color: var(--muted); font-size: 12px; }
 .details dd { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; font-size: 13px; overflow-wrap: anywhere; min-width: 0; }
@@ -100,8 +99,7 @@
   .profileTop { gap: 16px; padding-bottom: 32px; }
   .identity { flex-basis: calc(100% - 76px); }
   .avatar { width: 60px; height: 60px; }
-  .nameLine { gap: 4px 10px; }
-  .nameLine h2 { font-size: 20px; }
+  .profileName { font-size: 20px; }
   .profileTop > .button { margin-left: 76px; }
   .details > div { grid-template-columns: 1fr; gap: 8px; padding: 18px 0; }
   .settingRow { flex-wrap: wrap; gap: 12px; }
