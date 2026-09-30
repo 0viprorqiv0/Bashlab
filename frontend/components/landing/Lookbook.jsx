@@ -14,7 +14,6 @@ const CyberBackdrop = dynamic(() => import('./CyberBackdrop'), { ssr: false });
 
 /* Thuật toán Lookbook Snap — không dùng CSS scroll-snap */
 const SNAP_DEBOUNCE = 400;
-const SNAP_MAX_PULL = 50;
 const DESKTOP_MIN = 901;
 const STORE_KEY = 'bashlab:lookbook-snap';
 
@@ -749,7 +748,7 @@ export default function Lookbook() {
           best = i;
         }
       }
-      if (best >= 0 && bestAbs <= SNAP_MAX_PULL && bestAbs > 2) {
+      if (best >= 0 && bestAbs <= window.innerHeight / 4 && bestAbs > 2) {
         const target = sections[best].getBoundingClientRect().top + window.scrollY;
         setActive(best);
         smoothScrollTo(target);

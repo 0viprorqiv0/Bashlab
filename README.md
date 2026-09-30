@@ -21,7 +21,9 @@ BashLab là nền tảng học Bash qua bài học ngắn và thực hành. Fron
 | Khóa học, bài học và trang quản trị | Có trang chi tiết khóa học, workspace bài học, quản lý nội dung, người dùng và hoạt động admin |
 | Backend sandbox | Express API và Docker runner có hướng dẫn chạy trong [backend/RUNNING.md](backend/RUNNING.md); workspace hiện chưa gắn với tài khoản BashLab |
 
-Trang landing có terminal mô phỏng; lệnh trên landing không chạy trên hệ điều hành. Trang thực hành dùng backend sandbox.
+Trang landing có terminal mô phỏng; lệnh trên landing không chạy trên hệ điều hành. Workspace Shell 101 hiện dùng terminal preview, chưa kết nối backend sandbox hoặc ghi tiến độ thực hành.
+
+Workspace Shell 101 dùng URL `/courses/shell-101/labs/<số bài>` (1–12). URL slug bài cũ tự chuyển sang URL số tương ứng.
 
 ## Phân nhóm chức năng
 

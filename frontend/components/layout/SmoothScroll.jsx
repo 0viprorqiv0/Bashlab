@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 
-export default function SmoothScroll() {
+export default function SmoothScroll({ wheelMultiplier = 1 }) {
   useEffect(() => {
     // Tôn trọng cài đặt giảm chuyển động của người dùng
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -19,7 +19,7 @@ export default function SmoothScroll() {
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
-      wheelMultiplier: 1.0,
+      wheelMultiplier: 1,
       touchMultiplier: 1.2,
       smoothTouch: true,
       autoRaf: false,
@@ -90,6 +90,10 @@ export default function SmoothScroll() {
       delete window.lenis;
     };
   }, []);
+
+  useEffect(() => {
+    if (window.lenis) window.lenis.options.wheelMultiplier = wheelMultiplier;
+  }, [wheelMultiplier]);
 
   return null;
 }

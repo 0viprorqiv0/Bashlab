@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { initialLabs } from '@/data/labsData';
 
 const COURSE_FIELDS = 'id, slug, title, description, level, category, duration_minutes, status, sort_order, '
   + 'chapters(id, title, sort_order, lessons(id, slug, title, status, sort_order, objectives))';
@@ -30,17 +31,6 @@ export async function fetchPublishedCourses() {
   return data.map(normalizeCourse);
 }
 
-export async function fetchCourse(slug) {
-  const { data, error } = await supabase
-    .from('courses')
-    .select(COURSE_FIELDS)
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle();
-  if (error) throw error;
-  return data ? normalizeCourse(data) : null;
-}
-
 export async function fetchProgressMap(userId) {
   const { data, error } = await supabase
     .from('progress')
@@ -57,27 +47,15 @@ export function courseStats(course, progressMap) {
   return { total: course.lessons.length, done, next };
 }
 
-// Lessons unlock in order: everything done stays open, the first unfinished
-// lesson is "current", and anything after it is locked.
-export function lessonStates(course, progressMap) {
-  const states = new Map();
-  let reachedCurrent = false;
-  for (const lesson of course.lessons) {
-    if (progressMap.get(lesson.id)?.status === 'done') states.set(lesson.id, 'done');
-    else if (!reachedCurrent) {
-      states.set(lesson.id, 'current');
-      reachedCurrent = true;
-    } else states.set(lesson.id, 'locked');
-  }
-  return states;
-}
-
 export function courseCode(slug) {
   return slug.match(/\d+/)?.[0] || slug.slice(0, 3).toUpperCase();
 }
 
 export function lessonHref(courseSlug, lessonSlug) {
-  return `/courses/${courseSlug}/labs/${lessonSlug}`;
+  const labId = courseSlug === 'shell-101'
+    ? initialLabs.find((lab) => lab.slug === lessonSlug)?.id || 1
+    : lessonSlug;
+  return `/courses/${courseSlug}/labs/${labId}`;
 }
 
 export async function markLessonDone(userId, lessonId) {
@@ -93,15 +71,6 @@ export async function markLessonDone(userId, lessonId) {
 
 export async function markLessonUndone(userId, lessonId) {
   return supabase.from('progress').delete().eq('user_id', userId).eq('lesson_id', lessonId);
-}
-
-export async function markLessonStarted(userId, lessonId) {
-  // Never downgrades an already-done lesson — ignoreDuplicates only inserts
-  // when no row exists yet for this (user, lesson) pair.
-  return supabase.from('progress').upsert(
-    { user_id: userId, lesson_id: lessonId, status: 'in_progress', updated_at: new Date().toISOString() },
-    { onConflict: 'user_id,lesson_id', ignoreDuplicates: true },
-  );
 }
 
 const LAB_FIELDS = 'id, slug, title, status, sort_order, category, tag, difficulty, commands, lab, test_template, objectives, '
@@ -138,7 +107,7 @@ export function labProgressStatus(lab, progressMap) {
     : progressMap.get(lab.id) ? 'in_progress' : 'todo';
 }
 
-// Shape expected by CourseDetail/LabWorkspace (mirrors the old frontend/data/labsData.js entries).
+// Shape expected by CourseDetail (mirrors frontend/data/labsData.js entries).
 export function toDisplayLab(row, progressMap) {
   return {
     id: row.id,
