@@ -41,8 +41,35 @@
 > (phải F5 mới thấy) — Account page giờ bắn `window.dispatchEvent(new
 > Event('bashlab:profile-updated'))`, Navbar lắng nghe và refetch.
 >
-> Dọn sau: `frontend/data/labsData.js` (404 dòng) là mock cũ, không còn ai
-> import — có thể xoá khi rảnh.
+> Dọn sau: `frontend/data/labsData.js` vẫn còn 1 chỗ dùng thật
+> (`LearningDashboard.jsx` gọi `getFirstIncompleteLab()`) — đọc từ mảng tĩnh
+> hard-code, không phải tiến độ thật của user, nên nút "Continue learning"
+> trên My Learning có thể trỏ sai bài. Chưa sửa, cần bàn với người viết.
+>
+> **Cập nhật 2026-09-30 (2)**: Merge tiếp 1 commit mới trên `main`
+> (`aeee524 feat: improve lesson authoring and learning flow`) vào `dat-be`.
+> Merge sạch, không conflict. 3 điều cần lưu ý từ commit này:
+> - **Bug đã tự sửa ngay**: `app/(site)/courses/[slug]/page.js` có dòng
+>   `if (params?.slug === 'shell-101') redirect('/courses/shell-101/labs/1')`
+>   — rõ ràng là code debug quên xoá, khiến `/courses/shell-101` (trang
+>   khoá học công khai chính) luôn nhảy sang `/courses/shell-101/labs/1`
+>   (labId "1" không tồn tại), và vì `LabWorkspace.jsx` bắt buộc đăng nhập
+>   nên **khách chưa đăng nhập bị đá thẳng về `/login`** — chặn hẳn việc
+>   xem khoá học công khai, kể cả người đã đăng nhập cũng không vào được
+>   trang danh sách lab bình thường của shell-101. Đã xoá dòng redirect đó.
+> - **Chưa áp dụng lên DB**: `ContentManager.jsx` đọc thêm cột
+>   `lessons.lesson_content` (có fallback nếu thiếu cột — không crash), nhưng
+>   cột này **chưa có migration nào trong `backend/db/migrations/`** và
+>   chưa tồn tại trên Supabase thật (đã kiểm tra). Tính năng "lesson
+>   authoring" mới của commit này vì vậy chưa hoạt động đầy đủ.
+> - `lib/learning.js` và `CourseCatalog.jsx` cùng thêm 1 exception hard-code
+>   loại bài `hello-bashlab` ra khỏi đếm số bài của course `shell-101` (chỉ
+>   ảnh hưởng thống kê My Learning/Catalog — 13 thay vì 14; trang lab list
+>   của CourseDetail không bị ảnh hưởng, vẫn 14). Không rõ lý do, cần hỏi
+>   lại người viết trước khi coi là chuẩn.
+>
+> Test E2E cập nhật lại theo (dialog thay `window.prompt` ở admin Content,
+> số liệu 13/14 tuỳ trang) — **44/44 pass** sau khi sửa.
 
 Audit ngày 2026-09-28. Mức độ: đồ án môn học — đủ chạy, đủ demo 17 trang, không nhắm chuẩn production.
 

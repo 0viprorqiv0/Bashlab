@@ -20,22 +20,30 @@ test('admin creates a course, adds a chapter and a lesson, edits and publishes i
   await page.goto('/admin/content');
   await expect(page.getByRole('heading', { name: 'Content' })).toBeVisible();
 
-  page.once('dialog', (dialog) => dialog.accept(courseTitle));
+  // Course/chapter/lesson creation is an in-page dialog (not window.prompt).
   await page.getByRole('button', { name: 'New course' }).click();
+  await page.getByLabel('Course title').fill(courseTitle);
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('button', { name: courseTitle })).toBeVisible();
 
   const { data: course } = await adminClient.from('courses').select('id').eq('slug', courseSlug).single();
   createdCourseId = course.id;
 
-  // Course details form: slug auto-derived from the title, required + validated.
+  // Course settings tab: slug auto-derived from the title, required + validated.
+  await page.getByRole('tab', { name: /Course settings/ }).click();
   await expect(page.getByLabel('Slug')).toHaveValue(courseSlug);
+  await page.getByRole('tab', { name: /Curriculum/ }).click();
 
-  page.once('dialog', (dialog) => dialog.accept('Chapter One'));
   await page.getByRole('button', { name: 'Add chapter' }).click();
+  await page.getByLabel('Chapter title').fill('Chapter One');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByText('Chapter One')).toBeVisible();
 
-  page.once('dialog', (dialog) => dialog.accept('First Lesson'));
-  await page.getByRole('button', { name: 'Lesson' }).click();
+  // exact: the sidebar course buttons also contain the substring "lessons"
+  // (e.g. "3 chapters · 5 lessons"), which a loose match would also catch.
+  await page.getByRole('button', { name: 'Lesson', exact: true }).click();
+  await page.getByLabel('Lesson title').fill('First Lesson');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.waitForURL('**/admin/lessons/**');
 
   await expect(page.getByRole('heading', { name: 'First Lesson' })).toBeVisible();

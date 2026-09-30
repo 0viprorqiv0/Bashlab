@@ -28,28 +28,35 @@ test('a fresh learner sees all 14 labs, none solved yet', async ({ page }) => {
 test('My Learning shows the not-started state before any lab is solved', async ({ page }) => {
   await page.goto('/my-learning');
   await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
-  await expect(page.getByText('0 of 14 lessons completed')).toBeVisible();
+  // My Learning's count is 13, not 14: lib/learning.js normalizeCourse()
+  // special-cases shell-101/hello-bashlab out of its lesson list (unrelated
+  // to CourseDetail's own 14-lab table, which reads lessons directly and is
+  // unaffected — see 0 / 14 (0%) above).
+  await expect(page.getByText('0 of 13 lessons completed')).toBeVisible();
   await expect(page.getByRole('link', { name: /Start learning/ })).toBeVisible();
 });
 
 test('solving a lab from the table updates the row, the counters, and My Learning', async ({ page }) => {
   await page.goto('/courses/shell-101');
-  const firstRow = page.locator('tr', { hasText: 'Your first file' });
+  // Not "Your first file" (hello-bashlab) here on purpose: My Learning's
+  // stats exclude that one lesson for shell-101 (see test above), so solving
+  // it wouldn't move the My Learning counter at all.
+  const row = page.locator('tr', { hasText: 'Folders and files together' });
 
   // toggleSolveStatus (CourseDetail.jsx) updates the row optimistically
   // *then* awaits the `progress` upsert — wait for that request to actually
   // land before navigating away, instead of racing it.
   const write = page.waitForResponse((res) => res.url().includes('/rest/v1/progress') && res.request().method() === 'POST');
-  await firstRow.getByTitle('Not Started').click();
+  await row.getByTitle('Not Started').click();
   await write;
 
-  await expect(firstRow.getByTitle('Completed (click to toggle)')).toBeVisible();
+  await expect(row.getByTitle('Completed (click to toggle)')).toBeVisible();
   await expect(page.getByText('1 / 14 Solved')).toBeVisible();
   await expect(page.getByText('1 / 14 (7%)')).toBeVisible(); // round(1/14 * 100)
 
   await page.goto('/my-learning');
   await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
-  await expect(page.getByText('1 of 14 lessons completed')).toBeVisible();
+  await expect(page.getByText('1 of 13 lessons completed')).toBeVisible();
   const stat = page.locator('div').filter({ has: page.getByText('Lessons mastered', { exact: true }) }).last();
   await expect(stat.locator('dd')).toHaveText('1');
 });
