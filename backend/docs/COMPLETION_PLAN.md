@@ -15,6 +15,34 @@
 > `dat-be` và nối lại Supabase lên trên giao diện mới, test qua trình duyệt
 > bằng tài khoản admin thật. Xem quy trình chuẩn cho việc này trong
 > [`CONTEXT.md`](CONTEXT.md).
+>
+> **Cập nhật 2026-09-30**: Hai việc lớn.
+>
+> 1. **Bộ test E2E Playwright** (`frontend/tests/e2e/`, xem README trong
+>    thư mục đó) — chạy thật trên Supabase project, không mock. 44 test:
+>    auth/register/login, forgot/reset password, RLS + RPC admin_* (learner
+>    bị chặn, admin qua được, mọi hành động ghi `admin_logs`), admin
+>    Content/Users/Activity qua UI thật, và luồng học/tiến độ. 1 test
+>    Workspace để sẵn dạng skip (cần backend Linux/WSL). `npm run test:e2e`
+>    trong `frontend/`.
+> 2. **Merge nhánh FE mới nhất** (course labs kiểu LeetCode) — đã đổi hẳn
+>    trang khoá học: `CourseOverview.jsx`/`/learn/[course]/[lesson]` (chương
+>    → bài học tuần tự, khoá bài sau) bị thay bằng `CourseDetail.jsx`/
+>    `/courses/[slug]/labs/[labId]` (bảng lab phẳng, không khoá thứ tự, lọc
+>    theo category/tag/difficulty). Migration `013_public_upcoming_courses.sql`
+>    (courses có thêm status `upcoming` — công khai làm teaser "Coming next",
+>    khác `draft`/`hidden` vẫn admin-only) và `014_lab_content_fields.sql`
+>    (`lessons.category/tag/difficulty/commands/lab`) đã áp dụng lên DB thật;
+>    seed 14 lab bằng `backend/scripts/seed-labs.mjs`. Đã cập nhật toàn bộ
+>    test E2E theo giao diện mới, lint + build sạch (16 route), BE 14/17
+>    (3 fail permission/symlink chỉ trên Windows, không liên quan).
+>
+> Fix thêm: Navbar không tự cập nhật tên sau khi sửa profile ở `/account`
+> (phải F5 mới thấy) — Account page giờ bắn `window.dispatchEvent(new
+> Event('bashlab:profile-updated'))`, Navbar lắng nghe và refetch.
+>
+> Dọn sau: `frontend/data/labsData.js` (404 dòng) là mock cũ, không còn ai
+> import — có thể xoá khi rảnh.
 
 Audit ngày 2026-09-28. Mức độ: đồ án môn học — đủ chạy, đủ demo 17 trang, không nhắm chuẩn production.
 

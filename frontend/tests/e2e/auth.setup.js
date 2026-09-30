@@ -20,7 +20,9 @@ async function loginAndSave(browser, email, password, file) {
   await main.getByLabel('Email address').fill(email);
   await main.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
-  await page.waitForURL('**/my-learning');
+  // Post-login landing page now depends on role (learner -> '/', admin ->
+  // '/admin/content'), so just wait for navigation away from /login.
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
   await context.storageState({ path: file });
   await context.close();
 }

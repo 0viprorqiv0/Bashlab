@@ -16,7 +16,7 @@ test('editing the profile name updates the navbar immediately, with no reload', 
     await main.getByLabel('Email address').fill(user.email);
     await main.getByLabel('Password', { exact: true }).fill(user.password);
     await page.getByRole('button', { name: 'Log in' }).click();
-    await page.waitForURL('**/my-learning');
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 
     await page.goto('/account');
     await page.getByRole('button', { name: 'Edit profile' }).click();

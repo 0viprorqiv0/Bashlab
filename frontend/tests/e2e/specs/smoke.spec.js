@@ -14,21 +14,27 @@ test.describe('anonymous visitor', () => {
     await expect(page.getByText(/page could not be found/i)).toBeVisible();
   });
 
-  test('course catalog lists the published Shell 101 course; draft courses are invisible (RLS, not a UI filter)', async ({ page }) => {
+  test('course catalog lists the published Shell 101 course and the upcoming teasers', async ({ page }) => {
     await page.goto('/courses');
     await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
-    // shell-201 and linux-security are `status = 'draft'`: the courses RLS
-    // policy (using status = 'published' or is_admin()) means an anonymous
-    // request never gets those rows back at all, so "Coming next" never
-    // renders for a logged-out visitor — this isn't a component-level filter.
-    await expect(page.getByText('Coming next')).toHaveCount(0);
+    // shell-201/linux-security are `status = 'upcoming'` (backend/db/migrations/013_public_upcoming_courses.sql):
+    // the courses RLS policy explicitly allows 'upcoming' to be publicly
+    // readable as a teaser, unlike 'draft'/'hidden' which stay admin-only.
+    await expect(page.getByText('Coming next')).toBeVisible();
+    await expect(page.getByText('Shell 201 — Pipelines & Streams')).toBeVisible();
   });
 
-  test('course overview is publicly readable but progress is gated behind login', async ({ page }) => {
+  test('an upcoming course page is publicly reachable (teaser) but has no labs yet', async ({ page }) => {
+    await page.goto('/courses/shell-201');
+    await expect(page.getByRole('heading', { name: 'Shell 201 — Pipelines & Streams' })).toBeVisible();
+    await expect(page.getByText('0 / 0 Solved')).toBeVisible();
+  });
+
+  test('a published course page lists its labs publicly, with progress at 0%', async ({ page }) => {
     await page.goto('/courses/shell-101');
     await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
-    await expect(page.getByText('Log in to track your progress through this course.')).toBeVisible();
-    await expect(page.getByRole('link', { name: /log in to start/i })).toBeVisible();
+    await expect(page.getByText('0 / 14 (0%)')).toBeVisible();
+    await expect(page.getByText('Your first file')).toBeVisible();
   });
 
   test('/my-learning redirects to /login when not authenticated', async ({ page }) => {

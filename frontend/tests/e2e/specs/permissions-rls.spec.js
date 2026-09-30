@@ -11,7 +11,25 @@ const { loadUsers } = require('../support/testUsers');
 
 const authDir = path.join(__dirname, '..', '.auth');
 let users;
-test.beforeAll(() => { users = loadUsers(); });
+let hiddenCourseId;
+let hiddenCourseSlug;
+test.beforeAll(async () => {
+  users = loadUsers();
+  // 'published' and 'upcoming' are public teasers (013_public_upcoming_courses.sql);
+  // 'draft'/'hidden' must stay admin-only. Use our own disposable course so
+  // this doesn't depend on shell-201/linux-security keeping any particular status.
+  hiddenCourseSlug = `e2e-hidden-${Date.now()}`;
+  const { data, error } = await adminClient
+    .from('courses')
+    .insert({ title: 'E2E Hidden Course', slug: hiddenCourseSlug, status: 'hidden', sort_order: 999 })
+    .select('id')
+    .single();
+  if (error) throw error;
+  hiddenCourseId = data.id;
+});
+test.afterAll(async () => {
+  if (hiddenCourseId) await adminClient.from('courses').delete().eq('id', hiddenCourseId);
+});
 
 test.describe('admin UI guard (UX layer)', () => {
   test.use({ storageState: path.join(authDir, 'learner.json') });
@@ -60,11 +78,12 @@ test.describe('RLS / RPC boundary — learner token, bypassing the UI entirely',
     expect(data.code).toBe('42501');
   });
 
-  test('draft/hidden courses are invisible — only published rows come back', async () => {
+  test('hidden courses are invisible — only published/upcoming rows come back', async () => {
     const { status, data } = await api.select('courses', '?select=slug,status');
     expect(status).toBe(200);
-    expect(data.every((row) => row.status === 'published')).toBe(true);
+    expect(data.every((row) => ['published', 'upcoming'].includes(row.status))).toBe(true);
     expect(data.some((row) => row.slug === 'shell-101')).toBe(true);
+    expect(data.some((row) => row.slug === hiddenCourseSlug)).toBe(false);
   });
 
   test('admin_logs is invisible to a learner (RLS filters rows, not an error)', async () => {
@@ -110,7 +129,7 @@ test.describe('RLS / RPC boundary — admin token', () => {
     expect(data.message).toContain('cannot lock your own account');
   });
 
-  test('admin can promote/demote a learner and read draft content, and every action is written to admin_logs', async () => {
+  test('admin can promote/demote a learner and read hidden content, and every action is written to admin_logs', async () => {
     // admin_set_user_role returns void — PostgREST responds 204 No Content on success.
     const promote = await api.rpc('admin_set_user_role', { target: users.target.id, new_role: 'admin', reason: 'e2e promote' });
     expect(promote.status).toBe(204);
@@ -127,8 +146,8 @@ test.describe('RLS / RPC boundary — admin token', () => {
     expect(logs.map((l) => l.action)).toEqual(['set_role:learner', 'set_role:admin']);
     expect(logs.every((l) => l.actor_id === users.admin.id)).toBe(true);
 
-    const drafts = await api.select('courses', '?select=slug,status&status=eq.draft');
-    expect(drafts.status).toBe(200);
-    expect(drafts.data.length).toBeGreaterThan(0);
+    const hidden = await api.select('courses', `?select=slug,status&slug=eq.${hiddenCourseSlug}`);
+    expect(hidden.status).toBe(200);
+    expect(hidden.data).toHaveLength(1);
   });
 });

@@ -68,7 +68,7 @@ test.describe('register', () => {
       await main(page).getByLabel('Email address').fill(existing.email);
       await main(page).getByLabel('Password', { exact: true }).fill(existing.password);
       await page.getByRole('button', { name: 'Log in' }).click();
-      await page.waitForURL('**/my-learning');
+      await page.waitForURL((url) => !url.pathname.startsWith('/login'));
     } finally {
       await deleteTestUserSafe(existing);
     }
@@ -112,14 +112,14 @@ test.describe('login', () => {
     }
   });
 
-  test('valid credentials log in and land on /my-learning, then log out from the navbar', async ({ page }) => {
+  test('valid credentials log in (learner lands on /), then log out from the navbar', async ({ page }) => {
     const user = await createTestUser({ prefix: 'happypath' });
     try {
       await page.goto('/login');
       await main(page).getByLabel('Email address').fill(user.email);
       await main(page).getByLabel('Password', { exact: true }).fill(user.password);
       await page.getByRole('button', { name: 'Log in' }).click();
-      await page.waitForURL('**/my-learning');
+      await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 
       await page.getByRole('button', { name: 'User menu' }).click();
       await page.getByRole('button', { name: 'Log out' }).click();

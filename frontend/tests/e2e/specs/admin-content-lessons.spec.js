@@ -55,11 +55,11 @@ test('admin creates a course, adds a chapter and a lesson, edits and publishes i
   await expect(lessonRow.getByText('published')).toBeVisible();
 });
 
-test('a draft course never shows up in the public catalog or overview, published+course-published does', async ({ page, context }) => {
+test('a draft course never shows up in the public catalog or overview (only published/upcoming are public)', async ({ context }) => {
   // Re-check as an anonymous visitor: course is still draft (created in the
   // previous test), so it must not be reachable at all.
   const anonPage = await context.browser().newContext().then((c) => c.newPage());
   await anonPage.goto(`/courses/${courseSlug}`);
-  await expect(anonPage.getByRole('heading', { name: 'Course not found' })).toBeVisible();
+  await expect(anonPage.getByText('This course does not exist or is not published yet.')).toBeVisible();
   await anonPage.close();
 });
