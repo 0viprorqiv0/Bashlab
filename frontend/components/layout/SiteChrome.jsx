@@ -15,7 +15,7 @@ export default function SiteChrome({ children }) {
 
   return (
     <>
-      {!isWorkspace && <SmoothScroll />}
+      {!isWorkspace && <SmoothScroll wheelMultiplier={pathname === '/' ? 2 : 1} />}
       <Navbar isTransparent={pathname === '/'} />
       <main
         className={
