@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './LearningDashboard.module.css';
 import { supabase } from '@/lib/supabaseClient';
+import { getFirstIncompleteLab } from '@/data/labsData';
 import {
   courseCode, courseStats, fetchProgressMap, fetchPublishedCourses, getCurrentUser, lessonHref,
 } from '@/lib/learning';
@@ -111,6 +112,14 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
   for (let index = days.length - 1; index >= 0 && days[index].level > 0; index--) streak++;
   const percent = current && current.total ? Math.round((current.done / current.total) * 100) : 0;
   const courseState = !current || current.done === 0 ? 'Not started' : current.done === current.total ? 'Completed' : 'In progress';
+  const firstIncompleteLab = current?.course.slug === 'shell-101'
+    ? getFirstIncompleteLab()
+    : null;
+  const startHref = firstIncompleteLab
+    ? `/courses/${current.course.slug}/labs/${firstIncompleteLab.id}`
+    : current?.next
+      ? lessonHref(current.course.slug, current.next.slug)
+      : `/courses/${current?.course.slug}`;
 
   useEffect(() => {
     if (calendarRef.current) calendarRef.current.scrollLeft = calendarRef.current.scrollWidth;
@@ -156,7 +165,7 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
             <p>{current.done} of {current.total} lessons completed</p>
           </div>
           <div className={styles.courseAction}>
-            <Link href={current.next ? lessonHref(current.course.slug, current.next.slug) : `/courses/${current.course.slug}`}>
+            <Link href={startHref}>
               {current.done === 0 ? 'Start learning' : 'Continue learning'} <Icon name="arrow_forward" />
             </Link>
             <div className={styles.courseProgress} role="progressbar" aria-label={`${current.course.title} progress`} aria-valuenow={current.done} aria-valuemin={0} aria-valuemax={current.total}><span style={{ width: `${percent}%` }} /></div>

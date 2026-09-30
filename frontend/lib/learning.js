@@ -9,7 +9,8 @@ const bySort = (a, b) => a.sort_order - b.sort_order;
 function normalizeCourse(row) {
   const chapters = (row.chapters || []).slice().sort(bySort).map((chapter) => ({
     ...chapter,
-    lessons: (chapter.lessons || []).filter((lesson) => lesson.status === 'published').sort(bySort),
+    lessons: (chapter.lessons || []).filter((lesson) => lesson.status === 'published'
+      && !(row.slug === 'shell-101' && lesson.slug === 'hello-bashlab')).sort(bySort),
   }));
   return { ...row, chapters, lessons: chapters.flatMap((chapter) => chapter.lessons) };
 }

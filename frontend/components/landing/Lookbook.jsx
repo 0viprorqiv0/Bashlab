@@ -7,6 +7,7 @@ import styles from './Lookbook.module.css';
 import CuriosityWord from './animations/CuriosityWord';
 import CourseBento from './CourseBento';
 import { getTabCompletions, findCommonPrefix } from './terminalTabCompletion';
+import { getFirstIncompleteLab } from '@/data/labsData';
 
 /* Cyber backdrop loads independently from main content */
 const CyberBackdrop = dynamic(() => import('./CyberBackdrop'), { ssr: false });
@@ -426,6 +427,7 @@ function renderQuoteContent(quote, charCount, isIdle) {
 }
 
 export default function Lookbook() {
+  const firstIncompleteLab = getFirstIncompleteLab();
   const sectionRefs = useRef([]);
   const scrollTimer = useRef(null);
   const snappingUntil = useRef(0);
@@ -2216,7 +2218,7 @@ export default function Lookbook() {
               Learn Bash one small step at a time. Try a command, understand what it does, and build confidence through guided practice.
             </p>
             <div className={styles.heroCtas}>
-              <a href="/courses" className={styles.btnPrimary}>
+              <a href={firstIncompleteLab ? `/courses/shell-101/labs/${firstIncompleteLab.id}` : '/courses/shell-101'} className={styles.btnPrimary}>
                 <span>Start learning</span>
                 <span aria-hidden="true">→</span>
               </a>

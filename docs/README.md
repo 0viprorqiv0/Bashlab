@@ -2,6 +2,13 @@
 
 > Hệ thống tài liệu kỹ thuật, kiến trúc phân hệ, chiến lược bảo vệ đồ án và báo cáo nghiên cứu chuyên sâu cho dự án **BashLab**.
 
+## Kế hoạch Content và Lesson Editor
+
+- [Kế hoạch giao diện nền đen, form từng mục và preview màn học](plans/content-redesign/PLAN.md).
+- [README bàn giao backend: dữ liệu, migration, quyền truy cập và API kiểm tra bài](plans/content-redesign/README.md).
+
+Trạng thái ngày 2026-09-30: frontend đã có thay đổi Content/editor; kế hoạch vừa được chỉnh theo nền liền của Account & Security. Đợt chỉnh nền mới chưa triển khai; trạng thái database cần đối chiếu riêng. Xem tiến độ và phạm vi trong PLAN.md.
+
 ---
 
 ## 🗂️ CẤU TRÚC PHÂN LOẠI TÀI LIỆU
