@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { initialLabs, getLabById } from '@/data/labsData';
+import { useLabProgress } from '@/lib/labProgress';
 import styles from './LabWorkspace.module.css';
 
 export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
@@ -68,6 +69,15 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
   });
 
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
+
+  // A signed-in learner's real progress (database) replaces the built-in defaults.
+  const { doneSlugs, markDone } = useLabProgress(courseId);
+  useEffect(() => {
+    if (!doneSlugs) return;
+    const done = doneSlugs.has(currentLab.slug);
+    setIsLabSolved(done);
+    setCompletedSteps(done ? (currentLab.steps || []).map((s) => s.id) : []);
+  }, [doneSlugs, currentLab]);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [instanceStatus, setInstanceStatus] = useState('running'); // 'running' | 'stopped' | 'restarting'
@@ -198,6 +208,10 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
       const allIds = currentLab.steps.map((s) => s.id);
       setCompletedSteps(allIds);
       setIsLabSolved(true);
+      markDone(currentLab.slug).then(({ error }) => {
+        if (error) setTerminalLogs((prev) => [...prev, { type: 'output', text: `
+[warning] Your progress could not be saved: ${error.message}` }]);
+      });
       setTerminalLogs((prev) => [
         ...prev,
         {
@@ -545,7 +559,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
                 </div>
                 <ol className={styles.lessonList}>
                   {initialLabs.map((lab) => {
-                    const completed = lab.id === currentLab.id ? isLabSolved : lab.status === 'solved';
+                    const completed = lab.id === currentLab.id ? isLabSolved : (doneSlugs ? doneSlugs.has(lab.slug) : lab.status === 'solved');
                     return (
                       <li key={lab.id}>
                         <Link href={`/courses/${courseId}/labs/${lab.id}`} className={`${styles.lessonRow} ${lab.id === currentLab.id ? styles.currentLesson : ''} ${completed ? styles.completedLesson : ''}`}
