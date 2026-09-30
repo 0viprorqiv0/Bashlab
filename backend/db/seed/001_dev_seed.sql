@@ -9,10 +9,10 @@ values
    'beginner', 'Core Track', 150, 'published', 1),
   ('shell-201', 'Shell 201 — Pipelines & Streams',
    'Dive into standard streams (stdin, stdout, stderr), command chaining, exit codes, and building robust multi-stage data filters.',
-   'intermediate', 'Core Track', 120, 'draft', 2),
+   'intermediate', 'Core Track', 120, 'upcoming', 2),
   ('linux-security', 'Linux Permissions & Security',
    'Understand octal and symbolic permissions, sudo privilege boundaries, process inspection, and secure workspace hygiene.',
-   'intermediate', 'Security', 90, 'draft', 3)
+   'intermediate', 'Security', 90, 'upcoming', 3)
 on conflict (slug) do nothing;
 
 insert into public.chapters (course_id, title, sort_order)

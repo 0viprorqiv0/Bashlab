@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './LearningDashboard.module.css';
 import { supabase } from '@/lib/supabaseClient';
@@ -71,20 +72,27 @@ async function loadDashboard(userId) {
 export default function LearningDashboard() {
   const router = useRouter();
   const [data, setData] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-    getCurrentUser().then(async (user) => {
-      if (!user) {
-        router.push('/login');
-        return;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          router.replace('/login');
+          return;
+        }
+        const loaded = await loadDashboard(user.id);
+        if (!cancelled) setData(loaded);
+      } catch {
+        if (!cancelled) setLoadError('We could not load your learning data. Please refresh and try again.');
       }
-      const loaded = await loadDashboard(user.id);
-      if (!cancelled) setData(loaded);
-    });
+    })();
     return () => { cancelled = true; };
   }, [router]);
 
+  if (loadError) return <main className={styles.page}><p role="alert">{loadError}</p></main>;
   if (!data) return null;
   return <Dashboard {...data} />;
 }
@@ -136,7 +144,7 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
     <div className={styles.page}>
       <header className={styles.pageHeader}>
         <div><h1>My Learning<span>.</span></h1><p>Build a little every day. See how far you go.</p></div>
-        <a className={styles.browseLink} href="/courses" aria-label="Browse courses">Browse courses <Icon name="arrow_outward" /></a>
+        <Link className={styles.browseLink} href="/courses" aria-label="Browse courses">Browse courses <Icon name="arrow_outward" /></Link>
       </header>
 
       {current ? (
@@ -148,9 +156,9 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
             <p>{current.done} of {current.total} lessons completed</p>
           </div>
           <div className={styles.courseAction}>
-            <a href={current.next ? lessonHref(current.course.slug, current.next.slug) : `/courses/${current.course.slug}`}>
+            <Link href={current.next ? lessonHref(current.course.slug, current.next.slug) : `/courses/${current.course.slug}`}>
               {current.done === 0 ? 'Start learning' : 'Continue learning'} <Icon name="arrow_forward" />
-            </a>
+            </Link>
             <div className={styles.courseProgress} role="progressbar" aria-label={`${current.course.title} progress`} aria-valuenow={current.done} aria-valuemin={0} aria-valuemax={current.total}><span style={{ width: `${percent}%` }} /></div>
           </div>
         </section>

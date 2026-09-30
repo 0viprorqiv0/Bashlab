@@ -12,10 +12,9 @@ dist/
 
 # Environment files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!.env.*.example
 
 # IDE
 .idea/
@@ -41,6 +40,10 @@ frontend/tests/e2e/.auth/
 frontend/tests/e2e/report/
 frontend/test-results/
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # Misc
 *.tsbuildinfo
 .next-env.d.ts
@@ -53,4 +56,4 @@ antigravity_site/
 _backups/
 *.bak
 /Rick Astley*.mp4
-/images (10).jpg
+/images (10).jpg

@@ -11,15 +11,26 @@ export default function SiteChrome({ children }) {
   const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'].includes(pathname);
   const isAppPage = ['/account', '/my-learning', '/courses', '/learn', '/admin']
     .some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  const isWorkspace = pathname?.includes('/labs/');
 
   return (
     <>
-      <SmoothScroll />
+      {!isWorkspace && <SmoothScroll />}
       <Navbar isTransparent={pathname === '/'} />
-      <main className={isAuthPage ? styles.authMain : isAppPage ? 'pt-16 relative flex min-h-[100svh] flex-col' : 'pt-16 relative'}>
+      <main
+        className={
+          isWorkspace
+            ? styles.workspaceMain
+            : isAuthPage
+            ? styles.authMain
+            : isAppPage
+            ? styles.standardMain
+            : styles.defaultMain
+        }
+      >
         {children}
       </main>
-      <Footer />
+      {!isWorkspace && <Footer />}
     </>
   );
 }

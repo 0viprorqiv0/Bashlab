@@ -35,6 +35,11 @@ function toForm(lesson) {
     objectives: lesson.objectives || [],
     verifier: lesson.test_template?.verifier || '',
     hint: lesson.test_template?.hint || '',
+    category: lesson.category || '',
+    tag: lesson.tag || '',
+    difficulty: lesson.difficulty || '',
+    commands: (lesson.commands || []).join(', '),
+    labJson: lesson.lab ? JSON.stringify(lesson.lab, null, 2) : '',
   };
 }
 
@@ -46,7 +51,7 @@ export default function LessonEditor({ lessonId }) {
     (async () => {
       const { data: lesson, error: lessonError } = await supabase
         .from('lessons')
-        .select('id, title, slug, chapter_id, sort_order, status, content_md, objectives, test_template, chapters(course_id, courses(id, title, slug))')
+        .select('id, title, slug, chapter_id, sort_order, status, content_md, objectives, test_template, category, tag, difficulty, commands, lab, chapters(course_id, courses(id, title, slug))')
         .eq('id', lessonId)
         .maybeSingle();
       if (lessonError || !lesson) {
@@ -103,10 +108,16 @@ function EditorForm({ lesson, course, chapters }) {
     if (!isValidSlug(form.slug)) return setStatus({ type: 'error', message: 'Slug may only contain lowercase letters, numbers and single hyphens.' });
     const slugTaken = chapters.some((chapter) => chapter.lessons.some((item) => item.id !== lesson.id && item.slug === form.slug));
     if (slugTaken) return setStatus({ type: 'error', message: 'Another lesson in this course already uses this slug.' });
+    let lab = null;
+    if (form.labJson.trim()) {
+      try { lab = JSON.parse(form.labJson); }
+      catch { return setStatus({ type: 'error', message: 'Lab content JSON is invalid — check the syntax.' }); }
+    }
 
     setStatus({ type: 'saving' });
     const objectives = form.objectives.map((item) => item.trim()).filter(Boolean);
     const testTemplate = form.verifier ? { verifier: form.verifier, ...(form.hint.trim() ? { hint: form.hint.trim() } : {}) } : null;
+    const commands = form.commands.split(',').map((item) => item.trim()).filter(Boolean);
     const { error } = await supabase.from('lessons').update({
       title: form.title.trim(),
       slug: form.slug,
@@ -116,9 +127,17 @@ function EditorForm({ lesson, course, chapters }) {
       content_md: form.content_md,
       objectives,
       test_template: testTemplate,
+      category: form.category || null,
+      tag: form.tag || null,
+      difficulty: form.difficulty || null,
+      commands,
+      lab,
     }).eq('id', lesson.id);
     if (error) return setStatus({ type: 'error', message: error.message });
-    const next = { ...form, objectives, title: form.title.trim(), sort_order: String(Number(form.sort_order) || 0) };
+    const next = {
+      ...form, objectives, title: form.title.trim(), sort_order: String(Number(form.sort_order) || 0),
+      commands: commands.join(', '), labJson: lab ? JSON.stringify(lab, null, 2) : '',
+    };
     setSaved(next);
     setForm(next);
     setStatus({ type: 'saved' });
@@ -213,6 +232,25 @@ function EditorForm({ lesson, course, chapters }) {
               </select>
             </label>
             {form.verifier && <label className={styles.field}>Hint (optional)<textarea rows={2} value={form.hint} onChange={set('hint')} /></label>}
+          </section>
+
+          <section className={`${styles.panel} ${styles.panelPad} ${editor.stack}`} aria-labelledby="lab-title">
+            <h2 id="lab-title" className={editor.sideTitle}>Lab listing (Course page)</h2>
+            <p className={styles.muted}>Only shown if Category is set — that&apos;s what makes a lesson appear in the course&apos;s lab table.</p>
+            <div className={styles.fieldRow}>
+              <label className={styles.field}>Category<input value={form.category} onChange={set('category')} placeholder="e.g. Core Commands" /></label>
+              <label className={styles.field}>Tag<input value={form.tag} onChange={set('tag')} placeholder="e.g. File Ops" /></label>
+              <label className={styles.field}>Difficulty
+                <select value={form.difficulty} onChange={set('difficulty')}>
+                  <option value="">—</option><option value="Easy">Easy</option><option value="Medium">Medium</option><option value="Hard">Hard</option>
+                </select>
+              </label>
+            </div>
+            <label className={styles.field}>Commands (comma-separated)<input value={form.commands} onChange={set('commands')} placeholder="pwd, cd, ls" /></label>
+            <label className={styles.field}>
+              Lab content (JSON: scenario, steps, commandSyntax, examples, hint, solutionExplanation)
+              <textarea rows={10} value={form.labJson} onChange={set('labJson')} spellCheck={false} style={{ fontFamily: 'var(--font-code)', fontSize: 12 }} />
+            </label>
           </section>
         </aside>
       </div>

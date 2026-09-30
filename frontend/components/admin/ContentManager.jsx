@@ -9,7 +9,7 @@ import { isValidSlug, slugify } from './slug';
 
 function Icon({ name }) { return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>; }
 
-const STATUS_BADGE = { published: styles.badgeGreen, draft: styles.badgeAmber, hidden: styles.badgeGray };
+const STATUS_BADGE = { published: styles.badgeGreen, draft: styles.badgeAmber, upcoming: styles.badgeGray, hidden: styles.badgeGray };
 const bySort = (a, b) => a.sort_order - b.sort_order;
 const nextOrder = (rows) => rows.reduce((max, row) => Math.max(max, row.sort_order), 0) + 1;
 
@@ -231,6 +231,7 @@ function CourseForm({ course, courses, onDirty, mutate }) {
           Status
           <select value={course.status} onChange={(event) => mutate(supabase.from('courses').update({ status: event.target.value }).eq('id', course.id))}>
             <option value="draft">Draft</option>
+            <option value="upcoming">Upcoming (public teaser)</option>
             <option value="published">Published</option>
             <option value="hidden">Hidden</option>
           </select>

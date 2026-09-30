@@ -32,6 +32,9 @@ export default function ResetPasswordPage() {
       setStatus('error');
       return;
     }
+    // The recovery session only exists to allow this change — sign out so
+    // "Back to log in" actually lands on the login form, not the dashboard.
+    await supabase.auth.signOut();
     setStatus('complete');
   }
 

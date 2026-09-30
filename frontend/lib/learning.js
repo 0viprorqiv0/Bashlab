@@ -76,7 +76,7 @@ export function courseCode(slug) {
 }
 
 export function lessonHref(courseSlug, lessonSlug) {
-  return `/learn/${courseSlug}/${lessonSlug}`;
+  return `/courses/${courseSlug}/labs/${lessonSlug}`;
 }
 
 export async function markLessonDone(userId, lessonId) {
@@ -88,4 +88,68 @@ export async function markLessonDone(userId, lessonId) {
     completed_at: now,
     updated_at: now,
   });
+}
+
+export async function markLessonUndone(userId, lessonId) {
+  return supabase.from('progress').delete().eq('user_id', userId).eq('lesson_id', lessonId);
+}
+
+export async function markLessonStarted(userId, lessonId) {
+  // Never downgrades an already-done lesson — ignoreDuplicates only inserts
+  // when no row exists yet for this (user, lesson) pair.
+  return supabase.from('progress').upsert(
+    { user_id: userId, lesson_id: lessonId, status: 'in_progress', updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,lesson_id', ignoreDuplicates: true },
+  );
+}
+
+const LAB_FIELDS = 'id, slug, title, status, sort_order, category, tag, difficulty, commands, lab, test_template, objectives, '
+  + 'chapter_id, chapters!inner(course_id, sort_order)';
+
+// Flat, LeetCode-style list of labs for a course — only lessons authored with
+// lab content (category set). Order: chapter.sort_order, then lesson.sort_order.
+export async function fetchCourseLabs(courseSlug) {
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .select('id, slug, title')
+    .eq('slug', courseSlug)
+    .in('status', ['published', 'upcoming'])
+    .maybeSingle();
+  if (courseError) throw courseError;
+  if (!course) return null;
+
+  const { data, error } = await supabase
+    .from('lessons')
+    .select(LAB_FIELDS)
+    .eq('status', 'published')
+    .eq('chapters.course_id', course.id)
+    .not('category', 'is', null);
+  if (error) throw error;
+
+  const labs = data
+    .slice()
+    .sort((a, b) => (a.chapters.sort_order - b.chapters.sort_order) || (a.sort_order - b.sort_order));
+  return { ...course, labs };
+}
+
+export function labProgressStatus(lab, progressMap) {
+  return progressMap.get(lab.id)?.status === 'done' ? 'solved'
+    : progressMap.get(lab.id) ? 'in_progress' : 'todo';
+}
+
+// Shape expected by CourseDetail/LabWorkspace (mirrors the old frontend/data/labsData.js entries).
+export function toDisplayLab(row, progressMap) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    commands: row.commands || [],
+    category: row.category,
+    tag: row.tag,
+    difficulty: row.difficulty,
+    status: labProgressStatus(row, progressMap),
+    verifier: row.test_template?.verifier || null,
+    shortObjective: row.objectives?.[0] || '',
+    ...row.lab,
+  };
 }

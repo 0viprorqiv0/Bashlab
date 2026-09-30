@@ -2,7 +2,7 @@
 
 Tiếng Việt | [English](README.en.md)
 
-BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và phản hồi theo mục tiêu. Frontend hiện có landing page, giao diện đăng nhập/đăng ký, trang danh mục khóa học và trang Account & Security. Backend xác thực và sandbox Bash thật chưa được triển khai.
+BashLab là nền tảng học Bash qua bài học ngắn và thực hành. Frontend dùng Supabase Auth và database; backend Node.js cung cấp API sandbox Bash chạy trong Docker.
 
 ## Trạng thái triển khai
 
@@ -11,17 +11,17 @@ BashLab hướng tới việc học Bash qua bài học ngắn, thực hành và
 | Trang chủ `/` | `app/(site)/page.js` render `components/landing/Lookbook.jsx`: giới thiệu, thử lệnh, phương pháp học, Shell 101 và FAQ; có thể bật/tắt Lookbook snap |
 | Terminal trên trang chủ | Demo mô phỏng với câu trả lời có sẵn; không thực thi lệnh hệ điều hành |
 | Hiệu ứng giao diện | Có Lookbook navigation, terminal thu/phóng và các thành phần hiệu ứng; có script kiểm tra curiosity/backdrop |
-| Đăng nhập `/login` và đăng ký `/register` | Có biểu mẫu và kiểm tra dữ liệu phía giao diện; gửi biểu mẫu chỉ mô phỏng trạng thái dịch vụ chưa kết nối |
-| Xác minh email và khôi phục mật khẩu | `/verify-email`, `/forgot-password`, `/reset-password` có giao diện và trạng thái minh họa; chưa gửi email, xác thực liên kết hoặc đổi mật khẩu thật |
-| Danh mục khóa học `/courses` | Có 3 khóa học, bộ lọc All/Core Tracks/Security và trạng thái tiến độ/Coming soon; View course dẫn tới `/login` |
-| My Learning `/my-learning` | Trang tổng quan riêng với bốn chỉ số và lịch hoạt động 12 tháng minh họa, cùng lối vào danh mục khóa học; chưa có dữ liệu tiến độ thật |
-| Account & Security `/account` | Chỉ gồm hồ sơ, sửa thông tin/ảnh đại diện, chi tiết tài khoản, yêu cầu đặt lại mật khẩu và xác nhận đăng xuất; hồ sơ lưu trong localStorage, email/logout là demo |
+| Đăng nhập `/login` và đăng ký `/register` | Supabase Auth; sau đăng nhập learner về `/`, admin về `/admin/content` |
+| Xác minh email và khôi phục mật khẩu | Supabase Auth gửi email xác minh/đặt lại mật khẩu và xử lý liên kết |
+| Danh mục khóa học `/courses` | Đọc khóa học từ Supabase; `published` hiện là khóa đang mở, `upcoming` hiện trong Coming next cho guest và learner sau khi áp dụng migration 013 |
+| My Learning `/my-learning` | Đọc tiến độ và hoạt động từ Supabase cho tài khoản hiện tại |
+| Account & Security `/account` | Đọc/cập nhật hồ sơ và ảnh đại diện trong Supabase; hỗ trợ đặt lại mật khẩu và đăng xuất |
 | Trang 404 | Có `app/not-found.js` |
 | Giao diện 403 | Có `app/forbidden.js`; chưa có luồng phân quyền backend hay route riêng được triển khai để sử dụng giao diện này |
-| Trang chi tiết khóa học, bài học thực hành và quản trị | Mới có trong tài liệu thiết kế; chưa triển khai |
-| Backend, dữ liệu, email, sandbox | Mới có kế hoạch trong [backend/README.md](backend/README.md) |
+| Khóa học, bài học và trang quản trị | Có trang chi tiết khóa học, workspace bài học, quản lý nội dung, người dùng và hoạt động admin |
+| Backend sandbox | Express API và Docker runner có hướng dẫn chạy trong [backend/RUNNING.md](backend/RUNNING.md); workspace hiện chưa gắn với tài khoản BashLab |
 
-Nội dung về sandbox thật và lưu tiến độ mô tả định hướng sản phẩm; các dịch vụ này chưa hoạt động. Trang `/courses/shell-101` và các trang học chi tiết chưa được triển khai.
+Trang landing có terminal mô phỏng; lệnh trên landing không chạy trên hệ điều hành. Trang thực hành dùng backend sandbox.
 
 ## Phân nhóm chức năng
 
@@ -45,20 +45,20 @@ Bảng dưới mô tả phạm vi yêu cầu, không phải danh sách tính nă
 | STT | Nhóm | Screen | Trang | Chức năng |
 | --- | --- | --- | --- | --- |
 | 01 | A | 01 | Landing | Giới thiệu sản phẩm; thử lệnh mô phỏng; giới thiệu Shell 101; FAQ; dẫn vào khóa học |
-| 02 | B | 02 | Login | Đã có giao diện `/login`: nhập email/mật khẩu; hiện/ẩn mật khẩu; ghi nhớ thiết bị; trạng thái xử lý/lỗi; liên kết đăng ký và quên mật khẩu. Xác thực backend chưa có |
-| 03 | B | 03 | Register | Đã có giao diện `/register`: nhập email, mật khẩu và xác nhận; kiểm tra dữ liệu; trạng thái lỗi. Tạo tài khoản backend chưa có |
-| 04 | B | 04 | Verify Email | Đã có `/verify-email` với trạng thái hộp thư, chờ gửi lại, thành công và liên kết hết hạn; chỉ là demo, chưa xác minh hay gửi email thật |
-| 05 | B | 05 | Forgot Password | Đã có `/forgot-password` với kiểm tra email và thông báo trung lập; gửi email chỉ là demo |
-| 06 | B | 06 | Reset Password | Đã có `/reset-password` với kiểm tra mật khẩu và trạng thái demo; chưa xác thực token hay đổi mật khẩu thật |
-| 07 | C | 07 | Course Catalog | Đã có `/courses` với 3 khóa học, lọc All/Core Tracks/Security, cấp độ, thời lượng, tiến độ và trạng thái sắp ra mắt; View course dẫn tới đăng nhập |
+| 02 | B | 02 | Login | `/login` xác thực qua Supabase Auth; learner về landing page `/`, admin về `/admin/content` |
+| 03 | B | 03 | Register | `/register` tạo tài khoản qua Supabase Auth và kiểm tra dữ liệu biểu mẫu |
+| 04 | B | 04 | Verify Email | `/verify-email` xử lý xác minh và gửi lại email qua Supabase Auth |
+| 05 | B | 05 | Forgot Password | `/forgot-password` gửi yêu cầu đặt lại mật khẩu qua Supabase Auth |
+| 06 | B | 06 | Reset Password | `/reset-password` cập nhật mật khẩu qua Supabase Auth sau khi mở liên kết hợp lệ |
+| 07 | C | 07 | Course Catalog | `/courses` đọc khóa từ Supabase; lọc All/Core Tracks/Security; khóa upcoming được hiển thị dạng Coming next |
 | 08 | C | 08 | Course Overview | Giới thiệu khóa; kết quả học tập; giáo trình theo chương; tiến độ và trạng thái bài; tiếp tục học |
-| 09 | D | 09 | My Learning | Đã có `/my-learning` với bốn chỉ số, lịch hoạt động 12 tháng minh họa và liên kết danh mục khóa học; tiếp tục bài và tiến độ thật chưa triển khai |
+| 09 | D | 09 | My Learning | `/my-learning` hiển thị tiến độ và hoạt động tài khoản từ Supabase cùng liên kết danh mục khóa học |
 | 10 | D | 10 | Interactive Lesson Workspace | Đọc bài; chuyển bài; mục tiêu và gợi ý; terminal sandbox; trạng thái phiên; Check Solution và phản hồi |
-| 11 | E | 12 | Account | Đã có giao diện `/account`: xem/sửa hồ sơ, ảnh đại diện, vai trò và cài đặt bảo mật; yêu cầu đặt lại mật khẩu và xác nhận đăng xuất là demo, chưa nối backend |
-| 12 | F | 14 | Content | Cây khóa/chương/bài; tạo và sửa nội dung; sắp xếp thứ tự; trạng thái xuất bản; mở trình soạn bài |
+| 11 | E | 12 | Account | `/account` đọc và cập nhật hồ sơ Supabase, ảnh đại diện, cài đặt mật khẩu và đăng xuất |
+| 12 | F | 14 | Content | Trang admin quản lý khóa/chương/bài, thứ tự và trạng thái xuất bản |
 | 13 | F | 16 | Lesson Editor | Metadata bài; Markdown và xem trước; mục tiêu bài; mẫu kiểm tra; nháp/xuất bản; lưu/hủy |
-| 14 | G | 17 | Users | Tìm kiếm/phân trang; đổi vai trò; khóa/mở khóa; xác nhận và lý do; bảo vệ quản trị viên hoạt động cuối cùng |
-| 15 | G | 18 | Activity | Tab Sessions quản lý và dừng phiên có lý do; tab Admin log lọc/xem chi tiết nhật ký |
+| 14 | G | 17 | Users | Trang admin tìm kiếm người dùng, đổi vai trò và khóa/mở khóa tài khoản |
+| 15 | G | 18 | Activity | Trang admin xem/dừng phiên và lọc nhật ký quản trị |
 | 16 | H | 20 | Access Denied | Thông báo người dùng không đủ quyền truy cập |
 | 17 | H | 21 | Page Not Found | Thông báo đường dẫn hoặc trang không tồn tại |
 
@@ -97,7 +97,7 @@ Phiên bản khai báo trong [frontend/package.json](frontend/package.json):
 - Three.js `^0.170.0`; Tailwind CSS `^3.4.13`, PostCSS, Autoprefixer.
 - ESLint `8.57.0` và cấu hình Next.js.
 
-Backend dự kiến dùng Node.js/Express, PostgreSQL, REST/WebSocket và Docker sandbox. Đây là định hướng, chưa có dịch vụ chạy trong repository.
+Frontend dùng Supabase Auth/Postgres; backend dùng Node.js/Express và Docker sandbox. Xem [backend/RUNNING.md](backend/RUNNING.md) để chạy API và runner.
 
 ## Chạy frontend trên máy
 
@@ -110,7 +110,18 @@ npm ci
 npm run dev
 ```
 
-Mở [localhost:3000](http://localhost:3000). Chạy các lệnh npm trong thư mục `frontend`; thư mục gốc không có `package.json`. Frontend hiện chưa yêu cầu cấu hình database hoặc email để chạy demo.
+Tạo `frontend/.env.local` với project URL và anon key lấy từ Supabase **Project Settings → API**:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable-anon-key>
+```
+
+Mở [localhost:3000](http://localhost:3000). Chạy các lệnh npm trong thư mục `frontend`; thư mục gốc không có `package.json`. Không đặt service-role key hoặc mật khẩu database trong frontend.
+
+### Cập nhật schema Supabase
+
+Các migration nằm trong `backend/db/migrations/` và cần được áp dụng theo thứ tự số trên database mới. Để bật danh sách Coming next cho guest và learner trên database đã có migrations 001–012, mở đúng project trong **Supabase Dashboard → SQL Editor**, chạy `backend/db/migrations/013_public_upcoming_courses.sql`, rồi xác nhận `shell-201` và `linux-security` có trạng thái `upcoming`. Migration chỉ công khai metadata của khóa; chapter và lesson vẫn theo policy hiện tại.
 
 | Lệnh | Mục đích |
 | --- | --- |

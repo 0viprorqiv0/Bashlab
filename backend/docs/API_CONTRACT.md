@@ -92,14 +92,39 @@ sandbox thật.
 - Có gắn `requireAuth` vào sandbox API hay không — vẫn để ngỏ, không bắt buộc cho đồ án.
 - Avatar lưu base64 trong `avatar_url` (text) — không cần Storage bucket.
 
-## 5. Trang đã nối (tổng hợp)
+## 5. Course Overview / Workspace — đã đổi hẳn sang UI "Lab" mới
+
+FE làm lại toàn bộ 2 trang này (`CourseDetail.jsx`, `LabWorkspace.jsx`, style
+LeetCode: danh sách lab có category/tag/difficulty/chấm điểm, terminal 50/50).
+Bản mới lúc merge vào chỉ là mock (đọc `frontend/data/labsData.js`, terminal giả
+lập). Đã nối lại toàn bộ:
+- `lessons` có thêm cột `category, tag, difficulty, commands text[], lab jsonb`
+  (migration 014) — `lab` chứa `{scenario, steps, commandSyntax, examples, hint,
+  solutionExplanation}`. Chỉ lesson có `category` mới hiện trong bảng lab.
+- 12 lab gốc từ `labsData.js` đã nạp vào DB thật qua `backend/scripts/seed-labs.mjs`
+  (chạy lại được, đọc thẳng file JS của FE — không hard-code JSON trong SQL).
+- 2 lesson có sẵn (`hello-bashlab`, `files-03`) được nâng cấp thêm field lab để
+  vẫn hiện trong danh sách, **và vẫn chấm tự động thật** qua `test_template.verifier`
+  — cột "Grading" trên bảng lab phân biệt `Auto-checked` (gọi sandbox thật)
+  với `Manual` (learner tự tick từng bước, `Check Solution` ghi `progress` thật).
+- 7 lesson tutorial cũ không có field lab đã set `status='draft'` (không hiện ở
+  đâu nữa) — nội dung vẫn còn trong DB, không mất, chỉ ẩn khỏi UI mới.
+- Route đổi: `/learn/[course]/[lesson]` (cũ) → `/courses/[slug]/labs/[labSlug]`
+  (mới, `labId` param thực chất nhận **slug**, không phải số). File cũ
+  `CourseOverview.jsx`/`LessonWorkspace.jsx`/route `/learn` đã xoá hẳn — không
+  còn nơi nào trỏ tới, không phải dead code sót lại.
+- Admin Lesson Editor (`/admin/lessons/[id]`) đã thêm ô sửa category/tag/
+  difficulty/commands + 1 ô JSON thô cho `lab` (chưa làm form tách trường —
+  đủ dùng, không phải ưu tiên UX cho đồ án).
+
+## 6. Trang đã nối (tổng hợp)
 
 | Trang | Route | Nguồn dữ liệu |
 |---|---|---|
 | Login/Register/Verify/Forgot/Reset | `/login` ... `/reset-password` | Supabase Auth |
-| Course Catalog / Overview | `/courses`, `/courses/[slug]` | `courses/chapters/lessons` + `progress` |
+| Course Catalog / Detail | `/courses`, `/courses/[slug]` | `courses/chapters/lessons` (chỉ lesson có `category`) + `progress` |
 | My Learning | `/my-learning` | `progress`, `practice_sessions` |
-| Workspace | `/learn/[course]/[lesson]` | `lessons` + sandbox API + ghi `progress`/`practice_sessions` |
+| Lab Workspace | `/courses/[slug]/labs/[labSlug]` | `lessons` (field `lab`) + sandbox API + ghi `progress`/`practice_sessions` |
 | Account | `/account` | `profiles` |
 | Content / Lesson Editor | `/admin/content`, `/admin/lessons/[id]` | CRUD thẳng, RLS `is_admin()` |
 | Users | `/admin/users` | RPC `admin_list_users`, `admin_set_user_role`, `admin_set_user_lock` |

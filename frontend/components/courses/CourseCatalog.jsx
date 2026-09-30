@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import styles from './CourseCatalog.module.css';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -31,7 +32,7 @@ function toCourse(row) {
     lessons,
     duration: formatDuration(row.duration_minutes),
     description: row.description || '',
-    status: row.status === 'published' ? 'available' : 'locked',
+    status: row.status,
   };
 }
 
@@ -54,8 +55,8 @@ export default function CourseCatalog() {
   const visibleCourses = courses.filter((course) => filter === 'All'
     || (filter === 'Core Tracks' && course.category === 'Core Track')
     || course.category === filter);
-  const availableCourses = visibleCourses.filter((course) => course.status === 'available');
-  const upcomingCourses = visibleCourses.filter((course) => course.status === 'locked');
+  const availableCourses = visibleCourses.filter((course) => course.status === 'published');
+  const upcomingCourses = visibleCourses.filter((course) => course.status === 'upcoming');
 
   if (loading) return null;
 
@@ -82,7 +83,7 @@ export default function CourseCatalog() {
               <div className={styles.featureMeta} aria-label="Course details">
                 <span>{course.level}</span><span>{course.chapters} chapters</span><span>{course.lessons} lessons</span><span>{course.duration}</span>
               </div>
-              <a className={styles.primaryAction} href={`/courses/${course.id}`}>Start learning <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a>
+              <Link className={styles.primaryAction} href={`/courses/${course.id}`}>Start learning <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span></Link>
             </div>
             <div className={styles.courseMark} aria-hidden="true"><span>shell / bash</span><strong>{course.code}</strong><span>Learn by doing.</span></div>
           </article>
