@@ -1063,3 +1063,184 @@
     min-height: 520px;
   }
 }
+
+/* Shell 101 only: course navigation, reading panel, terminal. */
+.unified {
+  --line: #252525;
+  --line-light: #424242;
+  --muted: #a6a6a6;
+  --surface: #090909;
+  --surface-panel: #0d0d0d;
+  --surface-card: #121212;
+  --surface-hover: #1b1b1b;
+  --term-bg: #050505;
+  --sidebar-width: 200px;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: 56px minmax(0, 1fr);
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  transition: grid-template-columns 180ms ease-out;
+  color-scheme: dark;
+}
+
+.unified.sidebarCollapsed { --sidebar-width: 56px; }
+.unified :is(button, a, [role='checkbox'], [role='separator']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.unified ::selection { background: #24513f; color: #fff; }
+.unified .topBar { grid-column: 2; height: 56px; padding: 0 22px; background: #090909; }
+.unified .topLeft { flex: 1; gap: 12px; }
+.unified .topRight { gap: 12px; }
+.courseLabel { flex-shrink: 0; padding: 6px 0; background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; }
+.courseLabel:hover { color: var(--accent); }
+.unified .labNavGroup { order: 2; margin-left: auto; flex-shrink: 0; }
+.unified .labTitleHeader { font-size: 12px; font-weight: 400; color: var(--muted); max-width: none; }
+.unified .navArrowBtn { background: transparent; border-color: var(--line); }
+.unified .navArrowBtn[aria-disabled='true'] { opacity: .35; cursor: default; }
+.unified .diffBadge, .unified .solvedBadge { display: none; }
+.unified .checkSolutionBtn { background: #153e2e; color: #97eab8; border: 1px solid #285741; padding: 7px 10px; font-size: 11px; }
+.unified .checkSolutionBtn:hover { background: #1e513a; }
+
+.workspaceSidebar {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px;
+  border-right: 1px solid var(--line);
+  background: #090c12;
+  min-width: 0;
+  z-index: 12;
+}
+.sidebarItem { width: 100%; min-height: 42px; display: flex; align-items: center; gap: 12px; padding: 10px; margin-bottom: 4px; border: 1px solid transparent; border-radius: 6px; color: #a3aebb; background: transparent; text-align: left; white-space: nowrap; position: relative; }
+.sidebarItem :global(.material-symbols-outlined) { font-size: 20px; flex-shrink: 0; }
+.sidebarLabel { font-size: 12px; overflow: hidden; }
+.sidebarItem:hover { background: #121821; color: var(--ink); }
+.sidebarItemActive, .sidebarItemActive:hover { color: #f2f2f2; background: #1d1d1d; border-color: #383838; }
+.sidebarItemActive::before { content: ''; position: absolute; width: 2px; height: 16px; left: -9px; background: var(--accent); border-radius: 2px; }
+.sidebarRule { height: 1px; background: var(--line); margin: 14px 8px 18px; }
+.sidebarReport { margin-top: auto; }
+.sidebarToggle { margin-bottom: 0; }
+.sidebarCollapsed .sidebarLabel { display: none; }
+.sidebarCollapsed .sidebarItem { justify-content: center; padding: 10px 0; }
+.sidebarCollapsed .sidebarItem:is(:hover, :focus-visible)::after {
+  content: attr(data-tooltip); position: absolute; top: 50%; left: calc(100% + 12px); transform: translateY(-50%);
+  padding: 7px 10px; border: 1px solid #34414f; border-radius: 5px; background: #171e28; color: #eef1ef;
+  font-size: 12px; white-space: nowrap; pointer-events: none; z-index: 30;
+}
+
+.unified .splitLayout { grid-column: 2; grid-row: 2; position: relative; grid-template-columns: minmax(0, var(--panel-width, 50%)) 8px minmax(0, 1fr); height: 100%; }
+.unified .leftPane { min-width: 0; min-height: 0; border: 0; height: 100%; background: #090909; }
+.unified .rightPane { min-width: 0; min-height: 0; height: 100%; }
+.unified .rightPaneMaximized { inset: 0; height: 100% !important; }
+.panelHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 43px; padding: 0 28px; border-bottom: 1px solid var(--line); color: #ccd4dc; font-size: 12px; flex-shrink: 0; }
+.panelHeading > span:last-child { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.unified .instructionsScroll { padding: 30px clamp(20px, 2.5vw, 44px) 40px; animation: panelReveal 140ms ease-out; }
+.unified .labTitle { font-size: clamp(22px, 1.7vw, 29px); line-height: 1.25; letter-spacing: -.025em; font-weight: 600; text-wrap: balance; margin-bottom: 14px; }
+.unified .sectionHeader { margin-bottom: 28px; }
+.unified .metaRow { flex-wrap: wrap; gap: 8px; font-size: 11px; }
+.unified .scenarioCard { border: 0; border-radius: 0; padding: 0 0 24px; background: transparent; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+.unified .scenarioTitle { color: #9ba8b8; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; margin-bottom: 10px; }
+.unified .scenarioText { font-size: 14px; line-height: 1.75; max-width: 70ch; overflow-wrap: anywhere; }
+.unified .scenarioText code { font-family: var(--font-code); color: var(--secondary); }
+.unified .subSectionTitle { font-size: 13px; margin: 28px 0 14px; }
+.unified .stepList { gap: 0; }
+.unified .stepItem { background: transparent; border: 0; border-radius: 0; border-bottom: 1px solid var(--line); padding: 14px 0; }
+.unified .stepItem:hover { background: #10161d; }
+.unified .stepItemCompleted { background: transparent !important; border-color: var(--line) !important; }
+.unified .stepCheckIcon { color: #9ba3b5; }
+.unified .stepText { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.unified .stepText strong { font-weight: 500; color: var(--muted); }
+.unified .syntaxTable { background: #0e131c; border-color: var(--line); }
+.unified .syntaxTable td { padding: 12px; overflow-wrap: anywhere; }
+.unified .codeCard { border-radius: 8px; border-color: var(--line); }
+.unified .codeCardHeader { background: #101620; padding: 10px 14px; gap: 10px; }
+.unified .copyCodeBtn { flex-shrink: 0; min-height: 28px; }
+.unified .codeCardBody { padding: 16px; }
+.unified .codeExplanation { line-height: 1.6; padding: 12px 16px; }
+.unified .hintBox { background: #101620; }
+.unified .hintBoxOpen { box-shadow: none; }
+.unified .hintToggleLeft { flex-wrap: wrap; gap: 8px; }
+.unified .hintBadge { display: none; }
+.unified .successBanner { background: #0d2119; box-shadow: none; flex-wrap: wrap; gap: 16px; padding: 16px; }
+.unified .successDesc { line-height: 1.5; }
+.copyError { color: #f2c57c; font-size: 12px; padding: 12px 0; }
+.courseIntro { color: var(--muted); font-size: 14px; line-height: 1.7; }
+.lessonList { list-style: none; margin: 0; padding: 0; }
+.lessonRow { display: flex; align-items: center; gap: 14px; padding: 18px 10px; margin: 0 -10px; border-bottom: 1px solid var(--line); border-radius: 4px; transition: background 140ms ease-out; }
+.lessonRow:hover { background: #111922; }
+.lessonNumber { color: #9ba3b5; font: 12px var(--font-code); flex-shrink: 0; }
+.lessonInfo { display: flex; flex-direction: column; gap: 7px; min-width: 0; flex: 1; }
+.lessonInfo strong { font-size: 13px; font-weight: 500; line-height: 1.5; color: #d8e0e7; }
+.lessonInfo > span { font: 11px var(--font-code); color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; }
+.lessonDifficulty { color: #a8b5c4; font-size: 10px; }
+.lessonRow > :global(.material-symbols-outlined) { color: var(--muted); font-size: 17px; }
+.currentLesson { background: #1b1b1b; }
+.currentLesson .lessonNumber, .currentLesson .lessonInfo strong, .currentLesson > :global(.material-symbols-outlined) { color: var(--accent); }
+.completedLesson .lessonNumber, .completedLesson .lessonInfo strong, .completedLesson > :global(.material-symbols-outlined) { color: var(--secondary); }
+.splitHandle { cursor: col-resize; touch-action: none; position: relative; background: #090909; border-inline: 1px solid var(--line); }
+.splitHandle::after { content: ''; width: 2px; height: 36px; border-radius: 2px; background: #3a4655; position: absolute; top: calc(50% - 18px); left: 2px; }
+.splitHandle:hover, .splitHandle:focus-visible { background: #153426; }
+.splitHandle:hover::after, .splitHandle:focus-visible::after { background: var(--accent); }
+.unified .termHeader { min-height: 43px; padding: 8px 14px; flex-wrap: wrap; gap: 8px; background: #0b1017; }
+.unified .termHost { display: none; }
+.unified .termStatusPill { background: transparent; border: 0; color: #a7b5c6; }
+.unified .termScreen { padding: 22px; scrollbar-width: thin; scrollbar-color: #34414f transparent; }
+.unified .termOutput { color: #a7b5c6; font-size: 12px; line-height: 1.8; }
+.unified .termFooter { padding: 12px 14px; background: #0b1017; gap: 8px; flex-wrap: wrap; }
+.unified .termShortcuts { display: none; }
+.unified .termInputForm { flex-wrap: wrap; gap: 8px; }
+.unified .termCmdLine { flex-wrap: wrap; }
+.unified .termRealInput { min-width: 100px; caret-color: var(--accent); }
+.unified .termRealInput::placeholder { color: #94a1b3; }
+.mobileSwitcher { display: none; }
+@keyframes panelReveal { from { opacity: .65; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 1100px) {
+  .unified .topBar { padding: 0 14px; }
+  .unified .labTitleHeader { display: none; }
+  .unified .checkSolutionBtn { padding: 7px; }
+  .unified .checkSolutionBtn > span:last-child { display: none; }
+  .unified .panelHeading { padding: 0 20px; }
+}
+@media (max-width: 900px) {
+  .unified { grid-template-rows: 52px 42px minmax(0, 1fr); }
+  .unified .topBar { height: 52px; }
+  .unified .mobileSwitcher { display: flex; grid-column: 2; grid-row: 2; gap: 4px; align-items: stretch; padding: 0 16px; border-bottom: 1px solid var(--line); }
+  .mobileSwitcher button { background: transparent; padding: 0 14px; font-size: 12px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .mobileSwitcher button[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); }
+  .unified .splitLayout { grid-row: 3; display: flex; min-height: 0; }
+  .unified .splitHandle { display: none; }
+  .unified .leftPane, .unified .rightPane { width: 100%; min-height: 0; flex: 1; }
+  .unified .splitLayout[data-mobile-view='lesson'] > .rightPane { display: none; }
+  .unified .splitLayout[data-mobile-view='terminal'] > .leftPane { display: none; }
+  .unified .instructionsScroll { padding: 24px; }
+}
+@media (max-width: 600px) {
+  .unified { --sidebar-width: 156px; }
+  .unified.sidebarCollapsed { --sidebar-width: 56px; }
+  .unified:not(.sidebarCollapsed) { grid-template-columns: 56px minmax(0, 1fr); }
+  .unified:not(.sidebarCollapsed) .workspaceSidebar { position: absolute; inset: 0 auto 0 0; width: 156px; box-shadow: 12px 0 28px #0008; }
+  .unified .topBar { gap: 8px; padding: 0 10px; }
+  .unified .topLeft { gap: 8px; }
+  .unified .courseDivider { display: none; }
+  .unified .instructionsScroll { padding: 22px 18px 32px; }
+  .unified .panelHeading { padding: 0 18px; }
+  .unified .panelHeading > span:last-child { display: none; }
+  .unified .labTitle { font-size: 23px; }
+  .unified .lessonRow { gap: 10px; }
+  .unified .lessonDifficulty { display: none; }
+  .unified .termScreen { padding: 16px; }
+  .unified .termHeader { padding: 8px 10px; }
+  .unified .syntaxTable td { display: block; width: 100%; }
+  .unified .syntaxTable .syntaxCmd { padding-bottom: 4px; border-bottom: none; }
+  .unified .syntaxTable .syntaxDesc { padding-top: 4px; }
+  .sidebarCollapsed .sidebarItem:is(:hover, :focus-visible)::after { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unified, .unified * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

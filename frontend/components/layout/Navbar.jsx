@@ -185,7 +185,7 @@ export default function Navbar({ isTransparent = false }) {
           ) : (
             <>
               <Link href="/login" className="hidden sm:inline-flex text-xs font-code text-on-surface-variant hover:text-white px-3 py-1.5 transition-colors focus-visible">Log in</Link>
-              <Link href="/register" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Start learning</Link>
+              <Link href="/my-learning" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Start learning</Link>
             </>
           )}
 
@@ -241,7 +241,7 @@ export default function Navbar({ isTransparent = false }) {
               ) : (
                 <>
                   <Link href="/login" className="text-sm font-code text-on-surface-variant hover:text-white text-center py-2 focus-visible" onClick={() => setMobileOpen(false)}>Log in</Link>
-                  <Link href="/register" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
+                  <Link href="/my-learning" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
                     Start learning
                     <span className="material-symbols-outlined text-base">arrow_forward</span>
                   </Link>

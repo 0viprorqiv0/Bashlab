@@ -402,3 +402,7 @@ export function getLabById(id) {
   // Fallback to lab 1
   return initialLabs[0];
 }
+
+export function getFirstIncompleteLab() {
+  return initialLabs.find((lab) => lab.status !== 'solved') || null;
+}

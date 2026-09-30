@@ -21,7 +21,8 @@ function formatDuration(minutes) {
 
 function toCourse(row) {
   const chapters = row.chapters || [];
-  const lessons = chapters.reduce((sum, ch) => sum + (ch.lessons?.length || 0), 0);
+  const lessons = chapters.reduce((sum, ch) => sum + (ch.lessons || []).filter((lesson) =>
+    row.slug !== 'shell-101' || lesson.slug !== 'hello-bashlab').length, 0);
   return {
     id: row.slug,
     code: courseCode(row.slug),
@@ -44,7 +45,7 @@ export default function CourseCatalog() {
   useEffect(() => {
     supabase
       .from('courses')
-      .select('slug, title, description, level, category, duration_minutes, status, chapters(id, lessons(id))')
+        .select('slug, title, description, level, category, duration_minutes, status, chapters(id, lessons(id, slug))')
       .order('sort_order')
       .then(({ data }) => {
         setCourses((data || []).map(toCourse));
