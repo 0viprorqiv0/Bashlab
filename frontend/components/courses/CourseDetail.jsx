@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './CourseDetail.module.css';
 import {
-  fetchCourseLabs, fetchProgressMap, getCurrentUser, markLessonDone, markLessonUndone, toDisplayLab,
+  fetchCourseLabs, fetchProgressMap, getCurrentUser, lessonHref, markLessonDone, markLessonUndone, toDisplayLab,
 } from '@/lib/learning';
 
 const categoryTabs = [
@@ -181,7 +181,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
     const unsolved = labs.filter((l) => l.status !== 'solved');
     const pool = unsolved.length > 0 ? unsolved : labs;
     const randomIndex = Math.floor(Math.random() * pool.length);
-    router.push(`/courses/${courseId}/labs/${pool[randomIndex].slug}`);
+    router.push(lessonHref(courseId, pool[randomIndex].slug));
   }
 
   // Toggle solve status directly from table checkbox — writes straight to
@@ -414,7 +414,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                       <tr
                         key={lab.id}
                         className={styles.problemRow}
-                        onClick={() => router.push(`/courses/${courseId}/labs/${lab.slug}`)}
+                        onClick={() => router.push(lessonHref(courseId, lab.slug))}
                       >
                         <td
                           className={styles.statusCell}
@@ -486,11 +486,11 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                           className={styles.actionCell}
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/courses/${courseId}/labs/${lab.slug}`);
+                            router.push(lessonHref(courseId, lab.slug));
                           }}
                         >
                           <Link
-                            href={`/courses/${courseId}/labs/${lab.slug}`}
+                            href={lessonHref(courseId, lab.slug)}
                             className={`${styles.startLabBtn} ${lab.status === 'solved' ? styles.reviewBtn : ''}`}
                             aria-label={`${lab.status === 'solved' ? 'Review' : 'Start'} lab ${lab.title}`}
                           >
@@ -604,7 +604,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                 {dailyChallengeLab.shortObjective || dailyChallengeLab.title}
               </h4>
               <Link
-                href={`/courses/${courseId}/labs/${dailyChallengeLab.slug}`}
+                href={lessonHref(courseId, dailyChallengeLab.slug)}
                 className={styles.challengeBtn}
               >
                 <span className="material-symbols-outlined text-sm">play_arrow</span>

@@ -56,27 +56,6 @@
   min-width: 0;
 }
 
-.backBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--line);
-  transition: all 150ms ease;
-  white-space: nowrap;
-}
-
-.backBtn:hover {
-  color: var(--ink);
-  border-color: var(--line-light);
-  background: rgba(255, 255, 255, 0.08);
-}
-
 .courseDivider {
   height: 18px;
   width: 1px;
@@ -212,47 +191,6 @@
   overflow: hidden;
 }
 
-.paneTabs {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 16px 0;
-  background: #0d1117;
-  border-bottom: 1px solid var(--line);
-}
-
-.paneTab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 6px 6px 0 0;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid transparent;
-  border-bottom: none;
-  transition: all 150ms ease;
-}
-
-.paneTab:hover {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.paneTabActive {
-  color: var(--accent) !important;
-  background: var(--surface-panel) !important;
-  border-color: var(--line) !important;
-  font-weight: 600;
-}
-
-.paneTab :global(.material-symbols-outlined) {
-  font-size: 16px;
-}
-
 .instructionsScroll {
   flex: 1;
   min-height: 0;
@@ -266,16 +204,6 @@
 
 .sectionHeader {
   margin-bottom: 20px;
-}
-
-.labNumber {
-  font-family: var(--font-code);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 6px;
 }
 
 .labTitle {
