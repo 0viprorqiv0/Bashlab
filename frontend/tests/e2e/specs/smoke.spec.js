@@ -33,8 +33,8 @@ test.describe('anonymous visitor', () => {
   test('a published course page lists its labs publicly, with progress at 0%', async ({ page }) => {
     await page.goto('/courses/shell-101');
     await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
-    await expect(page.getByText('0 / 14 (0%)')).toBeVisible();
-    await expect(page.getByText('Your first file')).toBeVisible();
+    await expect(page.getByText('0 / 12 (0%)')).toBeVisible();
+    await expect(page.getByText('Terminal Fundamentals & Navigation')).toBeVisible();
   });
 
   test('/my-learning redirects to /login when not authenticated', async ({ page }) => {

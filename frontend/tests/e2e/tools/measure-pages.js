@@ -42,13 +42,13 @@ async function measure(page, path, ready) {
     const anon = await (await browser.newContext()).newPage();
     await measure(anon, '/', 'text=/curiosity/i');
     await measure(anon, '/courses', 'text=Shell 101 — Bash Basics');
-    await measure(anon, '/courses/shell-101', 'text=Your first file');
+    await measure(anon, '/courses/shell-101', 'text=Terminal Fundamentals & Navigation');
     await measure(anon, '/login', 'text=Welcome back');
 
     const lp = await (await browser.newContext()).newPage();
     await login(lp, learner);
     await measure(lp, '/my-learning', 'text=/lessons completed/');
-    await measure(lp, '/courses/shell-101', 'text=Your first file');
+    await measure(lp, '/courses/shell-101', 'text=Terminal Fundamentals & Navigation');
     await measure(lp, '/account', 'text=Account details');
 
     const ap = await (await browser.newContext()).newPage();

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { progressApi } from './writeApi';
+import { initialLabs } from '@/data/labsData';
 
 // Single source of truth for what a learner sees: every *published* lesson of
 // a course, in the chapter/lesson order the admin set in Content. The course
@@ -76,7 +77,10 @@ export function courseCode(slug) {
 }
 
 export function lessonHref(courseSlug, lessonSlug) {
-  return `/courses/${courseSlug}/labs/${lessonSlug}`;
+  const labId = courseSlug === 'shell-101'
+    ? initialLabs.find((lab) => lab.slug === lessonSlug)?.id || 1
+    : lessonSlug;
+  return `/courses/${courseSlug}/labs/${labId}`;
 }
 
 const capitalize = (value) => (value ? value[0].toUpperCase() + value.slice(1) : '');

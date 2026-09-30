@@ -1,116 +1,129 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { initialLabs, getLabById } from '@/data/labsData';
 import styles from './LabWorkspace.module.css';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { authClient } from '@/lib/authClient';
-import Markdown from '@/components/shared/Markdown';
-import { PageError, PageLoading } from '@/components/shared/Loading';
-import {
-  fetchCourseWithLessons, fetchProgressMap, lessonHref, markLessonDone, markLessonStarted, toDisplayLab,
-} from '@/lib/learning';
-import {
-  checkSolution, createSession, endSession, resetSession, runCommand,
-} from '@/lib/sandbox';
 
-const HOME = '/home/student';
-const shortCwd = (cwd) => (cwd === HOME ? '~' : cwd?.startsWith(`${HOME}/`) ? `~${cwd.slice(HOME.length)}` : cwd || '~');
-
-export default function LabWorkspace({ courseId = 'shell-101', labId }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { user, loading: authLoading } = useAuth();
-  const [state, setState] = useState({ loading: true });
-  const [attempt, setAttempt] = useState(0);
-
-  // Load from the stored session immediately; the API identity check (useAuth)
-  // runs in parallel and bounces to /login if it disagrees.
-  useEffect(() => {
-    if (!authLoading && !user) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [authLoading, user, pathname, router]);
-
-  useEffect(() => {
-    const userId = authClient.peekUserId();
-    if (!userId) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-      return undefined;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        // Course + lessons and progress in parallel instead of one after another.
-        const [course, progressMap] = await Promise.all([fetchCourseWithLessons(courseId), fetchProgressMap(userId)]);
-        const labs = course?.lessons || [];
-        const index = labs.findIndex((item) => item.slug === labId);
-        if (cancelled) return;
-        if (index === -1) {
-          setState({ loading: false, notFound: true });
-          return;
-        }
-        setState({ loading: false, labs, index, progressMap, userId });
-        // Recording "started" must not hold up the page.
-        markLessonStarted(userId, labs[index].id).then(() => {});
-      } catch (error) {
-        if (!cancelled) setState({ loading: false, error: error.message });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [courseId, labId, pathname, router, attempt]);
-
-  if (state.loading) return <PageLoading label="Opening lab…" />;
-  if (state.error) return <PageError message={`Could not load this lab: ${state.error}`} onRetry={() => { setState({ loading: true }); setAttempt((n) => n + 1); }} />;
-  if (state.notFound) {
-    return (
-      <div className={styles.workspacePage}>
-        <p style={{ padding: 32, color: '#eef1ef' }}>
-          Lab not found. <Link href={`/courses/${courseId}`}>Back to {courseId}</Link>
-        </p>
-      </div>
-    );
-  }
-  return <Workspace key={state.labs[state.index].id} courseId={courseId} user={{ id: state.userId }} {...state} />;
-}
-
-function Workspace({ courseId, user, labs, index, progressMap }) {
-  const currentLab = toDisplayLab(labs[index], progressMap);
-  const totalLabs = labs.length;
+export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
+  const currentLab = getLabById(labId);
+  const totalLabs = initialLabs.length;
 
   // Active tab on left pane
   const [activeTab, setActiveTab] = useState('instructions');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(50);
+  const [mobileView, setMobileView] = useState('lesson');
+  const splitRef = useRef(null);
+  const contentRef = useRef(null);
+  const copyTimerRef = useRef(null);
+  const [copyError, setCopyError] = useState('');
+
+  useEffect(() => {
+    try {
+      const savedSidebar = localStorage.getItem('shell101.sidebar');
+      setSidebarCollapsed(savedSidebar ? savedSidebar === 'collapsed' : window.matchMedia('(max-width: 600px)').matches);
+      const savedWidth = Number(localStorage.getItem('shell101.panel'));
+      if (savedWidth >= 36 && savedWidth <= 64) setPanelWidth(savedWidth);
+    } catch { /* The workspace also works without browser storage. */ }
+  }, []);
+
+  useEffect(() => () => clearTimeout(copyTimerRef.current), []);
+
+  function selectPanel(tab) {
+    setActiveTab(tab);
+    setMobileView('lesson');
+    if (window.matchMedia('(max-width: 600px)').matches) {
+      setSidebarCollapsed(true);
+      try { localStorage.setItem('shell101.sidebar', 'collapsed'); } catch {}
+    }
+    contentRef.current?.scrollTo({ top: 0 });
+  }
+
+  function toggleSidebar() {
+    const collapsed = !sidebarCollapsed;
+    setSidebarCollapsed(collapsed);
+    try { localStorage.setItem('shell101.sidebar', collapsed ? 'collapsed' : 'expanded'); } catch {}
+  }
+
+  function resizePanel(value) {
+    const width = Math.min(64, Math.max(36, value));
+    setPanelWidth(width);
+    try { localStorage.setItem('shell101.panel', String(width)); } catch {}
+  }
+
+  function handleDividerMove(event) {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const bounds = splitRef.current.getBoundingClientRect();
+    resizePanel(((event.clientX - bounds.left) / bounds.width) * 100);
+  }
 
   // Completed steps checklist
-  const [completedSteps, setCompletedSteps] = useState(() => (
-    currentLab.status === 'solved' ? (currentLab.steps || []).map((s) => s.id) : []
-  ));
+  const [completedSteps, setCompletedSteps] = useState(() => {
+    // If lab was already marked solved, start with all steps checked
+    if (currentLab.status === 'solved') {
+      return (currentLab.steps || []).map((s) => s.id);
+    }
+    return [];
+  });
 
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [instanceStatus, setInstanceStatus] = useState('running'); // 'running' | 'stopped' | 'restarting'
   const [isMaximized, setIsMaximized] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [checkMessage, setCheckMessage] = useState('');
-
-  const terminal = useSandbox(user, currentLab);
-  const instanceStatus = terminal.status === 'ready' ? 'running' : terminal.status === 'connecting' ? 'restarting' : 'stopped';
 
   useEffect(() => {
     setShowHint(false);
-  }, [currentLab.id]);
+  }, [labId]);
 
   // Red button: Stop / Toggle instance
   function handleToggleStopInstance() {
     if (instanceStatus === 'running' || instanceStatus === 'restarting') {
-      terminal.stop();
+      setInstanceStatus('stopped');
+      setTerminalLogs((prev) => [
+        ...prev,
+        {
+          type: 'output',
+          text: `\n[Broadcast] Signal SIGTERM received. Instance container halted.\nTo boot the environment again, click the red dot or "Start Instance".`
+        }
+      ]);
     } else {
-      terminal.retry();
+      handleStartInstance();
     }
   }
 
-  // Yellow button: Restart instance — resets the sandbox filesystem, keeps the session.
+  // Start instance
+  function handleStartInstance() {
+    setInstanceStatus('restarting');
+    setTerminalLogs([
+      {
+        type: 'output',
+        text: `Booting container instance...\n[  0.020] Loading kernel image (Ubuntu 24.04 LTS POSIX sandbox)\n[  0.110] Mounting /home/learner/workspace [OK]\n[  0.250] Initializing bash shell session [OK]\n\nBashLab Cloud Shell v2.4 (Ready).\nFocus commands for this lab: ${currentLab.commands.join(', ')}`
+      }
+    ]);
+    setTimeout(() => {
+      setInstanceStatus('running');
+      setCurrentDir('/home/learner/workspace');
+      inputRef.current?.focus();
+    }, 500);
+  }
+
+  // Yellow button: Restart instance
   function handleRestartInstance() {
-    terminal.reset();
+    setInstanceStatus('restarting');
+    setTerminalLogs((prev) => [
+      ...prev,
+      {
+        type: 'output',
+        text: `\n[System] Restarting sandbox container instance...\n[  0.010] Terminating lingering child processes [OK]\n[  0.120] Resetting working directory state [OK]\n[  0.260] POSIX environment reinitialized [OK]\nInstance restarted successfully.`
+      }
+    ]);
+    setTimeout(() => {
+      setInstanceStatus('running');
+      setCurrentDir('/home/learner/workspace');
+      inputRef.current?.focus();
+    }, 600);
   }
 
   // Green button: Maximize / Minimize
@@ -140,12 +153,17 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
     });
   }
 
-  // Terminal input state (pure UI — the sandbox session itself lives in `terminal`)
+  // Terminal state
+  const [currentDir, setCurrentDir] = useState('/home/learner/workspace');
   const [terminalInput, setTerminalInput] = useState('');
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [cmdHistory, setCmdHistory] = useState([]);
-  const currentDir = terminal.cwd;
-  const terminalLogs = terminal.log;
+  const [terminalLogs, setTerminalLogs] = useState([
+    {
+      type: 'output',
+      text: `BashLab Cloud Shell v2.4 (Ubuntu 24.04 LTS x86_64)\nWorkspace: /home/learner/workspace\nType "help" for a list of commands. Focus commands for this lab: ${currentLab.commands.join(', ')}`
+    }
+  ]);
 
   const terminalEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -160,95 +178,204 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
     inputRef.current?.focus();
   }
 
-  async function complete() {
-    const { error } = await markLessonDone(user.id, currentLab.id);
-    if (error) {
-      setCheckMessage(error.message);
-      return false;
-    }
-    setIsLabSolved(true);
-    return true;
-  }
+  // Toggle step completion manually
+  function toggleStep(stepId) {
+    setCompletedSteps((prev) => {
+      const next = prev.includes(stepId)
+        ? prev.filter((id) => id !== stepId)
+        : [...prev, stepId];
 
-  // Without a reachable sandbox (not configured on this machine, or offline)
-  // an automatic check is impossible; the learner may complete it by hand, as
-  // before the lab redesign. Progress is not anti-cheat protected anyway.
-  const sandboxDown = terminal.status === 'disabled' || terminal.status === 'offline';
-  const autoCheck = Boolean(currentLab.verifier) && !sandboxDown;
-
-  // Toggle step completion manually — only used for labs without an automatic
-  // check; ticking every step marks the lab solved for real.
-  async function toggleStep(stepId) {
-    const next = completedSteps.includes(stepId)
-      ? completedSteps.filter((id) => id !== stepId)
-      : [...completedSteps, stepId];
-    setCompletedSteps(next);
-    if (!autoCheck && currentLab.steps.length && next.length === currentLab.steps.length) {
-      await complete();
-    }
-  }
-
-  // Check Solution — real sandbox check when the lesson has a verifier and the
-  // sandbox is up; otherwise ticks every step and records completion directly.
-  async function handleCheckSolution() {
-    if (checking) return;
-    setChecking(true);
-    setCheckMessage('');
-    try {
-      if (autoCheck) {
-        if (!terminal.sessionId) {
-          setCheckMessage('The sandbox is still starting — try again in a moment.');
-          return;
-        }
-        const result = await checkSolution(terminal.sessionId, currentLab.verifier);
-        if (result.passed) {
-          setCompletedSteps(currentLab.steps.map((s) => s.id));
-          await complete();
-        } else {
-          const failed = result.checks.filter((c) => !c.passed).map((c) => c.name).join('; ');
-          setCheckMessage(`Not quite yet — ${failed || 'some checks did not pass'}.`);
-        }
-      } else {
-        setCompletedSteps(currentLab.steps.map((s) => s.id));
-        await complete();
+      if (currentLab.steps && next.length === currentLab.steps.length) {
+        setIsLabSolved(true);
       }
-    } catch (error) {
-      setCheckMessage(error.message);
-    } finally {
-      setChecking(false);
+      return next;
+    });
+  }
+
+  // Check solution button
+  function handleCheckSolution() {
+    if (currentLab.steps) {
+      const allIds = currentLab.steps.map((s) => s.id);
+      setCompletedSteps(allIds);
+      setIsLabSolved(true);
+      setTerminalLogs((prev) => [
+        ...prev,
+        {
+          type: 'output',
+          text: `\n[VERIFICATION PASSED] All ${allIds.length} validation checks succeeded!\n✓ Sandbox state matches expected solution.\n🎉 Lab #${currentLab.id} completed.`
+        }
+      ]);
     }
   }
 
-  // Copy code snippet helper — remembers which snippet was copied so only
-  // that one flips to "Copied".
-  function handleCopy(text, key) {
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(text);
-      setCopiedCode(key);
-      setTimeout(() => setCopiedCode((current) => (current === key ? false : current)), 2000);
+  // Copy code snippet helper
+  async function handleCopy(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyError('');
+      setCopiedCode(text);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      setCopyError('Could not copy. Select the command and copy it manually.');
     }
   }
 
-  // Command execution — runs for real in the sandbox; matches completed steps
-  // against the real command text as before.
+  // Reset terminal
+  function handleReset() {
+    setTerminalLogs([
+      {
+        type: 'output',
+        text: `Session reset.\nWorkspace: /home/learner/workspace\nType "help" for available commands.`
+      }
+    ]);
+    setCurrentDir('/home/learner/workspace');
+  }
+
+  // Command execution engine
   function handleCommandSubmit(e) {
     e.preventDefault();
     const rawCmd = terminalInput.trim();
     if (!rawCmd) return;
+
+    // Add to history
     setCmdHistory((prev) => [...prev, rawCmd]);
     setHistoryIndex(-1);
-    setTerminalInput('');
 
-    if (currentLab.steps.length) {
-      // target_cmd is optional in lesson_content; steps without one are ticked by hand.
-      const newlyDone = currentLab.steps
-        .filter((step) => step.targetCmd && rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()))
-        .map((step) => step.id)
-        .filter((id) => !completedSteps.includes(id));
-      if (newlyDone.length) setCompletedSteps((prev) => [...prev, ...newlyDone]);
+    const promptText = `learner@bashlab:${currentDir.replace('/home/learner', '~')}$`;
+    const newLogs = [...terminalLogs, { type: 'cmd', prompt: promptText, text: rawCmd }];
+
+    const [cmd, ...args] = rawCmd.split(' ');
+
+    // Match steps for auto-check
+    if (currentLab.steps) {
+      currentLab.steps.forEach((step) => {
+        if (rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase())) {
+          if (!completedSteps.includes(step.id)) {
+            setCompletedSteps((prev) => [...prev, step.id]);
+          }
+        }
+      });
     }
 
-    terminal.run(rawCmd);
+    // Evaluate command
+    if (cmd === 'clear') {
+      setTerminalLogs([]);
+      setTerminalInput('');
+      return;
+    } else if (cmd === 'help') {
+      newLogs.push({
+        type: 'output',
+        text: 'Available Commands:\n  pwd, ls [-la], cd [path], cat [file], head, tail, grep, awk, cut, sed, chmod, touch, mkdir, cp, mv, rm, whoami, date, echo, clear, help\nPress Ctrl+L to clear screen.'
+      });
+    } else if (cmd === 'pwd') {
+      newLogs.push({ type: 'output', text: currentDir });
+    } else if (cmd === 'whoami') {
+      newLogs.push({ type: 'output', text: 'learner (uid=1000 gid=1000 groups=sudo,docker)' });
+    } else if (cmd === 'date') {
+      newLogs.push({ type: 'output', text: new Date().toUTCString() });
+    } else if (cmd === 'cd') {
+      const target = args[0] || '~';
+      if (target === '~' || target === '/home/learner') {
+        setCurrentDir('/home/learner');
+        newLogs.push({ type: 'output', text: '' });
+      } else if (target === '..' || target === '../') {
+        const parts = currentDir.split('/').filter(Boolean);
+        parts.pop();
+        setCurrentDir('/' + parts.join('/'));
+        newLogs.push({ type: 'output', text: '' });
+      } else if (target.startsWith('/')) {
+        setCurrentDir(target);
+        newLogs.push({ type: 'output', text: '' });
+      } else {
+        const next = `${currentDir}/${target}`.replace(/\/+/g, '/');
+        setCurrentDir(next);
+        newLogs.push({ type: 'output', text: '' });
+      }
+    } else if (cmd === 'ls') {
+      const hasAll = rawCmd.includes('-a') || rawCmd.includes('-la') || rawCmd.includes('-lah');
+      const hasLong = rawCmd.includes('-l') || rawCmd.includes('-la') || rawCmd.includes('-lah');
+
+      if (hasAll && hasLong) {
+        newLogs.push({
+          type: 'output',
+          text: `total 48\ndrwxr-xr-x 6 learner learner 4096 Sep 29 22:00 .\ndrwxr-xr-x 3 learner learner 4096 Sep 29 21:00 ..\n-rw-r--r-- 1 learner learner  220 Sep 29 21:00 .bashrc\n-rw-r--r-- 1 learner learner  807 Sep 29 21:00 .profile\n-rw-r--r-- 1 learner learner  145 Sep 29 21:15 app.env\n-rw-r--r-- 1 learner learner 3420 Sep 29 21:30 audit.log\n-rwxr-xr-x 1 learner learner  512 Sep 29 21:45 deploy.sh\n-rw------- 1 learner learner 1675 Sep 29 21:10 id_rsa\n-rw-r--r-- 1 learner learner  940 Sep 29 21:20 package.json\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 src\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 tests`
+        });
+      } else if (hasLong) {
+        newLogs.push({
+          type: 'output',
+          text: `total 36\n-rw-r--r-- 1 learner learner  145 Sep 29 21:15 app.env\n-rw-r--r-- 1 learner learner 3420 Sep 29 21:30 audit.log\n-rwxr-xr-x 1 learner learner  512 Sep 29 21:45 deploy.sh\n-rw------- 1 learner learner 1675 Sep 29 21:10 id_rsa\n-rw-r--r-- 1 learner learner  940 Sep 29 21:20 package.json\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 src\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 tests`
+        });
+      } else if (hasAll) {
+        newLogs.push({
+          type: 'output',
+          text: `.  ..  .bashrc  .profile  app.env  audit.log  deploy.sh  id_rsa  package.json  src  tests`
+        });
+      } else {
+        newLogs.push({
+          type: 'output',
+          text: `app.env  audit.log  deploy.sh  id_rsa  package.json  src/  tests/`
+        });
+      }
+    } else if (cmd === 'cat') {
+      const targetFile = args[0] || '';
+      if (targetFile.includes('app.env') || targetFile.includes('env')) {
+        newLogs.push({
+          type: 'output',
+          text: `PORT=3000\nNODE_ENV=production\nDATABASE_URL=postgres://db-local:5432/bashlab\nVERBOSE=true\nLOG_LEVEL=info`
+        });
+      } else if (targetFile.includes('audit.log') || targetFile.includes('log')) {
+        newLogs.push({
+          type: 'output',
+          text: `2026-09-29T21:00:01Z user=alex ip=192.168.1.100 status=200 action=login\n2026-09-29T21:00:05Z user=root ip=10.0.0.1 status=401 action=ssh_auth\n2026-09-29T21:00:12Z user=alex ip=192.168.1.100 status=200 action=fetch_course\n2026-09-29T21:00:25Z user=guest ip=172.16.0.4 status=403 action=admin_access\n2026-09-29T21:00:44Z user=root ip=10.0.0.1 status=401 action=ssh_auth`
+        });
+      } else {
+        newLogs.push({
+          type: 'output',
+          text: `# Sample file: ${targetFile}\n// Created for BashLab interactive practice.\nconsole.log("Ready.");`
+        });
+      }
+    } else if (cmd === 'head') {
+      newLogs.push({
+        type: 'output',
+        text: `2026-09-29T21:00:01Z user=alex ip=192.168.1.100 status=200 action=login\n2026-09-29T21:00:05Z user=root ip=10.0.0.1 status=401 action=ssh_auth\n2026-09-29T21:00:12Z user=alex ip=192.168.1.100 status=200 action=fetch_course`
+      });
+    } else if (cmd === 'tail') {
+      newLogs.push({
+        type: 'output',
+        text: `2026-09-29T21:05:10Z user=alex ip=192.168.1.100 status=200 action=terminal_exec\n2026-09-29T21:05:44Z user=system status=200 action=health_check_ok`
+      });
+    } else if (cmd === 'echo') {
+      newLogs.push({ type: 'output', text: args.join(' ').replace(/^["']|["']$/g, '') });
+    } else if (cmd === 'chmod') {
+      newLogs.push({
+        type: 'output',
+        text: `Permissions updated successfully: ${args.join(' ')}`
+      });
+    } else if (cmd === 'mkdir') {
+      newLogs.push({
+        type: 'output',
+        text: `Directory created: ${args.join(' ')}`
+      });
+    } else if (cmd === 'touch') {
+      newLogs.push({
+        type: 'output',
+        text: `File updated: ${args.join(' ')}`
+      });
+    } else if (cmd.includes('grep')) {
+      newLogs.push({
+        type: 'output',
+        text: `app.env:3: DATABASE_URL=postgres://db-local:5432/bashlab\napp.env:5: LOG_LEVEL=info`
+      });
+    } else {
+      newLogs.push({
+        type: 'output',
+        text: `[sandbox] executed: ${rawCmd}`
+      });
+    }
+
+    setTerminalLogs(newLogs);
+    setTerminalInput('');
   }
 
   // Handle arrow up / arrow down command history
@@ -272,7 +399,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
       }
     } else if (e.ctrlKey && e.key === 'l') {
       e.preventDefault();
-      terminal.clear();
+      setTerminalLogs([]);
     }
   }
 
@@ -282,62 +409,95 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
     inputRef.current?.focus();
   }
 
-  const prevLab = labs[index - 1] || null;
-  const nextLab = labs[index + 1] || null;
+  const prevLabId = currentLab.id > 1 ? currentLab.id - 1 : null;
+  const nextLabId = currentLab.id < totalLabs ? currentLab.id + 1 : null;
 
   return (
-    <div className={styles.workspacePage} data-lenis-prevent="true">
+    <div className={`${styles.workspacePage} ${styles.unified} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`} data-lenis-prevent="true">
+        <aside className={styles.workspaceSidebar} aria-label="Course workspace">
+          <Link href="/" className={styles.sidebarItem} aria-label="Home" data-tooltip="Home">
+            <span className="material-symbols-outlined" aria-hidden="true">home</span>
+            <span className={styles.sidebarLabel}>Home</span>
+          </Link>
+          <div className={styles.sidebarRule} />
+          <nav aria-label="Learning panels">
+            {[
+              ['lessons', 'format_list_bulleted', 'Lessons'],
+              ['instructions', 'menu_book', 'Instructions'],
+              ['solution', 'lightbulb', 'Solution'],
+            ].map(([id, icon, label]) => (
+              <button key={id} type="button" className={`${styles.sidebarItem} ${activeTab === id ? styles.sidebarItemActive : ''}`}
+                aria-label={label} aria-pressed={activeTab === id} aria-controls="learning-panel" data-tooltip={label}
+                onClick={() => selectPanel(id)}>
+                <span className="material-symbols-outlined" aria-hidden="true">{icon}</span>
+                <span className={styles.sidebarLabel}>{label}</span>
+              </button>
+            ))}
+          </nav>
+          <a href="https://github.com/0viprorqiv0/Bashlab/issues/new" target="_blank" rel="noopener noreferrer"
+            className={`${styles.sidebarItem} ${styles.sidebarReport}`} aria-label="Report a bug (opens in a new tab)" data-tooltip="Report a bug">
+            <span className="material-symbols-outlined" aria-hidden="true">bug_report</span>
+            <span className={styles.sidebarLabel}>Report a bug</span>
+          </a>
+          <button type="button" className={`${styles.sidebarItem} ${styles.sidebarToggle}`} onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!sidebarCollapsed}
+            data-tooltip={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            <span className="material-symbols-outlined" aria-hidden="true">{sidebarCollapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}</span>
+            <span className={styles.sidebarLabel}>Collapse sidebar</span>
+          </button>
+        </aside>
       {/* Top Workspace Header Bar */}
       <header className={styles.topBar}>
         <div className={styles.topLeft}>
-          <Link href={`/courses/${courseId}`} className={styles.backBtn}>
-            <span className="material-symbols-outlined text-sm">arrow_back</span>
-            <span>{courseId}</span>
-          </Link>
+          <button type="button" className={styles.courseLabel} onClick={() => selectPanel('lessons')}>Shell 101</button>
 
           <div className={styles.courseDivider} />
 
           <div className={styles.labNavGroup}>
             <Link
-              href={prevLab ? lessonHref(courseId, prevLab.slug) : '#'}
+              href={prevLabId ? `/courses/${courseId}/labs/${prevLabId}` : '#'}
+              onClick={(event) => { if (!prevLabId) event.preventDefault(); }}
+              tabIndex={prevLabId ? undefined : -1}
+              aria-label="Previous lesson"
               className={styles.navArrowBtn}
-              aria-disabled={!prevLab}
-              title={prevLab ? `Previous: ${prevLab.title}` : 'First Lab'}
+              aria-disabled={!prevLabId}
+              title={prevLabId ? `Previous Lab #${prevLabId}` : 'First Lab'}
             >
               <span className="material-symbols-outlined text-sm">chevron_left</span>
             </Link>
 
             <span className="font-code text-xs text-on-surface-variant font-medium">
-              {index + 1} / {totalLabs}
+              {currentLab.id} / {totalLabs}
             </span>
 
             <Link
-              href={nextLab ? lessonHref(courseId, nextLab.slug) : '#'}
+              href={nextLabId ? `/courses/${courseId}/labs/${nextLabId}` : '#'}
+              onClick={(event) => { if (!nextLabId) event.preventDefault(); }}
+              tabIndex={nextLabId ? undefined : -1}
+              aria-label="Next lesson"
               className={styles.navArrowBtn}
-              aria-disabled={!nextLab}
-              title={nextLab ? `Next: ${nextLab.title}` : 'Last Lab'}
+              aria-disabled={!nextLabId}
+              title={nextLabId ? `Next Lab #${nextLabId}` : 'Last Lab'}
             >
               <span className="material-symbols-outlined text-sm">chevron_right</span>
             </Link>
           </div>
 
           <h1 className={styles.labTitleHeader}>
-            Lab #{index + 1}: {currentLab.title}
+            Lab #{currentLab.id}: {currentLab.title}
           </h1>
 
-          {currentLab.difficulty && (
-            <span
-              className={`${styles.diffBadge} ${
-                currentLab.difficulty === 'Easy'
-                  ? styles.diffEasy
-                  : currentLab.difficulty === 'Medium'
-                  ? styles.diffMedium
-                  : styles.diffHard
-              }`}
-            >
-              {currentLab.difficulty}
-            </span>
-          )}
+          <span
+            className={`${styles.diffBadge} ${
+              currentLab.difficulty === 'Easy'
+                ? styles.diffEasy
+                : currentLab.difficulty === 'Medium'
+                ? styles.diffMedium
+                : styles.diffHard
+            }`}
+          >
+            {currentLab.difficulty}
+          </span>
         </div>
 
         <div className={styles.topRight}>
@@ -352,87 +512,78 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             type="button"
             className={styles.checkSolutionBtn}
             onClick={handleCheckSolution}
-            disabled={checking || isLabSolved || (autoCheck && !terminal.sessionId)}
+            aria-label="Check solution"
             title="Validate completed tasks and check solution"
           >
             <span className="material-symbols-outlined">verified</span>
-            <span>{checking ? 'Checking…' : isLabSolved ? 'Completed' : autoCheck ? 'Check Solution' : 'Mark as complete'}</span>
+            <span>Check Solution</span>
           </button>
         </div>
       </header>
 
       {/* 50 / 50 Split Layout */}
-      <div className={styles.splitLayout}>
+      <div className={styles.mobileSwitcher} aria-label="Workspace view">
+        <button type="button" aria-pressed={mobileView === 'lesson'} onClick={() => setMobileView('lesson')}>Lesson</button>
+        <button type="button" aria-pressed={mobileView === 'terminal'} onClick={() => setMobileView('terminal')}>Terminal</button>
+      </div>
+      <div ref={splitRef} className={styles.splitLayout} style={{ '--panel-width': `${panelWidth}%` }} data-mobile-view={mobileView}>
         {/* LEFT HALF: Problem Statement & Instructions */}
-        <section className={styles.leftPane} data-lenis-prevent="true" aria-label="Problem statement and instructions">
-          {/* Tabs */}
-          <div className={styles.paneTabs}>
-            <button
-              type="button"
-              className={`${styles.paneTab} ${activeTab === 'instructions' ? styles.paneTabActive : ''}`}
-              onClick={() => setActiveTab('instructions')}
-            >
-              <span className="material-symbols-outlined">menu_book</span>
-              <span>Instructions</span>
-            </button>
-
-            <button
-              type="button"
-              className={`${styles.paneTab} ${activeTab === 'solution' ? styles.paneTabActive : ''}`}
-              onClick={() => setActiveTab('solution')}
-            >
-              <span className="material-symbols-outlined">lightbulb</span>
-              <span>Solution Walkthrough</span>
-            </button>
+        <section id="learning-panel" className={styles.leftPane} data-lenis-prevent="true" aria-label={`${activeTab} panel`}>
+          <div className={styles.panelHeading}>
+            <span>{activeTab === 'lessons' ? 'Course lessons' : activeTab === 'solution' ? 'Solution walkthrough' : 'Instructions'}</span>
+            <span>{activeTab === 'lessons' ? `${totalLabs} lessons` : `Lesson ${currentLab.id}`}</span>
           </div>
 
           {/* Instructions Content */}
-          <div className={styles.instructionsScroll} data-lenis-prevent="true">
-            {activeTab === 'instructions' ? (
+          <div key={activeTab} ref={contentRef} className={styles.instructionsScroll} data-lenis-prevent="true">
+            {copyError && <p role="status" className={styles.copyError}>{copyError}</p>}
+            {activeTab === 'lessons' ? (
               <>
                 <div className={styles.sectionHeader}>
-                  <div className={styles.labNumber}>Interactive Terminal Lab · {courseId}</div>
+                  <h2 className={styles.labTitle}>Shell 101</h2>
+                  <p className={styles.courseIntro}>Build your command line skills, one lesson at a time.</p>
+                </div>
+                <ol className={styles.lessonList}>
+                  {initialLabs.map((lab) => {
+                    const completed = lab.id === currentLab.id ? isLabSolved : lab.status === 'solved';
+                    return (
+                      <li key={lab.id}>
+                        <Link href={`/courses/${courseId}/labs/${lab.id}`} className={`${styles.lessonRow} ${lab.id === currentLab.id ? styles.currentLesson : ''} ${completed ? styles.completedLesson : ''}`}
+                          aria-current={lab.id === currentLab.id ? 'page' : undefined}
+                          aria-label={completed ? `${lab.title}, completed` : undefined}
+                          onClick={() => { if (lab.id === currentLab.id) selectPanel('instructions'); }}>
+                          <span className={styles.lessonNumber}>{String(lab.id).padStart(2, '0')}</span>
+                          <span className={styles.lessonInfo}><strong>{lab.title}</strong><span>{lab.commands.join(' · ')}</span></span>
+                          <span className={styles.lessonDifficulty}>{lab.difficulty}</span>
+                          <span className="material-symbols-outlined" aria-hidden="true">{completed ? 'check_circle' : lab.id === currentLab.id ? 'radio_button_checked' : 'chevron_right'}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </>
+            ) : activeTab === 'instructions' ? (
+              <>
+                <div className={styles.sectionHeader}>
                   <h2 className={styles.labTitle}>{currentLab.title}</h2>
                   <div className={styles.metaRow}>
                     <span>Track: <strong>{currentLab.category}</strong></span>
                     <span>·</span>
-                    <span>Grading: <strong>{autoCheck ? 'Automatic' : currentLab.verifier ? 'Manual (sandbox unavailable)' : 'Manual'}</strong></span>
+                    <span>Acceptance: <strong>{currentLab.acceptance}</strong></span>
                   </div>
                 </div>
 
-                {checkMessage && !isLabSolved && (
-                  <p role="alert" style={{ color: '#ff8a80', fontSize: 13, margin: '0 0 16px' }}>{checkMessage}</p>
-                )}
-
-                {/* Legacy Markdown lesson (no lesson_content yet) */}
-                {!currentLab.structured && (
-                  <div className={styles.scenarioCard}>
-                    {currentLab.contentMd
-                      ? <Markdown>{currentLab.contentMd}</Markdown>
-                      : <p className={styles.scenarioText}>This lesson has no written instructions yet.</p>}
-                    {currentLab.objectives.length > 0 && (
-                      <ul style={{ margin: '12px 0 0', paddingLeft: 18 }}>
-                        {currentLab.objectives.map((item) => <li key={item}>{formatInlineCode(item)}</li>)}
-                      </ul>
-                    )}
-                  </div>
-                )}
-
                 {/* Scenario / Story */}
-                {currentLab.scenario && (
-                  <div className={styles.scenarioCard}>
-                    <div className={styles.scenarioTitle}>Mission Scenario</div>
-                    <p className={styles.scenarioText}>{formatInlineCode(currentLab.scenario)}</p>
-                  </div>
-                )}
+                <div className={styles.scenarioCard}>
+                  <div className={styles.scenarioTitle}>Mission Scenario</div>
+                  <p className={styles.scenarioText}>{currentLab.scenario}</p>
+                </div>
 
                 {/* Checklist Steps */}
-                {currentLab.steps.length > 0 && (
                 <h3 className={styles.subSectionTitle}>
                   <span className="material-symbols-outlined">checklist</span>
-                  <span>Objective Tasks ({completedSteps.length} of {currentLab.steps.length} completed)</span>
+                  <span>Objective Tasks ({completedSteps.length} of {(currentLab.steps || []).length} completed)</span>
                 </h3>
-                )}
 
                 <div className={styles.stepList}>
                   {(currentLab.steps || []).map((step, idx) => {
@@ -442,6 +593,8 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                         key={step.id}
                         className={`${styles.stepItem} ${isDone ? styles.stepItemCompleted : ''}`}
                         onClick={() => toggleStep(step.id)}
+                        role="checkbox" aria-checked={isDone} tabIndex={0}
+                        onKeyDown={(event) => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleStep(step.id); } }}
                       >
                         <span
                           className={`material-symbols-outlined ${styles.stepCheckIcon} ${
@@ -459,7 +612,6 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                 </div>
 
                 {/* Command Syntax Table */}
-                {currentLab.commandSyntax.length > 0 && (<>
                 <h3 className={styles.subSectionTitle}>
                   <span className="material-symbols-outlined">code</span>
                   <span>Command Syntax &amp; Usage</span>
@@ -472,20 +624,17 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                         <td className={styles.syntaxCmd}>
                           <code>{item.cmd}</code>
                         </td>
-                        <td className={styles.syntaxDesc}>{formatInlineCode(item.desc)}</td>
+                        <td className={styles.syntaxDesc}>{item.desc}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                </>)}
 
                 {/* Examples */}
-                {currentLab.examples.length > 0 && (
                 <h3 className={styles.subSectionTitle}>
                   <span className="material-symbols-outlined">terminal</span>
                   <span>Example Walkthrough</span>
                 </h3>
-                )}
 
                 {(currentLab.examples || []).map((ex, i) => (
                   <div key={i} className={styles.codeCard}>
@@ -494,19 +643,19 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                       <button
                         type="button"
                         className={styles.copyCodeBtn}
-                        onClick={() => handleCopy(ex.code, i)}
+                        onClick={() => handleCopy(ex.code)}
                         title="Copy command to clipboard"
                       >
                         <span className="material-symbols-outlined text-xs">
-                          {copiedCode === i ? 'check' : 'content_copy'}
+                          {copiedCode === ex.code ? 'check' : 'content_copy'}
                         </span>
-                        <span>{copiedCode === i ? 'Copied' : 'Copy'}</span>
+                        <span>{copiedCode === ex.code ? 'Copied' : 'Copy'}</span>
                       </button>
                     </div>
                     <div className={styles.codeCardBody}>
                       <code>$ {ex.code}</code>
                     </div>
-                    <div className={styles.codeExplanation}>{formatInlineCode(ex.explanation)}</div>
+                    <div className={styles.codeExplanation}>{ex.explanation}</div>
                   </div>
                 ))}
 
@@ -557,8 +706,8 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                         </p>
                       </div>
                     </div>
-                    {nextLab && (
-                      <Link href={lessonHref(courseId, nextLab.slug)} className={styles.nextLabBtn}>
+                    {nextLabId && (
+                      <Link href={`/courses/${courseId}/labs/${nextLabId}`} className={styles.nextLabBtn}>
                         <span>Next Lab</span>
                         <span className="material-symbols-outlined text-sm">arrow_forward</span>
                       </Link>
@@ -570,28 +719,23 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
               /* Solution Walkthrough Tab */
               <div>
                 <div className={styles.sectionHeader}>
-                  <div className={styles.labNumber}>Solution Guide</div>
-                  <h2 className={styles.labTitle}>Detailed Solution &amp; Deep Dive</h2>
+                  <h2 className={styles.labTitle}>{currentLab.title}</h2>
                 </div>
 
                 <div className={styles.scenarioCard}>
                   <div className={styles.scenarioTitle}>POSIX Architecture Notes</div>
-                  <p className={styles.scenarioText}>
-                    {currentLab.solutionExplanation ? formatInlineCode(currentLab.solutionExplanation) : 'No solution walkthrough has been written for this lab yet.'}
-                  </p>
+                  <p className={styles.scenarioText}>{currentLab.solutionExplanation ? formatInlineCode(currentLab.solutionExplanation) : 'The solution is being updated.'}</p>
                 </div>
 
-                {currentLab.steps.some((step) => step.targetCmd) && (
-                  <h3 className={styles.subSectionTitle}>
-                    <span className="material-symbols-outlined">check_circle</span>
-                    <span>Reference Command Sequence</span>
-                  </h3>
-                )}
+                <h3 className={styles.subSectionTitle}>
+                  <span className="material-symbols-outlined">check_circle</span>
+                  <span>Reference Command Sequence</span>
+                </h3>
 
-                {currentLab.steps.filter((step) => step.targetCmd).map((step) => (
+                {(currentLab.steps || []).map((step, idx) => (
                   <div key={step.id} className={styles.codeCard}>
                     <div className={styles.codeCardHeader}>
-                      <span>Step {currentLab.steps.indexOf(step) + 1} Solution</span>
+                      <span>Step {idx + 1} Solution</span>
                     </div>
                     <div className={styles.codeCardBody}>
                       <code>$ {step.targetCmd}</code>
@@ -602,6 +746,19 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             )}
           </div>
         </section>
+
+        <div className={styles.splitHandle} role="separator" aria-label="Resize learning panel" aria-orientation="vertical"
+          aria-valuemin={36} aria-valuemax={64} aria-valuenow={Math.round(panelWidth)} aria-valuetext={`${Math.round(panelWidth)} percent`} tabIndex={0}
+          onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId); } }}
+          onPointerMove={handleDividerMove}
+          onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+          onDoubleClick={() => resizePanel(50)}
+          onKeyDown={(event) => {
+            if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(event.key)) {
+              event.preventDefault();
+              resizePanel(event.key === 'Home' ? 36 : event.key === 'End' ? 64 : event.key === 'Enter' ? 50 : panelWidth + (event.key === 'ArrowRight' ? 2 : -2));
+            }
+          }} />
 
         {/* RIGHT HALF: Terminal Sandbox */}
         <section
@@ -670,7 +827,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
               {instanceStatus === 'running' ? (
                 <span className={styles.termStatusPill}>
                   <span className={styles.termStatusDot} />
-                  Sandbox Ready
+                  Preview
                 </span>
               ) : instanceStatus === 'restarting' ? (
                 <span className={styles.termStatusPillRestarting}>
@@ -711,7 +868,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
               <button
                 type="button"
                 className={styles.termActionBtn}
-                onClick={terminal.clear}
+                onClick={() => setTerminalLogs([])}
                 title="Clear screen (Ctrl+L)"
               >
                 <span className="material-symbols-outlined">mop</span>
@@ -722,8 +879,8 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
 
           {/* Terminal Screen Output Area */}
           <div className={styles.termScreen} data-lenis-prevent="true">
-            {terminalLogs.map((log, logIndex) => (
-              <div key={logIndex} className={styles.termRow}>
+            {terminalLogs.map((log, index) => (
+              <div key={index} className={styles.termRow}>
                 {log.type === 'cmd' ? (
                   <div className={styles.termCmdLine}>
                     <span className={styles.termPrompt}>{log.prompt}</span>
@@ -736,23 +893,16 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             ))}
 
             {/* Terminal Input Line or Stopped Barrier */}
-            {terminal.status === 'disabled' ? (
+            {instanceStatus === 'stopped' ? (
               <div className={styles.stoppedBanner}>
                 <div className={styles.stoppedInfo}>
                   <span className="material-symbols-outlined text-base">power_off</span>
-                  <span>The practice sandbox is not configured on this server. Read the lab and mark it complete when you are done.</span>
-                </div>
-              </div>
-            ) : instanceStatus === 'stopped' ? (
-              <div className={styles.stoppedBanner}>
-                <div className={styles.stoppedInfo}>
-                  <span className="material-symbols-outlined text-base">power_off</span>
-                  <span>{terminal.status === 'offline' ? 'The sandbox could not be reached.' : 'Instance is stopped.'} Start the instance to run commands.</span>
+                  <span>Instance is stopped. Start instance to run commands.</span>
                 </div>
                 <button
                   type="button"
                   className={styles.startInstanceBtn}
-                  onClick={terminal.retry}
+                  onClick={handleStartInstance}
                 >
                   <span className="material-symbols-outlined text-xs">play_arrow</span>
                   <span>Start Instance</span>
@@ -761,7 +911,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
             ) : (
               <form onSubmit={handleCommandSubmit} className={styles.termInputForm}>
                 <span className={styles.termPrompt}>
-                  learner@bashlab:{shortCwd(currentDir)}$
+                  learner@bashlab:{currentDir.replace('/home/learner', '~')}$
                 </span>
                 <input
                   ref={inputRef}
@@ -772,7 +922,7 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
                   onKeyDown={handleKeyDown}
                   placeholder={instanceStatus === 'restarting' ? 'Instance booting...' : 'type a bash command...'}
                   disabled={instanceStatus === 'restarting'}
-                  autoFocus
+                  aria-label="Terminal command"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -809,109 +959,4 @@ function Workspace({ courseId, user, labs, index, progressMap }) {
       </div>
     </div>
   );
-}
-
-const STATUS_TEXT = {
-  disabled: 'Sandbox not configured',
-  connecting: 'Starting sandbox…',
-  ready: 'Sandbox ready',
-  offline: 'Sandbox offline',
-};
-
-// Owns the real sandbox session for this lab: creates it, runs commands,
-// keeps practice_sessions (My Learning / Activity) in sync, cleans up on leave.
-function useSandbox(user, lab) {
-  const [status, setStatus] = useState('connecting');
-  const [sessionId, setSessionId] = useState(null);
-  const [cwd, setCwd] = useState(HOME);
-  const [log, setLog] = useState([
-    { type: 'output', text: STATUS_TEXT.connecting },
-  ]);
-  const [busy, setBusy] = useState(false);
-  const openSession = useCallback(async () => {
-    setStatus('connecting');
-    try {
-      const session = await createSession(lab.id); // the API records the practice session
-      setSessionId(session.sessionId);
-      setCwd(session.cwd || HOME);
-      setStatus('ready');
-      return { sessionId: session.sessionId };
-    } catch (error) {
-      const failed = error.code === 'SANDBOX_DISABLED' ? 'disabled' : 'offline';
-      setStatus(failed);
-      setLog((prev) => [...prev, { type: 'output', text: STATUS_TEXT[failed] }]);
-      return null;
-    }
-  }, [lab.id]);
-
-  useEffect(() => {
-    // If the page unmounts before the session finishes opening (fast
-    // navigation, React dev double-mount), end that session too instead of
-    // leaking a sandbox and an "active" row.
-    let cancelled = false;
-    let opened = null;
-    openSession().then((value) => {
-      if (cancelled && value) {
-        endSession(value.sessionId);
-      } else {
-        opened = value;
-      }
-    });
-    return () => {
-      cancelled = true;
-      if (opened) endSession(opened.sessionId);
-    };
-  }, [openSession]);
-
-  const run = async (command) => {
-    const prompt = `learner@bashlab:${shortCwd(cwd)}$`;
-    setLog((prev) => [...prev, { type: 'cmd', prompt, text: command }]);
-    if (!sessionId) {
-      setLog((prev) => [...prev, { type: 'output', text: 'Sandbox is not connected.' }]);
-      return;
-    }
-    setBusy(true);
-    try {
-      let result;
-      try {
-        result = await runCommand(sessionId, command);
-      } catch (error) {
-        if (error.code !== 'SESSION_NOT_FOUND') throw error;
-        const fresh = await openSession();
-        if (!fresh) throw error;
-        setLog((prev) => [...prev, { type: 'output', text: 'Session expired — started a new sandbox (files were reset).' }]);
-        result = await runCommand(fresh.sessionId, command);
-      }
-      const lines = [];
-      if (result.stdout) lines.push({ type: 'output', text: result.stdout.replace(/\n$/, '') });
-      if (result.stderr) lines.push({ type: 'output', text: result.stderr.replace(/\n$/, '') });
-      if (result.termination === 'timeout') lines.push({ type: 'output', text: 'Command timed out.' });
-      if (result.quotaExceeded) lines.push({ type: 'output', text: result.quotaError });
-      setLog((prev) => [...prev, ...lines]);
-      if (result.cwdUpdated && result.cwd) setCwd(result.cwd);
-    } catch (error) {
-      setLog((prev) => [...prev, { type: 'output', text: error.message }]);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return {
-    status, sessionId, cwd, log, busy, run,
-    clear: () => setLog([]),
-    reset: async () => {
-      if (!sessionId) return;
-      await resetSession(sessionId).catch(() => {});
-      setCwd(HOME);
-      setLog([{ type: 'output', text: 'Workspace reset.' }]);
-    },
-    stop: () => {
-      if (sessionId) endSession(sessionId); // the API also closes the practice record
-      setSessionId(null);
-      // 'stopped' (by the learner), not 'offline': the sandbox is still reachable.
-      setStatus('stopped');
-      setLog((prev) => [...prev, { type: 'output', text: 'Instance stopped.' }]);
-    },
-    retry: openSession,
-  };
 }

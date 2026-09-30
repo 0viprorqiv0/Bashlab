@@ -1,9 +1,8 @@
-/** @type {import('next').NextConfig} */
 const isDev = process.env.NODE_ENV !== 'production';
 
 // Origins the browser may talk to besides itself: the BashLab API and (read-only
-// data) Supabase. Anything else — including an injected third-party script's
-// beacon — is blocked by the CSP below.
+// data) Supabase. Anything else - including an injected third-party script's
+// beacon - is blocked by the CSP below.
 const origin = (value) => { try { return value ? new URL(value).origin : null; } catch { return null; } };
 const apiOrigin = origin(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SANDBOX_API_URL)
   || (isDev ? 'http://127.0.0.1:3001' : null);
@@ -37,11 +36,11 @@ const securityHeaders = [
   ...(isDev ? [] : [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }]),
 ];
 
-const nextConfig = {
+export default {
+  // Keep WSL and Windows build output separate on the shared /mnt/c checkout.
+  distDir: process.platform === 'win32' ? '.next-win' : '.next-wsl',
   poweredByHeader: false,
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
 };
-
-module.exports = nextConfig;

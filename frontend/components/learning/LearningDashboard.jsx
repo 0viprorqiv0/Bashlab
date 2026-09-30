@@ -118,10 +118,9 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
   for (let index = days.length - 1; index >= 0 && days[index].level > 0; index--) streak++;
   const percent = current && current.total ? Math.round((current.done / current.total) * 100) : 0;
   const courseState = !current || current.done === 0 ? 'Not started' : current.done === current.total ? 'Completed' : 'In progress';
-  // Next unfinished lesson from real progress; a finished course reopens its overview.
   const startHref = current?.next
     ? lessonHref(current.course.slug, current.next.slug)
-    : `/courses/${current?.course.slug}`;
+    : current ? `/courses/${current.course.slug}` : '/courses';
 
   useEffect(() => {
     if (calendarRef.current) calendarRef.current.scrollLeft = calendarRef.current.scrollWidth;

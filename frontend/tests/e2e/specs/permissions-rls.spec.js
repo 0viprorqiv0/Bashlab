@@ -102,7 +102,7 @@ test.describe('RLS / RPC boundary — learner token, bypassing the UI entirely',
 
   test('progress: written through the API for the caller only; direct writes and impersonation are refused', async () => {
     const [{ data: lessons }] = await Promise.all([
-      adminClient.from('lessons').select('id').eq('slug', 'hello-bashlab').limit(1).then((r) => r),
+      adminClient.from('lessons').select('id').eq('slug', 'terminal-fundamentals-navigation').limit(1).then((r) => r),
     ]);
     const lessonId = lessons[0].id;
     const backend = forBackend(session.access_token);

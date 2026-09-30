@@ -446,7 +446,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                       <tr
                         key={lab.id}
                         className={styles.problemRow}
-                        onClick={() => router.push(`/courses/${courseId}/labs/${lab.slug}`)}
+                        onClick={() => router.push(lessonHref(courseId, lab.slug))}
                       >
                         <td
                           className={styles.statusCell}
@@ -520,11 +520,11 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                           className={styles.actionCell}
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/courses/${courseId}/labs/${lab.slug}`);
+                            router.push(lessonHref(courseId, lab.slug));
                           }}
                         >
                           <Link
-                            href={`/courses/${courseId}/labs/${lab.slug}`}
+                            href={lessonHref(courseId, lab.slug)}
                             className={`${styles.startLabBtn} ${lab.status === 'solved' ? styles.reviewBtn : ''}`}
                             aria-label={`${lab.status === 'solved' ? 'Review' : 'Start'} lab ${lab.title}`}
                           >
@@ -638,7 +638,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
                 {dailyChallengeLab.shortObjective || dailyChallengeLab.title}
               </h4>
               <Link
-                href={`/courses/${courseId}/labs/${dailyChallengeLab.slug}`}
+                href={lessonHref(courseId, dailyChallengeLab.slug)}
                 className={styles.challengeBtn}
               >
                 <span className="material-symbols-outlined text-sm">play_arrow</span>

@@ -12,7 +12,7 @@ let sessionId;
 
 test.beforeAll(async () => {
   users = loadUsers();
-  const { data: lesson } = await adminClient.from('lessons').select('id').eq('slug', 'hello-bashlab').single();
+  const { data: lesson } = await adminClient.from('lessons').select('id').eq('slug', 'terminal-fundamentals-navigation').single();
   const { data: session, error } = await adminClient
     .from('practice_sessions')
     .insert({ user_id: users.target.id, lesson_id: lesson.id, status: 'active' })
