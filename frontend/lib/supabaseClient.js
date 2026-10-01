@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { authClient } from './authClient';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
 // Data access only (courses, lessons, progress …), always under Row Level
 // Security with the signed-in user's token. Authentication is NOT done here:

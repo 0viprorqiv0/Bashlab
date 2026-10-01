@@ -17,6 +17,7 @@ const columns = [
   {
     title: 'Resources',
     links: [
+      ['Blog & Guides', '/blog'],
       ['How It Works', '/#learn'],
       ['Try a command', '/#try'],
       ['FAQ', '/#questions'],

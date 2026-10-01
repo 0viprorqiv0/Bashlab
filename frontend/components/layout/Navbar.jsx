@@ -31,6 +31,7 @@ export default function Navbar({ isTransparent = false }) {
 
   const navLinks = [
     { href: '/courses', label: 'Courses' },
+    { href: '/blog', label: 'Blog' },
   ];
 
   React.useEffect(() => {
