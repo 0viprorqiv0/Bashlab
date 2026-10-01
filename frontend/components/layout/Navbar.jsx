@@ -23,6 +23,7 @@ export default function Navbar({ isTransparent = false }) {
 
   const navLinks = [
     { href: '/courses', label: 'Courses' },
+    { href: '/blog', label: 'Blog' },
   ];
 
   // Real auth state — checked once on mount and kept in sync with
