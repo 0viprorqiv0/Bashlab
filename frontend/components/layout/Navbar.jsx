@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import BrandLogo from '../shared/BrandLogo';
 import { authClient } from '@/lib/authClient';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -18,6 +18,8 @@ export default function Navbar({ isTransparent = false }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  const isActive = (href) => pathname === href || pathname.startsWith(`${href}/`);
   const dropdownRef = React.useRef(null);
   const auth = useAuth();
   const authReady = !auth.loading;
@@ -72,7 +74,10 @@ export default function Navbar({ isTransparent = false }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="font-code text-xs text-on-surface-variant hover:text-white transition-colors focus-visible"
+                aria-current={isActive(link.href) ? 'page' : undefined}
+                className={`font-code text-xs transition-colors focus-visible ${
+                  isActive(link.href) ? 'text-primary' : 'text-on-surface-variant hover:text-white'
+                }`}
               >
                 {link.label}
               </Link>
@@ -163,7 +168,10 @@ export default function Navbar({ isTransparent = false }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="font-code text-sm text-on-surface-variant hover:text-white transition-colors focus-visible py-2"
+                aria-current={isActive(link.href) ? 'page' : undefined}
+                className={`font-code text-sm transition-colors focus-visible py-2 ${
+                  isActive(link.href) ? 'text-primary' : 'text-on-surface-variant hover:text-white'
+                }`}
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
