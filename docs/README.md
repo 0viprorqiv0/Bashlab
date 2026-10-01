@@ -43,7 +43,7 @@ docs/
 * **Mục tiêu:** Nắm chắc kịch bản 5–7 phút (bấm giờ từng giây), cách live demo 3 bước (CWD + Check Solution), và 4 câu trả lời phản biện kinh điển khi được bốc thăm ngẫu nhiên.
 
 ### 2. Triển khai Code Backend & Cấu hình Sandbox
-👉 Mở: **[`docs/architecture/sandbox_design.md`](architecture/sandbox_design.md)**
+👉 Mở: **[`backend/sandbox_architecture_design.md`](../backend/sandbox_architecture_design.md)**
 * **Mục tiêu:** Hướng dẫn chi tiết cách dựng 1 Docker Runner dùng chung, cấu hình Bubblewrap (`bwrap`), cơ chế CWD Tracker, giới hạn file 10MB (`ulimit -f`), quota 30MB và Reaper dọn dẹp mỗi 30 phút.
 
 ### 3. Nghiên cứu Kỹ thuật Sâu & Đối phó Câu hỏi Hóc búa

@@ -267,6 +267,6 @@ Bất kỳ thành viên nào trong nhóm bị giáo viên bốc thăm ngẫu nhi
 > [!TIP]
 > Toàn bộ tài liệu gốc và báo cáo chi tiết từng phần được lưu trữ tại:  
 > - Báo cáo bảo vệ đồ án: [`docs/presentation/rubric_and_presentation_plan.md`](presentation/rubric_and_presentation_plan.md)  
-> - Thiết kế kỹ thuật chi tiết: [`docs/architecture/sandbox_design.md`](architecture/sandbox_design.md)  
+> - Thiết kế kỹ thuật chi tiết: [`backend/sandbox_architecture_design.md`](../backend/sandbox_architecture_design.md)  
 > - Nghiên cứu sâu Bwrap-in-Docker: [`docs/research/astra_sandbox_hardening.md`](research/astra_sandbox_hardening.md)  
 > - Báo cáo mô hình chịu tải 1000 users: [`docs/research/astra_1000_users_stress.md`](research/astra_1000_users_stress.md)
