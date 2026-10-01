@@ -46,4 +46,16 @@ test.describe('anonymous visitor', () => {
     await page.goto('/admin/content');
     await page.waitForURL('**/login**');
   });
+
+  test('opening a lab workspace directly redirects to /login with a next back to that lab', async ({ page }) => {
+    await page.goto('/courses/shell-101/labs/1');
+    await page.waitForURL('**/login**');
+    expect(new URL(page.url()).searchParams.get('next')).toBe('/courses/shell-101/labs/1');
+  });
+
+  test('clicking Start on the course page redirects to /login instead of opening the lab', async ({ page }) => {
+    await page.goto('/courses/shell-101');
+    await page.getByRole('link', { name: /^Start lab Terminal Fundamentals/ }).click();
+    await page.waitForURL('**/login**');
+  });
 });

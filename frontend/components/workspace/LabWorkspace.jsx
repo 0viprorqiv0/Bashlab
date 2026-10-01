@@ -6,6 +6,8 @@ import { useRouter, notFound } from 'next/navigation';
 import { useCourseLabs } from '@/lib/courseLabs';
 import { PageError, PageLoading } from '@/components/shared/Loading';
 import { checkSolution, createSession, endSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { authClient } from '@/lib/authClient';
 import styles from './LabWorkspace.module.css';
 
 const HOME = '/home/student';
@@ -16,13 +18,27 @@ const shortCwd = (path) => (!path ? '~' : path === HOME ? '~' : path.startsWith(
 // the URL is redirected to its number.
 export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const nextParam = encodeURIComponent(`/courses/${courseId}/labs/${labId}`);
   const { loading, missing, error, labs, markDone, retry } = useCourseLabs(courseId);
   const lab = labs.find((item) => String(item.id) === String(labId) || item.slug === labId);
+
+  // Guests must log in before opening a lab — the instant local check avoids
+  // a flash of real content while the authoritative useAuth() call is still
+  // in flight.
+  useEffect(() => {
+    if (!authClient.peekUserId()) router.replace(`/login?next=${nextParam}`);
+  }, [router, nextParam]);
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace(`/login?next=${nextParam}`);
+  }, [authLoading, user, router, nextParam]);
 
   useEffect(() => {
     if (lab && String(lab.id) !== String(labId)) router.replace(`/courses/${courseId}/labs/${lab.id}`);
   }, [lab, labId, courseId, router]);
 
+  if (authLoading || !user) return <PageLoading label="Loading lab…" />;
   if (loading) return <PageLoading label="Loading lab…" />;
   if (error) return <PageError message={`Could not load this lab: ${error}`} onRetry={retry} />;
   if (missing || !lab) notFound();
