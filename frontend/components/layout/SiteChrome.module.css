@@ -27,3 +27,9 @@
   position: relative;
   box-sizing: border-box;
 }
+
+.landingMain {
+  padding-top: 0;
+  position: relative;
+  box-sizing: border-box;
+}
