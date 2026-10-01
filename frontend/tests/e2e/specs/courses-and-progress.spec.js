@@ -33,23 +33,35 @@ test('My Learning shows the not-started state before any lab is solved', async (
 });
 
 test('solving a lab from the table updates the row, the counters, and My Learning', async ({ page }) => {
-  await page.goto('/courses/shell-101');
-  const row = page.locator('tr', { hasText: 'Terminal Fundamentals & Navigation' });
+  let releaseProgress;
+  const progressGate = new Promise((resolve) => { releaseProgress = resolve; });
+  await page.route('**/rest/v1/progress*', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    await progressGate;
+    return route.fulfill({ json: [] });
+  });
 
-  // toggleSolveStatus (CourseDetail.jsx) updates the row optimistically
-  // *then* awaits the `progress` upsert — wait for that request to actually
-  // land before navigating away, instead of racing it.
-  const write = page.waitForResponse((res) => res.url().includes('/api/progress/') && res.request().method() === 'PUT');
-  await row.getByTitle('Not Started').click();
-  await write;
+  try {
+    await page.goto('/courses/shell-101');
+    const row = page.locator('tr', { hasText: 'Terminal Fundamentals & Navigation' });
 
-  await expect(row.getByTitle('Completed (click to toggle)')).toBeVisible();
-  await expect(page.getByText('1 / 12 Solved')).toBeVisible();
-  await expect(page.getByText('1 / 12 (8%)')).toBeVisible(); // round(1/12 * 100)
+    // Finish the write before releasing the stale initial read; it must not
+    // replace the optimistic progress state with an empty map.
+    const write = page.waitForResponse((res) => res.url().includes('/api/progress/') && res.request().method() === 'PUT');
+    await row.getByTitle('Not Started').click();
+    expect((await write).status()).toBe(204);
+    releaseProgress();
 
-  await page.goto('/my-learning');
-  await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
-  await expect(page.getByText('1 of 12 lessons completed')).toBeVisible();
-  const stat = page.locator('div').filter({ has: page.getByText('Lessons mastered', { exact: true }) }).last();
-  await expect(stat.locator('dd')).toHaveText('1');
+    await expect(row.getByTitle('Completed (click to toggle)')).toBeVisible();
+    await expect(page.getByText('1 / 12 Solved')).toBeVisible();
+    await expect(page.getByText('1 / 12 (8%)')).toBeVisible(); // round(1/12 * 100)
+
+    await page.goto('/my-learning');
+    await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
+    await expect(page.getByText('1 of 12 lessons completed')).toBeVisible();
+    const stat = page.locator('div').filter({ has: page.getByText('Lessons mastered', { exact: true }) }).last();
+    await expect(stat.locator('dd')).toHaveText('1');
+  } finally {
+    releaseProgress();
+  }
 });

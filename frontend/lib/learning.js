@@ -100,7 +100,7 @@ export function toDisplayLab(lesson, progressMap = new Map()) {
     commands: content?.commands || [],
     shortObjective: content?.short_objective || lesson.objectives?.[0] || '',
     scenario: content?.scenario || '',
-    steps: (content?.steps || []).map((step) => ({ id: step.id, text: step.text, targetCmd: step.target_cmd || '' })),
+    steps: content ? (content.steps || []).map((step) => ({ id: step.id, text: step.text, targetCmd: step.target_cmd || '' })) : null,
     commandSyntax: (content?.command_syntax || []).map((row) => ({ cmd: row.command, desc: row.description })),
     examples: content?.examples || [],
     hint: content?.hint || lesson.test_template?.hint || '',
