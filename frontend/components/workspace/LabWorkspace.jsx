@@ -5,7 +5,11 @@ import Link from 'next/link';
 import { useRouter, notFound } from 'next/navigation';
 import { useCourseLabs } from '@/lib/courseLabs';
 import { PageError, PageLoading } from '@/components/shared/Loading';
+import { checkSolution, createSession, endSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
 import styles from './LabWorkspace.module.css';
+
+const HOME = '/home/student';
+const shortCwd = (path) => (!path ? '~' : path === HOME ? '~' : path.startsWith(`${HOME}/`) ? `~${path.slice(HOME.length)}` : path);
 
 // Loads the course's labs from the database (see lib/courseLabs.js) and hands
 // them to the workspace below. /labs/<n> is the lab's position; a lab slug in
@@ -92,16 +96,45 @@ function Workspace({ courseId, labId, labs, markDone }) {
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [instanceStatus, setInstanceStatus] = useState('running'); // 'running' | 'stopped' | 'restarting'
+  const [instanceStatus, setInstanceStatus] = useState(sandboxEnabled ? 'restarting' : 'stopped'); // 'running' | 'stopped' | 'restarting'
   const [isMaximized, setIsMaximized] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const sessionIdRef = useRef(null);
 
   useEffect(() => {
     setShowHint(false);
   }, [labId]);
 
+  // Start instance: opens a real sandbox session via the backend API.
+  async function handleStartInstance() {
+    if (!sandboxEnabled) {
+      setInstanceStatus('stopped');
+      return;
+    }
+    setInstanceStatus('restarting');
+    setTerminalLogs([{ type: 'output', text: 'Booting container instance...' }]);
+    try {
+      const session = await createSession(currentLab.lessonId);
+      sessionIdRef.current = session.sessionId;
+      setCwd(session.cwd);
+      setInstanceStatus('running');
+      setTerminalLogs((prev) => [
+        ...prev,
+        { type: 'output', text: `BashLab Cloud Shell (Ready).\nWorkspace: ${session.cwd}\nFocus commands for this lab: ${currentLab.commands.join(', ')}` }
+      ]);
+      inputRef.current?.focus();
+    } catch (error) {
+      setInstanceStatus('stopped');
+      setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Could not start the sandbox: ${error.message}` }]);
+    }
+  }
+
   // Red button: Stop / Toggle instance
   function handleToggleStopInstance() {
     if (instanceStatus === 'running' || instanceStatus === 'restarting') {
+      if (sessionIdRef.current) endSession(sessionIdRef.current);
+      sessionIdRef.current = null;
       setInstanceStatus('stopped');
       setTerminalLogs((prev) => [
         ...prev,
@@ -115,38 +148,30 @@ function Workspace({ courseId, labId, labs, markDone }) {
     }
   }
 
-  // Start instance
-  function handleStartInstance() {
+  // Yellow button: Restart instance (resets the sandbox's filesystem/cwd, same session).
+  async function handleRestartInstance() {
+    if (!sessionIdRef.current) return handleStartInstance();
     setInstanceStatus('restarting');
-    setTerminalLogs([
-      {
-        type: 'output',
-        text: `Booting container instance...\n[  0.020] Loading kernel image (Ubuntu 24.04 LTS POSIX sandbox)\n[  0.110] Mounting /home/learner/workspace [OK]\n[  0.250] Initializing bash shell session [OK]\n\nBashLab Cloud Shell v2.4 (Ready).\nFocus commands for this lab: ${currentLab.commands.join(', ')}`
-      }
-    ]);
-    setTimeout(() => {
+    setTerminalLogs((prev) => [...prev, { type: 'output', text: '\n[System] Restarting sandbox container instance...' }]);
+    try {
+      const session = await resetSession(sessionIdRef.current);
+      setCwd(session.cwd);
       setInstanceStatus('running');
-      setCurrentDir('/home/learner/workspace');
+      setTerminalLogs((prev) => [...prev, { type: 'output', text: 'Instance restarted successfully.' }]);
       inputRef.current?.focus();
-    }, 500);
+    } catch (error) {
+      setInstanceStatus('stopped');
+      setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Restart failed: ${error.message}` }]);
+    }
   }
 
-  // Yellow button: Restart instance
-  function handleRestartInstance() {
-    setInstanceStatus('restarting');
-    setTerminalLogs((prev) => [
-      ...prev,
-      {
-        type: 'output',
-        text: `\n[System] Restarting sandbox container instance...\n[  0.010] Terminating lingering child processes [OK]\n[  0.120] Resetting working directory state [OK]\n[  0.260] POSIX environment reinitialized [OK]\nInstance restarted successfully.`
-      }
-    ]);
-    setTimeout(() => {
-      setInstanceStatus('running');
-      setCurrentDir('/home/learner/workspace');
-      inputRef.current?.focus();
-    }, 600);
-  }
+  // Open a sandbox session as soon as the lab loads; close it on the way out
+  // (lab change or navigating away) so containers do not leak.
+  useEffect(() => {
+    handleStartInstance();
+    return () => { if (sessionIdRef.current) endSession(sessionIdRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Green button: Maximize / Minimize
   function handleToggleMaximize() {
@@ -176,16 +201,11 @@ function Workspace({ courseId, labId, labs, markDone }) {
   }
 
   // Terminal state
-  const [currentDir, setCurrentDir] = useState('/home/learner/workspace');
+  const [cwd, setCwd] = useState(HOME);
   const [terminalInput, setTerminalInput] = useState('');
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [cmdHistory, setCmdHistory] = useState([]);
-  const [terminalLogs, setTerminalLogs] = useState([
-    {
-      type: 'output',
-      text: `BashLab Cloud Shell v2.4 (Ubuntu 24.04 LTS x86_64)\nWorkspace: /home/learner/workspace\nType "help" for a list of commands. Focus commands for this lab: ${currentLab.commands.join(', ')}`
-    }
-  ]);
+  const [terminalLogs, setTerminalLogs] = useState([]);
 
   const terminalEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -214,22 +234,46 @@ function Workspace({ courseId, labId, labs, markDone }) {
     });
   }
 
-  // Check solution button
-  function handleCheckSolution() {
+  // Confirms the lab as done in progress, celebrating in the terminal log.
+  function celebrate(allIds) {
+    if (allIds) setCompletedSteps(allIds);
+    setIsLabSolved(true);
+    markDone(currentLab).then(({ error }) => {
+      if (error) setTerminalLogs((prev) => [...prev, { type: 'output', text: `[warning] Your progress could not be saved: ${error.message}` }]);
+    });
+  }
+
+  // Check solution button: runs the server-owned verifier against the real
+  // sandbox when this lab has one; otherwise falls back to the learner's own
+  // checklist (manual completion — there is nothing server-side to verify).
+  async function handleCheckSolution() {
+    if (currentLab.verifier && sessionIdRef.current) {
+      setChecking(true);
+      try {
+        const result = await checkSolution(sessionIdRef.current, currentLab.verifier);
+        if (result.passed) {
+          celebrate(currentLab.steps?.map((s) => s.id));
+          setTerminalLogs((prev) => [
+            ...prev,
+            { type: 'output', text: `\n[VERIFICATION PASSED] All ${result.checks.length} validation checks succeeded!\n✓ Sandbox state matches expected solution.\n🎉 Lab #${currentLab.id} completed.` }
+          ]);
+        } else {
+          const failed = result.checks.filter((c) => !c.passed).map((c) => `✗ ${c.name}`).join('\n');
+          setTerminalLogs((prev) => [...prev, { type: 'output', text: `\n[VERIFICATION FAILED] Not solved yet:\n${failed}` }]);
+        }
+      } catch (error) {
+        setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Check failed: ${error.message}` }]);
+      } finally {
+        setChecking(false);
+      }
+      return;
+    }
     if (currentLab.steps) {
       const allIds = currentLab.steps.map((s) => s.id);
-      setCompletedSteps(allIds);
-      setIsLabSolved(true);
-      markDone(currentLab).then(({ error }) => {
-        if (error) setTerminalLogs((prev) => [...prev, { type: 'output', text: `
-[warning] Your progress could not be saved: ${error.message}` }]);
-      });
+      celebrate(allIds);
       setTerminalLogs((prev) => [
         ...prev,
-        {
-          type: 'output',
-          text: `\n[VERIFICATION PASSED] All ${allIds.length} validation checks succeeded!\n✓ Sandbox state matches expected solution.\n🎉 Lab #${currentLab.id} completed.`
-        }
+        { type: 'output', text: `\n[VERIFICATION PASSED] All ${allIds.length} checklist items marked complete.\n🎉 Lab #${currentLab.id} completed.` }
       ]);
     }
   }
@@ -247,161 +291,54 @@ function Workspace({ courseId, labId, labs, markDone }) {
     }
   }
 
-  // Reset terminal
-  function handleReset() {
-    setTerminalLogs([
-      {
-        type: 'output',
-        text: `Session reset.\nWorkspace: /home/learner/workspace\nType "help" for available commands.`
-      }
-    ]);
-    setCurrentDir('/home/learner/workspace');
-  }
-
-  // Command execution engine
-  function handleCommandSubmit(e) {
+  // Command execution engine — every line goes to the real sandbox (Docker +
+  // Bubblewrap on the backend); nothing is interpreted client-side except the
+  // terminal-local `clear` shortcut.
+  async function handleCommandSubmit(e) {
     e.preventDefault();
     const rawCmd = terminalInput.trim();
-    if (!rawCmd) return;
+    if (!rawCmd || busy) return;
 
-    // Add to history
     setCmdHistory((prev) => [...prev, rawCmd]);
     setHistoryIndex(-1);
+    setTerminalInput('');
 
-    const promptText = `learner@bashlab:${currentDir.replace('/home/learner', '~')}$`;
-    const newLogs = [...terminalLogs, { type: 'cmd', prompt: promptText, text: rawCmd }];
+    if (rawCmd === 'clear') {
+      setTerminalLogs([]);
+      return;
+    }
 
-    const [cmd, ...args] = rawCmd.split(' ');
+    const promptText = `student@bashlab:${shortCwd(cwd)}$`;
+    setTerminalLogs((prev) => [...prev, { type: 'cmd', prompt: promptText, text: rawCmd }]);
 
-    // Match steps for auto-check
+    // Lets the checklist track along with real commands when this lab has no
+    // server verifier (manual-grading labs still deserve live feedback).
     if (currentLab.steps) {
       currentLab.steps.forEach((step) => {
-        if (rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase())) {
-          if (!completedSteps.includes(step.id)) {
-            setCompletedSteps((prev) => [...prev, step.id]);
-          }
+        if (step.targetCmd && rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()) && !completedSteps.includes(step.id)) {
+          setCompletedSteps((prev) => [...prev, step.id]);
         }
       });
     }
 
-    // Evaluate command
-    if (cmd === 'clear') {
-      setTerminalLogs([]);
-      setTerminalInput('');
+    if (!sessionIdRef.current) {
+      setTerminalLogs((prev) => [...prev, { type: 'output', text: '[error] No active sandbox session. Click the red dot or "Start Instance" first.' }]);
       return;
-    } else if (cmd === 'help') {
-      newLogs.push({
-        type: 'output',
-        text: 'Available Commands:\n  pwd, ls [-la], cd [path], cat [file], head, tail, grep, awk, cut, sed, chmod, touch, mkdir, cp, mv, rm, whoami, date, echo, clear, help\nPress Ctrl+L to clear screen.'
-      });
-    } else if (cmd === 'pwd') {
-      newLogs.push({ type: 'output', text: currentDir });
-    } else if (cmd === 'whoami') {
-      newLogs.push({ type: 'output', text: 'learner (uid=1000 gid=1000 groups=sudo,docker)' });
-    } else if (cmd === 'date') {
-      newLogs.push({ type: 'output', text: new Date().toUTCString() });
-    } else if (cmd === 'cd') {
-      const target = args[0] || '~';
-      if (target === '~' || target === '/home/learner') {
-        setCurrentDir('/home/learner');
-        newLogs.push({ type: 'output', text: '' });
-      } else if (target === '..' || target === '../') {
-        const parts = currentDir.split('/').filter(Boolean);
-        parts.pop();
-        setCurrentDir('/' + parts.join('/'));
-        newLogs.push({ type: 'output', text: '' });
-      } else if (target.startsWith('/')) {
-        setCurrentDir(target);
-        newLogs.push({ type: 'output', text: '' });
-      } else {
-        const next = `${currentDir}/${target}`.replace(/\/+/g, '/');
-        setCurrentDir(next);
-        newLogs.push({ type: 'output', text: '' });
-      }
-    } else if (cmd === 'ls') {
-      const hasAll = rawCmd.includes('-a') || rawCmd.includes('-la') || rawCmd.includes('-lah');
-      const hasLong = rawCmd.includes('-l') || rawCmd.includes('-la') || rawCmd.includes('-lah');
-
-      if (hasAll && hasLong) {
-        newLogs.push({
-          type: 'output',
-          text: `total 48\ndrwxr-xr-x 6 learner learner 4096 Sep 29 22:00 .\ndrwxr-xr-x 3 learner learner 4096 Sep 29 21:00 ..\n-rw-r--r-- 1 learner learner  220 Sep 29 21:00 .bashrc\n-rw-r--r-- 1 learner learner  807 Sep 29 21:00 .profile\n-rw-r--r-- 1 learner learner  145 Sep 29 21:15 app.env\n-rw-r--r-- 1 learner learner 3420 Sep 29 21:30 audit.log\n-rwxr-xr-x 1 learner learner  512 Sep 29 21:45 deploy.sh\n-rw------- 1 learner learner 1675 Sep 29 21:10 id_rsa\n-rw-r--r-- 1 learner learner  940 Sep 29 21:20 package.json\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 src\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 tests`
-        });
-      } else if (hasLong) {
-        newLogs.push({
-          type: 'output',
-          text: `total 36\n-rw-r--r-- 1 learner learner  145 Sep 29 21:15 app.env\n-rw-r--r-- 1 learner learner 3420 Sep 29 21:30 audit.log\n-rwxr-xr-x 1 learner learner  512 Sep 29 21:45 deploy.sh\n-rw------- 1 learner learner 1675 Sep 29 21:10 id_rsa\n-rw-r--r-- 1 learner learner  940 Sep 29 21:20 package.json\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 src\ndrwxr-xr-x 2 learner learner 4096 Sep 29 21:00 tests`
-        });
-      } else if (hasAll) {
-        newLogs.push({
-          type: 'output',
-          text: `.  ..  .bashrc  .profile  app.env  audit.log  deploy.sh  id_rsa  package.json  src  tests`
-        });
-      } else {
-        newLogs.push({
-          type: 'output',
-          text: `app.env  audit.log  deploy.sh  id_rsa  package.json  src/  tests/`
-        });
-      }
-    } else if (cmd === 'cat') {
-      const targetFile = args[0] || '';
-      if (targetFile.includes('app.env') || targetFile.includes('env')) {
-        newLogs.push({
-          type: 'output',
-          text: `PORT=3000\nNODE_ENV=production\nDATABASE_URL=postgres://db-local:5432/bashlab\nVERBOSE=true\nLOG_LEVEL=info`
-        });
-      } else if (targetFile.includes('audit.log') || targetFile.includes('log')) {
-        newLogs.push({
-          type: 'output',
-          text: `2026-09-29T21:00:01Z user=alex ip=192.168.1.100 status=200 action=login\n2026-09-29T21:00:05Z user=root ip=10.0.0.1 status=401 action=ssh_auth\n2026-09-29T21:00:12Z user=alex ip=192.168.1.100 status=200 action=fetch_course\n2026-09-29T21:00:25Z user=guest ip=172.16.0.4 status=403 action=admin_access\n2026-09-29T21:00:44Z user=root ip=10.0.0.1 status=401 action=ssh_auth`
-        });
-      } else {
-        newLogs.push({
-          type: 'output',
-          text: `# Sample file: ${targetFile}\n// Created for BashLab interactive practice.\nconsole.log("Ready.");`
-        });
-      }
-    } else if (cmd === 'head') {
-      newLogs.push({
-        type: 'output',
-        text: `2026-09-29T21:00:01Z user=alex ip=192.168.1.100 status=200 action=login\n2026-09-29T21:00:05Z user=root ip=10.0.0.1 status=401 action=ssh_auth\n2026-09-29T21:00:12Z user=alex ip=192.168.1.100 status=200 action=fetch_course`
-      });
-    } else if (cmd === 'tail') {
-      newLogs.push({
-        type: 'output',
-        text: `2026-09-29T21:05:10Z user=alex ip=192.168.1.100 status=200 action=terminal_exec\n2026-09-29T21:05:44Z user=system status=200 action=health_check_ok`
-      });
-    } else if (cmd === 'echo') {
-      newLogs.push({ type: 'output', text: args.join(' ').replace(/^["']|["']$/g, '') });
-    } else if (cmd === 'chmod') {
-      newLogs.push({
-        type: 'output',
-        text: `Permissions updated successfully: ${args.join(' ')}`
-      });
-    } else if (cmd === 'mkdir') {
-      newLogs.push({
-        type: 'output',
-        text: `Directory created: ${args.join(' ')}`
-      });
-    } else if (cmd === 'touch') {
-      newLogs.push({
-        type: 'output',
-        text: `File updated: ${args.join(' ')}`
-      });
-    } else if (cmd.includes('grep')) {
-      newLogs.push({
-        type: 'output',
-        text: `app.env:3: DATABASE_URL=postgres://db-local:5432/bashlab\napp.env:5: LOG_LEVEL=info`
-      });
-    } else {
-      newLogs.push({
-        type: 'output',
-        text: `[sandbox] executed: ${rawCmd}`
-      });
     }
 
-    setTerminalLogs(newLogs);
-    setTerminalInput('');
+    setBusy(true);
+    try {
+      const result = await runCommand(sessionIdRef.current, rawCmd);
+      if (result.cwdUpdated) setCwd(result.cwd);
+      const text = [result.stdout, result.stderr].filter(Boolean).join('\n');
+      const warning = result.quotaExceeded ? `\n[warning] ${result.quotaError}` : '';
+      setTerminalLogs((prev) => [...prev, { type: 'output', text: `${text}${warning}` }]);
+    } catch (error) {
+      setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] ${error.message}` }]);
+    } finally {
+      setBusy(false);
+      inputRef.current?.focus();
+    }
   }
 
   // Handle arrow up / arrow down command history
@@ -538,11 +475,12 @@ function Workspace({ courseId, labId, labs, markDone }) {
             type="button"
             className={styles.checkSolutionBtn}
             onClick={handleCheckSolution}
+            disabled={checking}
             aria-label="Check solution"
             title="Validate completed tasks and check solution"
           >
             <span className="material-symbols-outlined">verified</span>
-            <span>Check Solution</span>
+            <span>{checking ? 'Checking…' : 'Check Solution'}</span>
           </button>
         </div>
       </header>
@@ -923,21 +861,23 @@ function Workspace({ courseId, labId, labs, markDone }) {
               <div className={styles.stoppedBanner}>
                 <div className={styles.stoppedInfo}>
                   <span className="material-symbols-outlined text-base">power_off</span>
-                  <span>Instance is stopped. Start instance to run commands.</span>
+                  <span>{sandboxEnabled ? 'Instance is stopped. Start instance to run commands.' : 'Sandbox not configured on this environment — mark steps complete manually below.'}</span>
                 </div>
-                <button
-                  type="button"
-                  className={styles.startInstanceBtn}
-                  onClick={handleStartInstance}
-                >
-                  <span className="material-symbols-outlined text-xs">play_arrow</span>
-                  <span>Start Instance</span>
-                </button>
+                {sandboxEnabled && (
+                  <button
+                    type="button"
+                    className={styles.startInstanceBtn}
+                    onClick={handleStartInstance}
+                  >
+                    <span className="material-symbols-outlined text-xs">play_arrow</span>
+                    <span>Start Instance</span>
+                  </button>
+                )}
               </div>
             ) : (
               <form onSubmit={handleCommandSubmit} className={styles.termInputForm}>
                 <span className={styles.termPrompt}>
-                  learner@bashlab:{currentDir.replace('/home/learner', '~')}$
+                  student@bashlab:{shortCwd(cwd)}$
                 </span>
                 <input
                   ref={inputRef}
@@ -946,8 +886,8 @@ function Workspace({ courseId, labId, labs, markDone }) {
                   value={terminalInput}
                   onChange={(e) => setTerminalInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={instanceStatus === 'restarting' ? 'Instance booting...' : 'type a bash command...'}
-                  disabled={instanceStatus === 'restarting'}
+                  placeholder={instanceStatus === 'restarting' ? 'Instance booting...' : busy ? 'running…' : 'type a bash command...'}
+                  disabled={instanceStatus === 'restarting' || busy}
                   aria-label="Terminal command"
                   autoComplete="off"
                   spellCheck={false}
