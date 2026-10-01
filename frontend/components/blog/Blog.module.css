@@ -38,7 +38,7 @@
 }
 
 .title {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
   font-size: clamp(2rem, 3.5vw, 2.75rem);
   font-weight: 700;
   line-height: 1.2;
@@ -223,7 +223,7 @@
 }
 
 .featuredTitle {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
   font-size: 1.45rem;
   font-weight: 700;
   color: #0F172A;
@@ -308,7 +308,7 @@
 
 /* 2. Title */
 .cardTitle {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
   font-size: 1.1rem;
   font-weight: 600;
   color: #0F172A;
@@ -400,7 +400,7 @@
 .detailTitle {
   max-width: 780px;
   margin: 0 auto 1rem;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
   font-size: clamp(1.85rem, 3.2vw, 2.5rem);
   font-weight: 700;
   color: #FFFFFF;
@@ -636,7 +636,7 @@
 }
 
 .relatedTitle {
-  font-family: 'Inter', sans-serif !important;
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif) !important;
   font-size: 1.05rem !important;
   font-weight: 600 !important;
   color: #0F172A !important;
