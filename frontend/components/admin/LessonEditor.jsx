@@ -361,7 +361,7 @@ function StructuredForm({ form, set, content, setContent }) {
           <div className={editor.itemRow} key={step.id}>
             <span className={editor.rowIndex}>{index + 1}</span>
             <div style={{ display: 'grid', gap: 6 }}>
-              <textarea rows={2} aria-label={`Step ${index + 1}`} value={step.text} onChange={(event) => updateAt('steps', index, { text: event.target.value })} placeholder="Use `backticks` for inline commands" />
+              <textarea className={editor.stepText} rows={2} aria-label={`Step ${index + 1}`} value={step.text} onChange={(event) => updateAt('steps', index, { text: event.target.value })} placeholder="Use `backticks` for inline commands" />
               <label className={styles.field} style={{ fontSize: 12 }}>Auto-tick when the learner runs (optional)
                 <input value={step.target_cmd || ''} onChange={(event) => updateAt('steps', index, { target_cmd: event.target.value || undefined })} placeholder="e.g. ls -la" />
               </label>
