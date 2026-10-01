@@ -55,14 +55,14 @@ export default function Navbar({ isTransparent = false }) {
 
   return (
     <header
-      style={{ height: '64px' }}
-      className={`fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 ${
+      className={`fixed top-0 left-0 w-full z-50 flex flex-col transition-all duration-200 ${
         isTransparent
           ? 'border-b border-[#26313d]/60 bg-[#111720]/35 backdrop-blur-md'
           : 'border-b border-[#26313d] bg-[#111720]/95 shadow-[0_8px_28px_rgba(0,0,0,0.3)] backdrop-blur-xl'
       }`}
       role="banner"
     >
+      <div style={{ height: '64px' }} className="w-full px-6 lg:px-8 flex items-center flex-none">
       <div className="w-full max-w-[1340px] mx-auto flex items-center justify-between">
         <div className="flex items-center gap-7">
           <Link href="/" className="flex items-center" aria-label="BashLab home">
@@ -159,6 +159,7 @@ export default function Navbar({ isTransparent = false }) {
             </span>
           </button>
         </div>
+      </div>
       </div>
 
       {mobileOpen && (
