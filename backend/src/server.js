@@ -77,6 +77,12 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   // share a budget with sandbox commands, so they are mounted first.
   if (authApi) app.use('/api/auth', createAuthRouter({ ...authApi, origins }));
 
+  // Progress + admin writes (own body parser, own auth, own — much higher —
+  // rate limits): before the shared limiter below, which is sized for sandbox
+  // commands and would throttle an admin editing content.
+  if (auth && content) {
+    app.use('/api', createContentRouter({ service: content.service, authenticate: auth.authenticate, isAdmin: auth.isAdmin, limits: content.limits }));
+  }
   app.use('/api', rateLimiter(rateMax));
   if (!sandbox) {
     app.use('/api/sessions', (_req, _res, next) => next(new HttpError(503, 'SANDBOX_DISABLED', 'The practice sandbox is not enabled on this server')));
@@ -110,9 +116,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     }
     next();
   };
-  // Progress + admin writes (own body parser, own auth): before the global one.
   if (auth && content) {
-    app.use('/api', createContentRouter({ service: content.service, authenticate: auth.authenticate, isAdmin: auth.isAdmin }));
     // An admin stopping a learner's session also ends the sandbox behind it.
     app.on('practice-session-stopped', (sandboxSessionId) => {
       if (!sandboxSessionId || !manager.sessions.has(sandboxSessionId)) return;
@@ -216,7 +220,13 @@ function servicesFromEnv() {
     const admin = createSupabaseAdmin();
     const authenticate = requireAuth(admin);
     return {
-      content: { service: createContentService({ admin, userClient: createSupabaseUserFactory() }) },
+      content: {
+        service: createContentService({ admin, userClient: createSupabaseUserFactory() }),
+        limits: {
+          ...(process.env.CONTENT_RATE_LIMIT_IP && { perIp: Number(process.env.CONTENT_RATE_LIMIT_IP) }),
+          ...(process.env.CONTENT_RATE_LIMIT_USER && { perUser: Number(process.env.CONTENT_RATE_LIMIT_USER) }),
+        },
+      },
       auth: {
         authenticate,
         isAdmin: (userId) => isActiveAdmin(admin, userId),

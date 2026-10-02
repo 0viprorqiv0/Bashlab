@@ -45,11 +45,11 @@ function fakeAdmin(tables = {}) {
   return { from, writes };
 }
 
-async function start(t, { admin = fakeAdmin(), rpc = [] } = {}) {
+async function start(t, { admin = fakeAdmin(), rpc = [], limits, rateMax = 1000 } = {}) {
   const userClient = (token) => ({ rpc: async (name, args) => { rpc.push({ token, name, args }); return { data: null, error: null }; } });
   const service = createContentService({ admin, userClient });
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'bashlab-content-'));
-  const server = createApp({ manager: new SessionManager({ root }), rateMax: 1000, auth: fakeAuth, content: { service }, sandbox: false })
+  const server = createApp({ manager: new SessionManager({ root }), rateMax, auth: fakeAuth, content: { service, limits }, sandbox: false })
     .listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   t.after(async () => { await new Promise((resolve) => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
@@ -183,4 +183,19 @@ test('the API sends hardening headers and hides its stack', async (t) => {
   assert.match(res.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal(res.headers.get('referrer-policy'), 'no-referrer');
   assert.ok(res.headers.get('strict-transport-security'));
+});
+
+test('writes are not throttled by the shared sandbox limiter, but have their own per-user and per-IP limits', async (t) => {
+  // rateMax=2 would block a third call if the shared /api limiter applied.
+  const { call } = await start(t, { rateMax: 2, limits: { perUser: 5, perIp: 8 } });
+  for (let i = 0; i < 5; i++) assert.equal((await call('admin', 'POST', '/api/admin/courses', { title: 'x', slug: `c-${i}` })).status, 201);
+  const limited = await call('admin', 'POST', '/api/admin/courses', { title: 'x', slug: 'c-6' });
+  assert.equal(limited.status, 429);
+  assert.ok(limited.headers.get('retry-after'));
+  // another user is unaffected by admin's budget (until the per-IP cap)
+  assert.equal((await call('alice', 'POST', '/api/admin/courses', { title: 'x', slug: 'c-7' })).status, 403);
+  // flooding with bad tokens is stopped per IP before it can cost anything
+  let last;
+  for (let i = 0; i < 6; i++) last = await call(null, 'PUT', `/api/progress/${ID}`, { status: 'done' });
+  assert.equal(last.status, 429);
 });
