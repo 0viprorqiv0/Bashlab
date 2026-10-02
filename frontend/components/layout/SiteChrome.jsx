@@ -18,7 +18,7 @@ export default function SiteChrome({ children }) {
   return (
     <AuthProvider>
       {!isWorkspace && <SmoothScroll wheelMultiplier={pathname === '/' ? 2 : 1} />}
-      <Navbar />
+      {!isWorkspace && <Navbar />}
       <div className={styles.chromeContainer}>
         <main
           className={
