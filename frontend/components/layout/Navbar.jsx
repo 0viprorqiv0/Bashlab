@@ -33,6 +33,7 @@ export default function Navbar({ isTransparent = false }) {
 
   const navLinks = [
     { href: '/courses', label: 'Courses' },
+    { href: '/subscription', label: 'Pricing' },
     { href: '/blog', label: 'Blog' },
   ];
 
@@ -55,8 +56,8 @@ export default function Navbar({ isTransparent = false }) {
 
   return (
     <header
-      style={{ height: '64px' }}
-      className="fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 border-b border-[#26313d] bg-[#111720] shadow-[0_8px_28px_rgba(0,0,0,0.3)]"
+      style={{ height: '64px', zIndex: 1000 }}
+      className="fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 border-b border-[#26313d] bg-[#111720]/95 backdrop-blur-md shadow-[0_8px_28px_rgba(0,0,0,0.3)]"
       role="banner"
     >
       <div className="w-full max-w-[1340px] mx-auto flex items-center justify-between">

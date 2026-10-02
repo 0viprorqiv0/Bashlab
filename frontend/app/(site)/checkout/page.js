@@ -6,10 +6,31 @@ import { useSearchParams } from 'next/navigation';
 import styles from './checkout.module.css';
 import { supabase } from '@/lib/supabaseClient';
 
+const COURSE_DETAILS = {
+  'shell-101': {
+    title: 'Shell 101 — Bash Basics',
+    desc: 'Command line fundamentals, navigation, directory inspection & pipes',
+    price: 29,
+  },
+  'shell-201': {
+    title: 'Shell 201 — Pipelines & Streams',
+    desc: 'Standard I/O streams, exit codes, process management & filters',
+    price: 39,
+  },
+  'linux-security': {
+    title: 'Linux Permissions & Security',
+    desc: 'Permissions, sudo privilege boundaries, access controls & security hygiene',
+    price: 39,
+  },
+};
+
 function CheckoutContent() {
   const searchParams = useSearchParams();
+  const courseParam = searchParams.get('course');
   const planParam = searchParams.get('plan') || 'pro';
   const cycleParam = searchParams.get('cycle') || 'annual';
+
+  const selectedCourse = courseParam && COURSE_DETAILS[courseParam] ? COURSE_DETAILS[courseParam] : null;
 
   // Selected plan and billing cycle
   const [billingCycle, setBillingCycle] = useState(cycleParam === 'monthly' ? 'monthly' : 'annual');
@@ -66,7 +87,9 @@ function CheckoutContent() {
 
   // Pricing calculations
   const baseRate = planType === 'team' ? 29 : 9;
-  const rawSubtotal = billingCycle === 'annual' ? (planType === 'team' ? 290 : 89) : baseRate;
+  const rawSubtotal = selectedCourse
+    ? selectedCourse.price
+    : (billingCycle === 'annual' ? (planType === 'team' ? 290 : 89) : baseRate);
   const discountAmount = couponApplied ? rawSubtotal * couponDiscount : 0;
   const finalTotal = Math.max(0, rawSubtotal - discountAmount);
 
@@ -214,10 +237,6 @@ function CheckoutContent() {
                 />
               </button>
             </div>
-
-            <div className={styles.quickSubtext}>
-              1-click instant biometric authorization
-            </div>
           </div>
 
           {/* Divider */}
@@ -332,13 +351,19 @@ function CheckoutContent() {
               className={styles.btnSubmitPayment}
               disabled={isSubmitting}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>check_circle</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
               <span>{isSubmitting ? 'Processing...' : `Pay $${finalTotal.toFixed(2)} USD`}</span>
             </button>
 
-            <div className={styles.securityGuarantee}>
-              <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-              256-bit SSL encryption · PCI-DSS Level 1 compliant
+            <div className={styles.stripeSecurityFooter}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#68dfa0', flexShrink: 0 }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span>Guaranteed safe checkout powered by</span>
+              <img src="/stripe-logo.svg" alt="Stripe" className={styles.stripeLogoImg} />
             </div>
           </form>
         </section>
@@ -356,13 +381,19 @@ function CheckoutContent() {
           <div className={styles.tierCard}>
             <div>
               <span className={styles.tierBadge}>
-                {planType === 'team' ? 'TEAM ACCESS' : 'PRO HACKER'}
+                {selectedCourse
+                  ? 'COURSE ENROLLMENT'
+                  : (planType === 'team' ? 'TEAM ACCESS' : 'ALL-ACCESS PASS')}
               </span>
               <div className={styles.tierName}>
-                {planType === 'team' ? 'Linux Team & University' : 'Pro Linux Access'}
+                {selectedCourse
+                  ? selectedCourse.title
+                  : (planType === 'team' ? 'Linux Team & University' : 'All Courses Pass (Shell 101, 201 & Security)')}
               </div>
               <div className={styles.tierDesc}>
-                {billingCycle === 'annual' ? 'Billed annually (Save 20%)' : 'Billed monthly'}
+                {selectedCourse
+                  ? selectedCourse.desc
+                  : 'Shell 101: Bash Basics · Shell 201: Streams · Linux Security'}
               </div>
             </div>
             <div className={styles.tierPrice}>
@@ -370,7 +401,9 @@ function CheckoutContent() {
                 ${rawSubtotal.toFixed(2)}
               </div>
               <div className={styles.tierPeriod}>
-                {billingCycle === 'annual' ? '/ year' : '/ month'}
+                {selectedCourse
+                  ? '/ lifetime access'
+                  : (billingCycle === 'annual' ? '/ year' : '/ month')}
               </div>
             </div>
           </div>
@@ -403,7 +436,11 @@ function CheckoutContent() {
           {/* Price Breakdown */}
           <div className={styles.breakdownList}>
             <div className={styles.breakdownRow}>
-              <span>Subscription ({billingCycle === 'annual' ? 'Annual' : 'Monthly'})</span>
+              <span>
+                {selectedCourse
+                  ? `Course (${selectedCourse.title})`
+                  : `Subscription (${billingCycle === 'annual' ? 'Annual' : 'Monthly'})`}
+              </span>
               <span>${rawSubtotal.toFixed(2)}</span>
             </div>
             {couponApplied && (
@@ -425,14 +462,6 @@ function CheckoutContent() {
               ${finalTotal.toFixed(2)} <span>USD</span>
             </div>
           </div>
-
-          {/* Perks list */}
-          <ul className={styles.featuresMiniList}>
-            <li><span className={styles.checkIcon}>✓</span> Unlimited Linux container sandboxes</li>
-            <li><span className={styles.checkIcon}>✓</span> Real-time automated task verification</li>
-            <li><span className={styles.checkIcon}>✓</span> Full access to Shell 101, 201 &amp; Linux Security</li>
-            <li><span className={styles.checkIcon}>✓</span> Verified digital certificate of completion</li>
-          </ul>
         </aside>
       </main>
 
