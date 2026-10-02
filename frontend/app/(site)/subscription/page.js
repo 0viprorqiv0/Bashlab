@@ -79,6 +79,27 @@ function SubscriptionContent() {
       isPopular: true,
       href: `/checkout?plan=individual&cycle=${billingCycle}`,
     },
+    {
+      name: 'Team & University',
+      badge: 'FOR TEAMS',
+      price: billingCycle === 'annual' ? '24' : '29',
+      period: 'per seat / month (min 5 seats)',
+      savings: 'Volume team pricing',
+      desc: 'Centralized environment for engineering teams, university security labs & bootcamp cohorts.',
+      features: [
+        'Everything in Individual for all team members',
+        'Centralized team dashboard & cohort analytics',
+        'Custom interactive challenge & scenario creator',
+        'Dedicated isolated Docker runner nodes',
+        '99.98% uptime SLA & priority support',
+        'Single Sign-On (SSO / SAML integration)',
+        'Co-branded university graduation certificates',
+      ],
+      notIncluded: [],
+      cta: 'Get Team & University',
+      isPopular: false,
+      href: `/checkout?plan=team&cycle=${billingCycle}`,
+    },
   ];
 
   // --- COMPARISON MATRIX DATA ---
@@ -90,26 +111,31 @@ function SubscriptionContent() {
           name: 'In-Browser Linux Terminal Sandbox',
           col1: 'Ephemeral (15 min)',
           col2: 'Unlimited Persistent',
+          col3: 'Dedicated Isolated Nodes',
         },
         {
           name: 'Root Privilege & Sudo Access',
           col1: 'User-level only',
           col2: 'Full root access',
+          col3: 'Full root access + Custom tools',
         },
         {
           name: 'Persistent /home Storage',
           col1: 'None',
           col2: '10 GB SSD Storage',
+          col3: '50 GB Team Storage',
         },
         {
           name: 'Concurrent Lab Instances',
           col1: '1 Instance',
           col2: '3 Concurrent Instances',
+          col3: '10 Instances / seat',
         },
         {
           name: 'Container Spooling Speed',
           col1: 'Standard (~5s)',
           col2: 'Instant Zero-Wait (<1s)',
+          col3: 'Instant Dedicated (<500ms)',
         },
       ],
     },
@@ -120,41 +146,60 @@ function SubscriptionContent() {
           name: 'Shell 101: CLI Fundamentals',
           col1: 'Full access (12 labs)',
           col2: 'Full access + Extra challenges',
+          col3: 'Full access + Cohort grading',
         },
         {
           name: 'Shell 201: Automation & Scripting',
           col1: 'Preview first 3 labs',
           col2: 'Full access (24 labs)',
+          col3: 'Full access + Team grading',
         },
         {
           name: 'Linux Security & Exploitation CTFs',
           col1: 'Community CTFs only',
           col2: '40+ Live-Fire Scenarios',
+          col3: 'All CTFs + Custom CTF Builder',
         },
         {
           name: 'AI Terminal Assistant & Hint Engine',
           col1: 'Basic hints',
           col2: 'Detailed debugging & hints',
+          col3: 'Unlimited Team AI hints',
         },
       ],
     },
     {
-      title: 'Credentials & Community',
+      title: 'Governance & Credentials',
       features: [
         {
           name: 'Verifiable Certificate of Mastery',
           col1: '✕',
-          col2: '✓ Shareable on LinkedIn & CV',
+          col2: '✓ Individual Shareable',
+          col3: '✓ Co-branded University Certs',
         },
         {
           name: 'Skill Telemetry & Mastery Graph',
           col1: 'Basic points',
           col2: 'Full competency matrix',
+          col3: 'Team Leaderboard & Admin Analytics',
         },
         {
-          name: 'Community & Office Hours',
-          col1: 'Public Discord',
+          name: 'Centralized Team Dashboard',
+          col1: '✕',
+          col2: '✕',
+          col3: '✓ Member Management & Seats',
+        },
+        {
+          name: 'Single Sign-On (SSO / SAML)',
+          col1: '✕',
+          col2: '✕',
+          col3: '✓ Okta, Google, Azure AD',
+        },
+        {
+          name: 'Support & Onboarding SLA',
+          col1: 'Community Discord',
           col2: 'VIP Lounge & Office Hours',
+          col3: 'Dedicated Slack & < 4h SLA',
         },
       ],
     },
@@ -403,13 +448,14 @@ function SubscriptionContent() {
                   <div className={styles.popularTableBadge}>RECOMMENDED</div>
                   Individual Access
                 </th>
+                <th className={styles.planColHead}>Team &amp; University</th>
               </tr>
             </thead>
             <tbody>
               {comparisonCategories.map((cat) => (
                 <React.Fragment key={cat.title}>
                   <tr className={styles.categoryRow}>
-                    <td colSpan="3" className={styles.categoryTitle}>
+                    <td colSpan="4" className={styles.categoryTitle}>
                       <div className={styles.catTitleWrap}>
                         <span>{cat.title}</span>
                       </div>
@@ -436,6 +482,15 @@ function SubscriptionContent() {
                           <span className={styles.crossIcon}>✕</span>
                         ) : (
                           <span className={styles.boldCell}>{feat.col2}</span>
+                        )}
+                      </td>
+                      <td className={styles.valueCell}>
+                        {feat.col3 === '✓' ? (
+                          <span className={styles.checkIcon}>✓</span>
+                        ) : feat.col3 === '✕' ? (
+                          <span className={styles.crossIcon}>✕</span>
+                        ) : (
+                          <span className={styles.boldCell}>{feat.col3}</span>
                         )}
                       </td>
                     </tr>

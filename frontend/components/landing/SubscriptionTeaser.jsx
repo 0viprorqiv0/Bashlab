@@ -50,6 +50,31 @@ export default function SubscriptionTeaser() {
         </svg>
       ),
     },
+    {
+      id: 'team',
+      name: 'Team & University',
+      price: '$24',
+      period: '/ seat / mo',
+      desc: 'Centralized environment for engineering teams, university labs, and security bootcamps.',
+      features: [
+        'All Individual tracks & persistent containers',
+        'Centralized dashboard & cohort analytics',
+        'Custom challenge authoring & scoring',
+        'Single Sign-On (SSO / SAML integration)',
+        'Volume team license & priority support',
+      ],
+      ctaText: 'Explore Team & University',
+      isPopular: false,
+      color: '#a78bfa',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      ),
+    },
   ];
 
   return (

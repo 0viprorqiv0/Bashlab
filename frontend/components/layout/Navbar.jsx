@@ -159,7 +159,10 @@ export default function Navbar({ isTransparent = false }) {
       </div>
 
       {mobileOpen && (
-        <div id="mobile-menu" className="md:hidden border-t border-[#343a43]/60 bg-[#0a0d14] px-6 py-4">
+        <div
+          id="mobile-menu"
+          className="absolute top-[64px] left-0 w-full md:hidden border-b border-[#343a43]/60 bg-[#0a0d14]/98 backdrop-blur-xl px-6 py-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+        >
           <nav className="flex flex-col gap-4" aria-label="Mobile navigation">
             {navLinks.map((link) => (
               <Link

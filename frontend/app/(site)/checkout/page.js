@@ -34,7 +34,7 @@ function CheckoutContent() {
 
   // Selected plan and billing cycle
   const [billingCycle, setBillingCycle] = useState(cycleParam === 'monthly' ? 'monthly' : 'annual');
-  const [planType, setPlanType] = useState('individual');
+  const [planType, setPlanType] = useState(planParam === 'team' ? 'team' : 'individual');
 
   // Customer form fields
   const [email, setEmail] = useState('');
@@ -89,9 +89,12 @@ function CheckoutContent() {
   }, []);
 
   // Pricing calculations
+  const isTeam = planType === 'team';
   const rawSubtotal = selectedCourse
     ? selectedCourse.price
-    : (billingCycle === 'annual' ? 89 : 12);
+    : (isTeam
+        ? (billingCycle === 'annual' ? 240 : 29)
+        : (billingCycle === 'annual' ? 89 : 12));
   const discountAmount = couponApplied ? rawSubtotal * couponDiscount : 0;
   const finalTotal = Math.max(0, rawSubtotal - discountAmount);
 
@@ -170,7 +173,7 @@ function CheckoutContent() {
           <h2 className={styles.successTitle}>Payment Successful!</h2>
           <p className={styles.successMsg}>
             Congratulations <strong>{fullName || email || 'Hacker'}</strong>! Your account has been upgraded to{' '}
-            <strong>Individual Access ({billingCycle})</strong>. An activation receipt was sent to <strong>{email || 'your email'}</strong>.
+            <strong>{isTeam ? 'Team & University Access' : 'Individual Access'} ({billingCycle})</strong>. An activation receipt was sent to <strong>{email || 'your email'}</strong>.
           </p>
           <div className={styles.orderIdBadge}>ORDER ID: {orderId}</div>
           <Link href="/courses" className={styles.successCtaBtn}>
@@ -194,6 +197,34 @@ function CheckoutContent() {
           src="/background/pixel-cityscape.1920x1080.mp4"
         />
         <div className={styles.bgDimOverlay} />
+      </div>
+
+      {/* Top Bar with Brand Badge & Billing Switcher */}
+      <div className={styles.topBar}>
+        <div className={styles.brandTag}>
+          <span>BashLab Checkout</span>
+          <span className={styles.brandBadge}>
+            {selectedCourse ? 'COURSE ENROLLMENT' : (isTeam ? 'TEAM & UNIVERSITY' : 'INDIVIDUAL ACCESS')}
+          </span>
+        </div>
+        {!selectedCourse && (
+          <div className={styles.demoToggles}>
+            <button
+              type="button"
+              className={`${styles.btnCycle} ${billingCycle === 'annual' ? styles.btnCycleActive : ''}`}
+              onClick={() => setBillingCycle('annual')}
+            >
+              Annual (Save 25%)
+            </button>
+            <button
+              type="button"
+              className={`${styles.btnCycle} ${billingCycle === 'monthly' ? styles.btnCycleActive : ''}`}
+              onClick={() => setBillingCycle('monthly')}
+            >
+              Monthly
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main 2-Column Grid */}
@@ -419,14 +450,20 @@ function CheckoutContent() {
               <div className={styles.tierName}>
                 {selectedCourse
                   ? selectedCourse.title
-                  : 'Individual Access Pass (Shell 101, 201 & Security)'}
+                  : (isTeam
+                      ? 'Team & University Access Pass (5+ Seats Included)'
+                      : 'Individual Access Pass (Shell 101, 201 & Security)')}
               </div>
               <div className={styles.tierDesc}>
                 {selectedCourse
                   ? selectedCourse.desc
-                  : (billingCycle === 'annual'
-                    ? 'Billed annually at $89/yr (Save 25%) · Persistent Sandboxes & Verified Certs'
-                    : 'Billed monthly at $12/mo · Cancel anytime · Persistent Sandboxes & Verified Certs')}
+                  : (isTeam
+                      ? (billingCycle === 'annual'
+                          ? 'Billed annually at $240/seat/yr ($20/mo/seat) · Cohort Dashboard & Dedicated Nodes'
+                          : 'Billed monthly at $29/seat/mo · Cancel anytime · Cohort Dashboard & Dedicated Nodes')
+                      : (billingCycle === 'annual'
+                          ? 'Billed annually at $89/yr (Save 25%) · Persistent Sandboxes & Verified Certs'
+                          : 'Billed monthly at $12/mo · Cancel anytime · Persistent Sandboxes & Verified Certs'))}
               </div>
             </div>
             <div className={styles.tierPrice}>
@@ -436,7 +473,9 @@ function CheckoutContent() {
               <div className={styles.tierPeriod}>
                 {selectedCourse
                   ? '/ lifetime access'
-                  : (billingCycle === 'annual' ? '/ year' : '/ month')}
+                  : (isTeam
+                      ? (billingCycle === 'annual' ? '/ seat / year' : '/ seat / month')
+                      : (billingCycle === 'annual' ? '/ year' : '/ month'))}
               </div>
             </div>
           </div>

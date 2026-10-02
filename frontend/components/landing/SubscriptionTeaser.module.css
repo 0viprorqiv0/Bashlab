@@ -43,14 +43,14 @@
   margin: 0;
 }
 
-/* Grid chứa 2 gói cá nhân */
+/* Grid chứa 3 gói: Community, Individual, Team & University */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 420px));
+  grid-template-columns: repeat(3, minmax(260px, 360px));
   justify-content: center;
-  gap: clamp(16px, 2vw, 24px);
+  gap: clamp(14px, 1.8vw, 22px);
   width: 100%;
-  max-width: 880px;
+  max-width: 1140px;
 }
 
 /* Thẻ Card kính */
@@ -259,7 +259,7 @@
   letter-spacing: 0.02em;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .grid {
     grid-template-columns: 1fr;
     max-width: 440px;

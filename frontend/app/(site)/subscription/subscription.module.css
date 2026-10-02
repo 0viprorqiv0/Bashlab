@@ -127,21 +127,31 @@
   letter-spacing: 0.05em;
 }
 
-/* 2. Grid 2 Pricing Plans */
+/* 2. Grid 3 Pricing Plans */
 .pricingGrid {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(300px, 460px));
+  grid-template-columns: repeat(3, minmax(280px, 380px));
   justify-content: center;
-  gap: 32px;
+  gap: 28px;
   margin-bottom: 72px;
   align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .pricingGrid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 @media (max-width: 768px) {
   .pricingGrid {
     grid-template-columns: 1fr;
+    max-width: 440px;
   }
 }
 
@@ -528,7 +538,7 @@
 }
 
 .featureColHead {
-  width: 44%;
+  width: 40%;
   padding: 20px 24px;
   font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 1rem;
@@ -538,7 +548,7 @@
 }
 
 .planColHead {
-  width: 28%;
+  width: 20%;
   padding: 20px 16px;
   text-align: center;
   font-family: 'Space Grotesk', system-ui, sans-serif;
@@ -549,7 +559,7 @@
 }
 
 .planColPopular {
-  width: 28%;
+  width: 20%;
   background: rgba(104, 223, 160, 0.06);
   border-left: 1px solid rgba(104, 223, 160, 0.25);
   border-right: 1px solid rgba(104, 223, 160, 0.25);
