@@ -231,6 +231,8 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       throw new HttpError(400, 'INVALID_COMMAND', 'command must contain 1–8192 UTF-8 bytes without NUL');
     }
     const result = await manager.withSession(req.params.id, async session => {
+      if (auth) await leaseStore.beginCommand({ leaseId: session.id });
+      try {
       await manager.checkQuota(session);
       let output;
       try {
@@ -255,6 +257,9 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
         metrics.counters.quota_exceeded++;
       }
       return output;
+      } finally {
+        if (auth) await leaseStore.finishCommand({ leaseId: session.id });
+      }
     });
     const recordId = records.get(req.params.id);
     if (recordId) content.service.touchPracticeRecord(recordId).catch(() => {});
@@ -340,6 +345,7 @@ export async function startServer() {
   const { auth, authApi, content } = servicesFromEnv();
   const manager = new SessionManager();
   const runner = new SandboxRunner();
+  const leaseStore = createMemoryLeaseStore({ maxActiveLeases: Number(process.env.SANDBOX_MAX_ACTIVE_LEASES || 100) });
   // Machines without Docker/Linux (e.g. a Windows dev box) still run the auth
   // API: SANDBOX_ENABLED=false skips the runner probe and reaper.
   const sandbox = process.env.SANDBOX_ENABLED !== 'false';
@@ -362,7 +368,7 @@ export async function startServer() {
     // Discover after the probe so a full orphan inventory does not prevent the
     // API/reaper from starting and reclaiming that inventory.
     await manager.discoverOrphans();
-    stopReaper = startReaper(manager);
+    stopReaper = startReaper(manager, { leaseStore });
   } else {
     console.warn('Sandbox disabled (SANDBOX_ENABLED=false): only the auth API is served.');
   }
@@ -377,7 +383,7 @@ export async function startServer() {
     sweeper.unref();
   }
   const host = process.env.HOST || '0.0.0.0';
-  const server = createApp({ manager, runner, auth, authApi, content, sandbox }).listen(Number(process.env.PORT || 3001), host, () => {
+  const server = createApp({ manager, runner, leaseStore, auth, authApi, content, sandbox }).listen(Number(process.env.PORT || 3001), host, () => {
     console.log(`BashLab API listening on http://${host}:${server.address().port}`);
   });
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {

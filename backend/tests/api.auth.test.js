@@ -89,8 +89,9 @@ test('one learner always has one session, including legacy starts without a less
 
   const lessonId = '11111111-1111-4111-8111-111111111111';
   const switched = await (await call('alice', 'POST', '/api/sessions', { lessonId })).json();
-  assert.notEqual(switched.sessionId, first.sessionId);
-  assert.equal((await call('alice', 'GET', `/api/sessions/${first.sessionId}`)).status, 404);
+  assert.equal(switched.sessionId, first.sessionId);
+  assert.equal(switched.lessonId, lessonId);
+  assert.equal((await call('alice', 'GET', `/api/sessions/${first.sessionId}`)).status, 200);
 });
 
 test('session lifecycle: same-lab start is idempotent, active session lookup works, switching labs replaces old session', async (t) => {
@@ -121,14 +122,15 @@ test('session lifecycle: same-lab start is idempotent, active session lookup wor
   assert.equal(restartData.sessionId, data1.sessionId);
   assert.equal(restartData.reused, true);
 
-  // Starting Lab 2 automatically cleans up Lab 1 and opens a new session
+  // Starting Lab 2 keeps the durable lease/session and rebinds the workspace
   const start2 = await call('alice', 'POST', '/api/sessions', { lessonId: lab2 });
-  assert.equal(start2.status, 201);
+  assert.equal(start2.status, 200);
   const data2 = await start2.json();
-  assert.notEqual(data2.sessionId, data1.sessionId);
+  assert.equal(data2.sessionId, data1.sessionId);
+  assert.equal(data2.lessonId, lab2);
 
-  // Lab 1 session is now gone (404)
-  assert.equal((await call('alice', 'GET', `/api/sessions/${data1.sessionId}`)).status, 404);
+  // The durable session remains available after lesson replacement
+  assert.equal((await call('alice', 'GET', `/api/sessions/${data1.sessionId}`)).status, 200);
 
   // Active session is now Lab 2
   const active2 = await (await call('alice', 'GET', '/api/sessions/active')).json();
