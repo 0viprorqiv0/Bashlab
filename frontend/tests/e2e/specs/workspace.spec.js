@@ -120,3 +120,12 @@ test('the flag of another lab is refused', async ({ page }) => {
   const { data } = await adminClient.from('progress').select('status').eq('user_id', users.learner.id);
   expect(data ?? []).toHaveLength(0);
 });
+
+test('clicking the flag box keeps the focus there (it must not jump back to the terminal)', async ({ page }) => {
+  const terminal = await boot(page, 'terminal-fundamentals-navigation');
+  await page.getByLabel('Flag').click();
+  await expect(page.getByLabel('Flag')).toBeFocused();
+  await page.keyboard.type('BASHLAB{typing_here}');
+  await expect(page.getByLabel('Flag')).toHaveValue('BASHLAB{typing_here}');
+  await expect(terminal).not.toBeFocused();
+});

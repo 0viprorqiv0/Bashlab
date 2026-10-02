@@ -1148,7 +1148,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile }) {
             </a>
           </div>
 
-          <form className={styles.flagBar} onSubmit={handleSubmitFlag}>
+          <form className={styles.flagBar} onSubmit={handleSubmitFlag} onClick={(event) => event.stopPropagation()}> {/* the pane focuses the terminal on click; the flag box must keep its own focus */}
             <span className={`material-symbols-outlined ${styles.flagIcon}`} aria-hidden="true">flag</span>
             <input
               type="text"
