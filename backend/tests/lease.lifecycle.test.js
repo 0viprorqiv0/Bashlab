@@ -24,6 +24,7 @@ async function boot(t, { maxActiveLeases = 100 } = {}) {
   const call = (method, url, user = 1) => fetch(`http://127.0.0.1:${server.address().port}${url}`, {
     method, headers: { 'Content-Type': 'application/json', 'x-user': String(user) }, body: method === 'POST' ? '{}' : undefined,
   }).then(async (response) => ({ status: response.status, body: response.status === 204 ? null : await response.json().catch(() => null) }));
+  t.server = { port: server.address().port };
   return { call, leaseStore, manager };
 }
 
@@ -49,4 +50,21 @@ test('a learner at capacity is refused with LEASE_CAPACITY, not a server error',
   assert.equal((await call('POST', '/api/sessions', 1)).status, 201);
   const refused = await call('POST', '/api/sessions', 2);
   assert.equal(refused.status, 503);
+});
+
+test('two parallel opens that switch the learner to another lab do not fail with SESSION_BUSY', async (t) => {
+  const { call, manager } = await boot(t);
+  const labA = '11111111-1111-4111-8111-111111111111';
+  const labB = '22222222-2222-4222-8222-222222222222';
+  const first = await (async () => {
+    const response = await fetch(`http://127.0.0.1:${t.server.port}/api/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user': '1' }, body: JSON.stringify({ lessonId: labA }) });
+    return response.json();
+  })();
+  const open = (lessonId) => fetch(`http://127.0.0.1:${t.server.port}/api/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user': '1' }, body: JSON.stringify({ lessonId }) })
+    .then(async (response) => ({ status: response.status, body: await response.json() }));
+  const [one, two] = await Promise.all([open(labB), open(labB)]);
+  assert.deepEqual([one.status, two.status], [200, 200]);
+  assert.equal(one.body.sessionId, first.sessionId);
+  assert.equal(two.body.sessionId, first.sessionId);
+  assert.equal(manager.sessions.size, 1);
 });

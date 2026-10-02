@@ -188,7 +188,18 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       },
     });
   });
-  app.post('/api/sessions', async (req, res) => {
+  // One open/switch at a time per learner: a second request that arrives while the first is
+  // still creating or resetting waits for it, and is then answered by the session it made
+  // (two near-simultaneous opens happen in dev with React StrictMode, and on a double click).
+  const openChains = new Map();
+  const serializeOpens = (userId, task) => {
+    const run = (openChains.get(userId) || Promise.resolve()).then(task);
+    const tail = run.catch(() => {});
+    openChains.set(userId, tail);
+    tail.then(() => { if (openChains.get(userId) === tail) openChains.delete(userId); });
+    return run;
+  };
+  const openSession = async (req, res) => {
     const lessonId = req.body?.lessonId;
     if (lessonId !== undefined && lessonId !== null && !isUuid(lessonId)) {
       throw new HttpError(400, 'INVALID_INPUT', 'lessonId must be a valid id');
@@ -252,7 +263,8 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       ...manager.describe(session),
       ...(lessonId && { lessonId }),
     });
-  });
+  };
+  app.post('/api/sessions', (req, res) => (auth ? serializeOpens(req.user.id, () => openSession(req, res)) : openSession(req, res)));
   app.get('/api/sessions/:id', ownSession, (req, res) => res.json(manager.describe(manager.get(req.params.id))));
   app.post('/api/sessions/:id/execute', ownSession, async (req, res) => {
     const command = req.body?.command;
