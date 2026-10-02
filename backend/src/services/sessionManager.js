@@ -31,7 +31,7 @@ export class SessionManager {
       await fs.mkdir(this.root, { recursive: true, mode: 0o2770 });
       // Refuse a symlink root. It must be the same local bind source as the runner.
       if (!(await fs.lstat(this.root)).isDirectory()) throw new Error('Invalid workspace root');
-      await fs.mkdir(workspacePath, { mode: 0o2770 });
+      await fs.mkdir(workspacePath, { recursive: true, mode: 0o2770 });
       await fs.chmod(workspacePath, 0o2770);
       const session = { id, workspaceId, workspacePath, cwd: HOME, lastActiveAt: Date.now(), commandCount: 0,
         busy: false, quarantined: false };
@@ -74,7 +74,7 @@ export class SessionManager {
   async makeDirectories(session) {
     for (const name of ['home', 'tmp']) {
       const dir = path.join(session.workspacePath, name);
-      await fs.mkdir(dir, { mode: 0o2770 });
+      await fs.mkdir(dir, { recursive: true, mode: 0o2770 });
       await fs.chmod(dir, 0o2770);
     }
   }
@@ -126,7 +126,19 @@ export class SessionManager {
     const pending = ['home', 'tmp'].map(name => path.join(session.workspacePath, name));
     while (pending.length) {
       const dir = pending.pop();
-      if (!(await fs.lstat(dir)).isDirectory()) throw new HttpError(413, 'INVALID_WORKSPACE', 'Workspace directory is invalid');
+      let dirStat;
+      try {
+        dirStat = await fs.lstat(dir);
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          await fs.mkdir(dir, { recursive: true, mode: 0o2770 });
+          await fs.chmod(dir, 0o2770);
+          dirStat = await fs.lstat(dir);
+        } else {
+          throw err;
+        }
+      }
+      if (!dirStat.isDirectory()) throw new HttpError(413, 'INVALID_WORKSPACE', 'Workspace directory is invalid');
       let handle;
       try {
         await fs.access(dir, fs.constants.R_OK | fs.constants.X_OK);

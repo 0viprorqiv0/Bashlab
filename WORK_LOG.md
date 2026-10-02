@@ -293,3 +293,44 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
   * **Backend Tests**: `npm --prefix backend test` $\rightarrow$ **74/74 tests pass 100%**.
   * **E2E Playwright Suites**: `smoke.spec.js`, `landing-start-learning.spec.js`, `admin-dashboard.spec.js`, `workspace.spec.js` $\rightarrow$ **19/19 tests PASS**.
 * **Trạng thái**: Hoàn thành.
+
+---
+
+### [2026-10-02 22:45] Tích hợp Giao diện Lab Workspace Mới từ `origin/feature/lab-workspace` (ChatGPT-Style Sidebar & Full 100vh)
+
+* **Yêu cầu & Mục tiêu**:
+  * Kéo các cập nhật giao diện mới nhất từ commit `1e1691a` (`origin/feature/lab-workspace` của `LowkeyProd`) về nhánh làm việc.
+  * Tích hợp thanh Sidebar phong cách ChatGPT/Cursor IDE, menu tài khoản dạng Popover, mở rộng không gian làm việc Full 100vh (loại bỏ top Navbar trong trang làm bài).
+  * **Tránh lỗi & Kiểm chứng thực tế (Strict User Constraint)**:
+    * Không ghi đè mù quáng làm mất logic kiểm tra kết quả bài làm: Phục hồi nút `Check Solution` và hàm kiểm tra verifier trên backend container.
+    * Tự động khởi tạo và kết nối sandbox mượt mà, khắc phục lỗi duplicate welcome log.
+    * Tự động sửa lỗi tự phục hồi thư mục workspace (`sessionManager.js`) khi gặp tình trạng tồn tại sẵn hoặc thiếu thư mục con `tmp`.
+    * Chụp ảnh màn hình thực tế từng trạng thái: Booted, Commands, Solved, Popover menu, Collapsed sidebar.
+
+* **Các thay đổi thực hiện**:
+  * [`frontend/components/layout/SiteChrome.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/layout/SiteChrome.jsx) & [`frontend/components/layout/SiteChrome.module.css`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/layout/SiteChrome.module.css):
+    * Ẩn thanh Navbar chung trên đỉnh (`{!isWorkspace && <Navbar />}`) và đặt `padding-top: 0` khi truy cập trang `/courses/.../labs/...`.
+    * Duy trì hook dọn dẹp Service Worker / Cache Storage trên trình duyệt để tránh lỗi PWA cũ.
+  * [`frontend/components/workspace/LabWorkspace.module.css`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/workspace/LabWorkspace.module.css):
+    * Cập nhật toàn bộ hệ thống CSS của ChatGPT Sidebar, BrandLogo toggle, Popover menu, avatar initials, panel split resizer và các breakpoints responsive.
+  * [`frontend/components/workspace/LabWorkspace.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/workspace/LabWorkspace.jsx):
+    * Tích hợp [`BrandLogo`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/shared/BrandLogo.jsx) ở đỉnh Sidebar kèm phím tắt bàn phím đóng/mở nhanh: `⌘/Ctrl + Shift + S` hoặc `⌘/Ctrl + B`.
+    * Tích hợp menu tài khoản Popover ở chân Sidebar với avatar chữ cái (`getInitials`), tên người dùng, huy hiệu `"Pro Learner"` / `"Administrator"`, popup mở ra các liên kết Profile, My Learning, Courses, Log out.
+    * Bảo lưu logic cốt lõi: Nút `Check Solution` ở góc trên bên phải, hàm `handleCheckSolution` chạy verifier đối chiếu trạng thái container thật, ghi nhận tiến độ `done` vào database Supabase, và lưu `bashlab:last_lab:` vào `localStorage`.
+  * [`backend/src/services/sessionManager.js`](file:///home/light/Documents/B3/web_app/Bashlab/backend/src/services/sessionManager.js):
+    * Nâng cấp `mkdir` trong `create` và `makeDirectories` với cờ `recursive: true` để không bị lỗi `EEXIST` khi tái sử dụng đường dẫn lease có sẵn.
+    * Thêm cơ chế tự phục hồi (self-healing) trong `checkQuota`: Tự động tạo lại thư mục `home`/`tmp` với quyền `0o2770` nếu thiếu thay vì quăng lỗi `ENOENT`.
+  * [`frontend/tests/e2e/specs/workspace.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/workspace.spec.js):
+    * Viết kịch bản kiểm thử toàn diện cho giao diện mới: Khởi động container sandbox $\rightarrow$ Thực thi các lệnh `pwd`, `ls -la`, `cd /var/log`, `cd ~` $\rightarrow$ Bấm Check Solution $\rightarrow$ Mở menu Popover $\rightarrow$ Thu gọn Sidebar về icon-only $\rightarrow$ Kiểm tra bản ghi trong DB.
+
+* **Kiểm chứng thực tế (Real Evidence & Verification)**:
+  * **Ảnh chụp màn hình thực tế (Trải nghiệm thật trên trình duyệt)**:
+    1. Trạng thái Full 100vh Booted với Sidebar ChatGPT: [`screenshots/workspace-chatgpt-booted.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-booted.png).
+    2. Thực thi lệnh thật trong sandbox container: [`screenshots/workspace-chatgpt-commands.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-commands.png).
+    3. Hoàn thành bài lab và vượt qua kiểm tra verifier: [`screenshots/workspace-chatgpt-passed.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-passed.png).
+    4. Menu Popover tài khoản người dùng mở mượt mà: [`screenshots/workspace-chatgpt-popover.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-popover.png).
+    5. Thanh Sidebar thu gọn mượt mà về dạng icon 56px: [`screenshots/workspace-chatgpt-collapsed.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-collapsed.png).
+  * **ESLint**: `npm --prefix frontend run lint` $\rightarrow$ **0 warnings, 0 errors**.
+  * **Backend Tests**: `npm --prefix backend test` $\rightarrow$ **74/74 tests pass 100%**.
+  * **E2E Playwright Suites**: `smoke.spec.js`, `landing-start-learning.spec.js`, `admin-dashboard.spec.js`, `workspace.spec.js`, `courses-and-progress.spec.js`, `account-profile.spec.js` $\rightarrow$ **23/23 tests PASS 100% (47.0s)**.
+* **Trạng thái**: Hoàn thành.
