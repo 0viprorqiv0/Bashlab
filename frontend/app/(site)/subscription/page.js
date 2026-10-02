@@ -227,8 +227,6 @@ function SubscriptionContent() {
     },
   ];
 
-
-
   return (
     <div className={styles.pageWrapper}>
       {/* Background Cityscape với lớp tint đen như trang Landing & Checkout */}
