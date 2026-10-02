@@ -415,24 +415,6 @@ function CheckoutContent() {
         <aside className={styles.orderSummaryPanel}>
           <div className={styles.summaryTitle}>
             <span>Order Summary</span>
-            {!selectedCourse && (
-              <div className={styles.demoToggles}>
-                <button
-                  type="button"
-                  className={`${styles.btnCycle} ${billingCycle === 'annual' ? styles.btnCycleActive : ''}`}
-                  onClick={() => setBillingCycle('annual')}
-                >
-                  Annual
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.btnCycle} ${billingCycle === 'monthly' ? styles.btnCycleActive : ''}`}
-                  onClick={() => setBillingCycle('monthly')}
-                >
-                  Monthly
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Plan Info Card */}
@@ -442,8 +424,8 @@ function CheckoutContent() {
                 {selectedCourse
                   ? selectedCourse.title
                   : (isTeam
-                      ? 'Team & University Access Pass (5+ Seats Included)'
-                      : 'Individual Access Pass (Shell 101, 201 & Security)')}
+                      ? 'Team & University Access Pass'
+                      : 'Individual Access Pass')}
               </div>
               <div className={styles.tierDesc}>
                 {selectedCourse
