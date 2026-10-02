@@ -1,22 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import styles from './subscription.module.css';
 
-export default function SubscriptionPage() {
-  const [billingCycle, setBillingCycle] = useState('annual'); // 'annual' | 'monthly'
-  const [openFaq, setOpenFaq] = useState(0); // index of open FAQ item, default first open
+// Animated Rolling Number Component (TryHackMe Style Reel Transition)
+function AnimatedPrice({ value, currency = '$' }) {
+  return (
+    <div className={styles.animatedPriceContainer}>
+      <span className={styles.currencySymbol}>{currency}</span>
+      <span key={value} className={styles.animatedPriceValue}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function SubscriptionContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Mode: 'individual' | 'business'
+  const initialView = searchParams.get('view') === 'business' ? 'business' : 'individual';
+  const [view, setView] = useState(initialView);
+  
+  // Billing: 'annual' | 'monthly'
+  const [billingCycle, setBillingCycle] = useState('annual');
+  
+  // FAQ accordion
+  const [openFaq, setOpenFaq] = useState(0);
+
+  // Sync view mode with URL without full page reload
+  const handleViewChange = (newView) => {
+    setView(newView);
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', newView);
+    window.history.replaceState({}, '', url.toString());
+  };
 
   const toggleFaq = (index) => {
     setOpenFaq(openFaq === index ? -1 : index);
   };
 
-  const plans = [
+  // --- PLANS DATA ---
+
+  // Individual plans
+  const individualPlans = [
     {
       name: 'Community',
       badge: 'FREE FOREVER',
-      price: '$0',
+      price: '0',
       period: 'forever',
       desc: 'Everything you need to learn terminal fundamentals and syntax basics.',
       features: [
@@ -39,7 +73,7 @@ export default function SubscriptionPage() {
     {
       name: 'Individual',
       badge: 'MOST POPULAR',
-      price: billingCycle === 'annual' ? '$9' : '$12',
+      price: billingCycle === 'annual' ? '9' : '12',
       period: billingCycle === 'annual' ? 'per month, billed annually ($89/yr)' : 'per month, billed monthly',
       savings: billingCycle === 'annual' ? 'Save 25% with annual' : null,
       desc: 'Unrestricted access to all Linux sandboxes, live-fire CTFs, persistent environments & verified credentials.',
@@ -59,10 +93,10 @@ export default function SubscriptionPage() {
     },
     {
       name: 'Team & University',
-      badge: 'ENTERPRISE',
-      price: '$29',
+      badge: 'FOR TEAMS',
+      price: billingCycle === 'annual' ? '24' : '29',
       period: 'per seat / month (min 5 seats)',
-      savings: 'Volume discounts available',
+      savings: 'Volume team pricing',
       desc: 'Centralized environment for engineering teams, university security labs & bootcamp cohorts.',
       features: [
         'Everything in Individual for all team members',
@@ -74,45 +108,121 @@ export default function SubscriptionPage() {
         'Co-branded university graduation certificates',
       ],
       notIncluded: [],
-      cta: 'Contact Sales / Inquire',
+      cta: 'View Business Plans',
       isPopular: false,
-      href: '/checkout?plan=team',
+      onClick: () => handleViewChange('business'),
     },
   ];
 
-  const comparisonCategories = [
+  // Business plans
+  const businessPlans = [
     {
-      title: 'Terminal & Sandboxes',
+      name: 'Team Starter',
+      badge: '5 – 20 SEATS',
+      price: billingCycle === 'annual' ? '24' : '29',
+      period: 'per seat / month, billed annually',
+      savings: billingCycle === 'annual' ? 'Save $60/seat per year' : null,
+      desc: 'Equip your engineering or security team with dedicated root sandboxes and cohort analytics.',
+      features: [
+        'Full Individual Access for all assigned members',
+        'Centralized team admin dashboard & license management',
+        'Cohort progress & skill assessment reports',
+        'Shared scenario workspaces & team leaderboards',
+        'Priority runner queue on dedicated cluster',
+        'Standard business support with < 24h SLA',
+      ],
+      notIncluded: [
+        'Custom VPC Peering & On-Prem Deployment',
+        'Custom interactive CTF authoring tools',
+        'LMS (Canvas / Blackboard) integration',
+      ],
+      cta: 'Start Team Trial',
+      isPopular: false,
+      href: '/checkout?plan=team',
+    },
+    {
+      name: 'Business Pro',
+      badge: 'RECOMMENDED FOR TEAMS',
+      price: billingCycle === 'annual' ? '42' : '49',
+      period: 'per seat / month (20 – 100 seats)',
+      savings: billingCycle === 'annual' ? 'Save $84/seat per year' : null,
+      desc: 'Advanced security posture training with SSO, custom interactive scenarios, and deep skill telemetry.',
+      features: [
+        'Everything in Team Starter tier',
+        'Single Sign-On (SAML 2.0 / Okta / Azure AD / Google Workspace)',
+        'Custom scenario & internal CTF authoring builder',
+        'Automated executive compliance & skill gap reports (CSV/PDF)',
+        'Dedicated isolated Docker runner nodes with custom tools',
+        'Dedicated Technical Account Manager & 99.98% uptime SLA',
+        'Team office hours & live quarterly CTF tournaments',
+      ],
+      notIncluded: [],
+      cta: 'Get Started with Pro',
+      isPopular: true,
+      href: '/checkout?plan=business_pro',
+    },
+    {
+      name: 'Enterprise & Academic',
+      badge: 'CUSTOM SCALE',
+      price: 'Custom',
+      period: 'tailored for 100+ seats & universities',
+      savings: 'Non-profit & University grants',
+      desc: 'Tailored deployment with private cloud VPC peering, custom curriculum design, and LMS integration.',
+      features: [
+        'Unlimited team members with role-based governance',
+        'Private Cloud / VPC Peering / On-Premise deploy options',
+        'LTI 1.3 Canvas, Moodle & Blackboard LMS integration',
+        'Bespoke cybersecurity curriculum tailored to your stack',
+        '99.99% Enterprise Uptime SLA & 24/7 emergency response',
+        'Co-branded university diplomas & institutional badges',
+        'SOC 2 Type II & ISO 27001 audit support documentation',
+      ],
+      notIncluded: [],
+      cta: 'Contact Enterprise Sales',
+      isPopular: false,
+      href: 'mailto:enterprise@bashlab.io?subject=BashLab%20Enterprise%20Inquiry',
+    },
+  ];
+
+  // Active plans list based on tab
+  const activePlans = view === 'individual' ? individualPlans : businessPlans;
+
+  // --- COMPARISON MATRIX DATA ---
+
+  // Standard comparison categories (shown for Individual)
+  const baseComparisonCategories = [
+    {
+      title: 'Terminal & Infrastructure',
       features: [
         {
           name: 'In-Browser Linux Terminal Sandbox',
-          free: 'Ephemeral (15 min)',
-          individual: 'Unlimited Persistent',
-          team: 'Unlimited Dedicated Pool',
+          col1: 'Ephemeral (15 min)',
+          col2: 'Unlimited Persistent',
+          col3: 'Unlimited Dedicated Pool',
         },
         {
           name: 'Root Privilege & Sudo Access',
-          free: 'User-level only',
-          individual: 'Full root access',
-          team: 'Full root + Custom kernels',
+          col1: 'User-level only',
+          col2: 'Full root access',
+          col3: 'Full root + Custom kernels',
         },
         {
           name: 'Persistent /home Storage',
-          free: 'None',
-          individual: '10 GB SSD Storage',
-          team: '50 GB / Seat + Shared storage',
+          col1: 'None',
+          col2: '10 GB SSD Storage',
+          col3: '50 GB / Seat + Shared storage',
         },
         {
           name: 'Concurrent Lab Instances',
-          free: '1 Instance',
-          individual: '3 Concurrent Instances',
-          team: '10+ Concurrent Instances',
+          col1: '1 Instance',
+          col2: '3 Concurrent Instances',
+          col3: '10+ Concurrent Instances',
         },
         {
           name: 'Container Spooling Speed',
-          free: 'Standard (~5s)',
-          individual: 'Instant Zero-Wait (<1s)',
-          team: 'Dedicated Cluster Node',
+          col1: 'Standard (~5s)',
+          col2: 'Instant Zero-Wait (<1s)',
+          col3: 'Dedicated Cluster Node',
         },
       ],
     },
@@ -121,27 +231,27 @@ export default function SubscriptionPage() {
       features: [
         {
           name: 'Shell 101: CLI Fundamentals',
-          free: 'Full access (12 labs)',
-          individual: 'Full access + Extra challenges',
-          team: 'Full access + Solutions',
+          col1: 'Full access (12 labs)',
+          col2: 'Full access + Extra challenges',
+          col3: 'Full access + Solutions',
         },
         {
           name: 'Shell 201: Automation & Scripting',
-          free: 'Preview first 3 labs',
-          individual: 'Full access (24 labs)',
-          team: 'Full access + Custom modules',
+          col1: 'Preview first 3 labs',
+          col2: 'Full access (24 labs)',
+          col3: 'Full access + Custom modules',
         },
         {
           name: 'Linux Security & Exploitation CTFs',
-          free: 'Community CTFs only',
-          individual: '40+ Live-Fire Scenarios',
-          team: 'All + Private CTF Hosting',
+          col1: 'Community CTFs only',
+          col2: '40+ Live-Fire Scenarios',
+          col3: 'All + Private CTF Hosting',
         },
         {
           name: 'AI Terminal Assistant & Hint Engine',
-          free: 'Basic hints',
-          individual: 'Detailed debugging & hints',
-          team: 'Dedicated mentor queue',
+          col1: 'Basic hints',
+          col2: 'Detailed debugging & hints',
+          col3: 'Dedicated mentor queue',
         },
       ],
     },
@@ -150,32 +260,101 @@ export default function SubscriptionPage() {
       features: [
         {
           name: 'Verifiable Certificate of Mastery',
-          free: '✕',
-          individual: '✓ Shareable on LinkedIn & CV',
-          team: '✓ Co-branded Institutional',
+          col1: '✕',
+          col2: '✓ Shareable on LinkedIn & CV',
+          col3: '✓ Co-branded Institutional',
         },
         {
           name: 'Skill Telemetry & Mastery Graph',
-          free: 'Basic points',
-          individual: 'Full competency matrix',
-          team: 'Manager dashboard & export',
+          col1: 'Basic points',
+          col2: 'Full competency matrix',
+          col3: 'Manager dashboard & export',
         },
         {
-          name: 'Discord Community Access',
-          free: 'Public channels',
-          individual: 'VIP Lounge & Office Hours',
-          team: 'Private Team channel',
-        },
-        {
-          name: 'Support Level',
-          free: 'Community forum',
-          individual: 'Priority email (< 24h)',
-          team: 'Dedicated Account Manager & SLA',
+          name: 'Community & Office Hours',
+          col1: 'Public Discord',
+          col2: 'VIP Lounge & Office Hours',
+          col3: 'Private Team channel',
         },
       ],
     },
   ];
 
+  // Extra categories added ONLY when in Business mode
+  const businessSpecificCategories = [
+    {
+      title: 'Team Governance & Administration',
+      isBusinessOnly: true,
+      features: [
+        {
+          name: 'Single Sign-On (SAML / Okta / Azure AD)',
+          col1: '✕',
+          col2: '✓ Included (SAML 2.0)',
+          col3: '✓ Custom IdP & SCIM Provisioning',
+        },
+        {
+          name: 'Role-Based Access Control (RBAC)',
+          col1: '✕',
+          col2: 'Owner / Admin / Member',
+          col3: 'Granular permissions & Custom roles',
+        },
+        {
+          name: 'Consolidated Billing & Central Invoicing',
+          col1: 'Individual receipts',
+          col2: 'Single invoice / Credit card',
+          col3: 'Net-30 Invoicing / Wire transfer / PO',
+        },
+        {
+          name: 'LMS Integration (Canvas / Moodle / Blackboard)',
+          col1: '✕',
+          col2: '✕',
+          col3: '✓ LTI 1.3 Certified Integration',
+        },
+      ],
+    },
+    {
+      title: 'Enterprise Security, Isolation & SLA',
+      isBusinessOnly: true,
+      features: [
+        {
+          name: 'Private Cloud VPC Peering / On-Premise',
+          col1: 'Public Cloud',
+          col2: 'Dedicated Cluster Node',
+          col3: '✓ Full VPC Peering / AWS / GCP / On-Prem',
+        },
+        {
+          name: 'Custom Scenario & CTF Authoring Builder',
+          col1: '✕',
+          col2: '5 Custom Lab slots',
+          col3: 'Unlimited Private Scenario Creator',
+        },
+        {
+          name: 'SOC 2 Type II & Security Compliance Report',
+          col1: 'Standard terms',
+          col2: 'Self-serve security pack',
+          col3: 'Full SOC 2 Type II, ISO 27001 & BAA',
+        },
+        {
+          name: 'Service Level Agreement (SLA)',
+          col1: 'Best effort',
+          col2: '99.9% Uptime SLA',
+          col3: '99.99% Financial-Backed SLA (24/7)',
+        },
+      ],
+    },
+  ];
+
+  // Merge categories based on current view
+  const comparisonCategories = view === 'business'
+    ? [...baseComparisonCategories, ...businessSpecificCategories]
+    : baseComparisonCategories;
+
+  // Comparison table column headers
+  const comparisonHeaders = view === 'individual'
+    ? { col1: 'Community', col2: 'Individual', col3: 'Team & Uni', popularCol: 2 }
+    : { col1: 'Individual', col2: 'Business Pro', col3: 'Enterprise & Academic', popularCol: 2 };
+
+  // Testimonials
   const testimonials = [
     {
       name: 'Alex Rivera',
@@ -206,6 +385,7 @@ export default function SubscriptionPage() {
     },
   ];
 
+  // FAQs
   const faqs = [
     {
       q: 'Can I cancel or change my subscription at any time?',
@@ -228,27 +408,60 @@ export default function SubscriptionPage() {
       a: 'Upon completing a curriculum track and passing the hands-on practical exam, you receive a cryptographically signed Certificate of Mastery with a unique verification URL that you can attach directly to LinkedIn, GitHub, or your resume.',
     },
     {
-      q: 'What payment methods are supported?',
-      a: 'We support all major Credit & Debit cards (Visa, Mastercard, American Express), Apple Pay, Google Pay, PayPal, and instant bank transfers via VietQR for learners in Vietnam.',
+      q: 'What payment methods are supported for individual and teams?',
+      a: 'We support all major Credit & Debit cards (Visa, Mastercard, American Express), Apple Pay, Google Pay, PayPal, and instant bank transfers via VietQR. For Business and Enterprise tiers, we also support Net-30 invoicing, ACH, and wire transfers.',
     },
   ];
 
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. Header & Billing Cycle Switcher */}
+      {/* 1. Header Section & Dual-Segment (Individual vs Business) */}
       <section className={styles.headerSection}>
         <div className={styles.topBadge}>
           <span className={styles.topBadgePulse} />
           <span>CYBERSECURITY &amp; LINUX TRAINING</span>
         </div>
+
         <h1 className={styles.title}>
           Invest in your <span className={styles.titleAccent}>Linux mastery</span>.
         </h1>
         <p className={styles.subtitle}>
-          Whether you are taking your first steps in the shell or sharpening real-world DevOps &amp; security skills, choose the tier that accelerates your ambitions.
+          {view === 'individual'
+            ? 'Whether you are taking your first steps in the shell or sharpening real-world DevOps & security skills, choose the tier that accelerates your ambitions.'
+            : 'Upskill your engineering and security teams with scalable browser sandboxes, cohort analytics, and custom live-fire challenges.'}
         </p>
 
-        {/* Monthly / Annual Switcher Toggle */}
+        {/* PRIMARY TOP SWITCHER: Individual vs Business (TryHackMe Style) */}
+        <div className={styles.viewTabsWrapper}>
+          <div className={styles.viewSegmentBox}>
+            <button
+              type="button"
+              className={`${styles.viewTabBtn} ${view === 'individual' ? styles.viewTabBtnActive : ''}`}
+              onClick={() => handleViewChange('individual')}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>For Individuals</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.viewTabBtn} ${view === 'business' ? styles.viewTabBtnActive : ''}`}
+              onClick={() => handleViewChange('business')}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+              </svg>
+              <span>For Business &amp; Teams</span>
+              <span className={styles.teamsTabTag}>PRO</span>
+            </button>
+          </div>
+        </div>
+
+        {/* SECONDARY SWITCHER: Monthly vs Annual (With Animated Price Numbers) */}
         <div className={styles.switchWrapper}>
           <div className={styles.cycleSwitch}>
             <button
@@ -270,9 +483,9 @@ export default function SubscriptionPage() {
         </div>
       </section>
 
-      {/* 2. Three Primary Pricing Cards */}
+      {/* 2. Three Primary Pricing Cards with Animated Numbers */}
       <section className={styles.pricingGrid}>
-        {plans.map((p) => (
+        {activePlans.map((p) => (
           <div
             key={p.name}
             className={`${styles.card} ${p.isPopular ? styles.cardPopular : ''}`}
@@ -290,9 +503,14 @@ export default function SubscriptionPage() {
 
             <p className={styles.cardDesc}>{p.desc}</p>
 
+            {/* Price Block with Smooth Animated Reel transition */}
             <div className={styles.priceBlock}>
               <div className={styles.priceRow}>
-                <span className={styles.priceValue}>{p.price}</span>
+                {p.price === 'Custom' ? (
+                  <span className={styles.priceCustom}>Custom</span>
+                ) : (
+                  <AnimatedPrice value={p.price} />
+                )}
                 <span className={styles.pricePeriod}>/ {p.period}</span>
               </div>
               {p.savings && (
@@ -311,7 +529,7 @@ export default function SubscriptionPage() {
                     <span>{f}</span>
                   </li>
                 ))}
-                {p.notIncluded.map((f, i) => (
+                {p.notIncluded?.map((f, i) => (
                   <li key={i} className={`${styles.featureItem} ${styles.featureItemDisabled}`}>
                     <span className={styles.crossIcon}>✕</span>
                     <span>{f}</span>
@@ -320,21 +538,34 @@ export default function SubscriptionPage() {
               </ul>
             </div>
 
-            <Link
-              href={p.href}
-              className={`${styles.ctaBtn} ${p.isPopular ? styles.ctaBtnPopular : ''}`}
-            >
-              <span>{p.cta}</span>
-              <span className={styles.ctaArrow}>→</span>
-            </Link>
+            {p.onClick ? (
+              <button
+                type="button"
+                onClick={p.onClick}
+                className={`${styles.ctaBtn} ${p.isPopular ? styles.ctaBtnPopular : ''}`}
+              >
+                <span>{p.cta}</span>
+                <span className={styles.ctaArrow}>→</span>
+              </button>
+            ) : (
+              <Link
+                href={p.href}
+                className={`${styles.ctaBtn} ${p.isPopular ? styles.ctaBtnPopular : ''}`}
+              >
+                <span>{p.cta}</span>
+                <span className={styles.ctaArrow}>→</span>
+              </Link>
+            )}
           </div>
         ))}
       </section>
 
-      {/* 3. Social Proof: Trusted by Security Organizers & Universities (TryHackMe Style) */}
+      {/* 3. Social Proof: Trusted by Security Organizers & Universities */}
       <section className={styles.trustedSection}>
         <h2 className={styles.trustedTitle}>
-          TRUSTED BY CTF ORGANIZERS, SECURITY CLUBS &amp; DEVELOPERS WORLDWIDE
+          {view === 'individual'
+            ? 'TRUSTED BY CTF ORGANIZERS, SECURITY CLUBS & DEVELOPERS WORLDWIDE'
+            : 'TRUSTED BY ENTERPRISE SOC TEAMS, UNIVERSITIES & TECH ORGANIZATIONS'}
         </h2>
 
         {/* Logo / Badge Marquee */}
@@ -386,13 +617,19 @@ export default function SubscriptionPage() {
         </div>
       </section>
 
-      {/* 4. Full Plan Comparison Matrix (TryHackMe Style) */}
+      {/* 4. Full Plan Comparison Matrix (Adds Business Sections When in Business View) */}
       <section className={styles.comparisonSection}>
         <div className={styles.sectionHeaderWrap}>
-          <div className={styles.sectionTag}>ACCESS MATRIX</div>
-          <h2 className={styles.sectionHeading}>Detailed Plan Comparison</h2>
+          <div className={styles.sectionTag}>
+            {view === 'individual' ? 'ACCESS MATRIX' : 'ENTERPRISE ACCESS MATRIX'}
+          </div>
+          <h2 className={styles.sectionHeading}>
+            Detailed Plan Comparison {view === 'business' && <span className={styles.headingBusinessTag}>(Business Edition)</span>}
+          </h2>
           <p className={styles.sectionSub}>
-            Explore every capability across our plans to choose the best configuration for your development environment.
+            {view === 'individual'
+              ? 'Explore every capability across our plans to choose the best configuration for your development environment.'
+              : 'Compare team capabilities, administrative controls, VPC peering, and enterprise compliance.'}
           </p>
         </div>
 
@@ -400,49 +637,58 @@ export default function SubscriptionPage() {
           <table className={styles.comparisonTable}>
             <thead>
               <tr>
-                <th className={styles.featureColHead}>Features</th>
-                <th className={styles.planColHead}>Community</th>
+                <th className={styles.featureColHead}>Capabilities &amp; Features</th>
+                <th className={styles.planColHead}>{comparisonHeaders.col1}</th>
                 <th className={`${styles.planColHead} ${styles.planColPopular}`}>
                   <div className={styles.popularTableBadge}>RECOMMENDED</div>
-                  Individual
+                  {comparisonHeaders.col2}
                 </th>
-                <th className={styles.planColHead}>Team &amp; Uni</th>
+                <th className={styles.planColHead}>{comparisonHeaders.col3}</th>
               </tr>
             </thead>
             <tbody>
-              {comparisonCategories.map((cat, catIdx) => (
+              {comparisonCategories.map((cat) => (
                 <React.Fragment key={cat.title}>
-                  <tr className={styles.categoryRow}>
+                  <tr className={`${styles.categoryRow} ${cat.isBusinessOnly ? styles.businessCategoryRow : ''}`}>
                     <td colSpan="4" className={styles.categoryTitle}>
-                      {cat.title}
+                      <div className={styles.catTitleWrap}>
+                        <span>{cat.title}</span>
+                        {cat.isBusinessOnly && (
+                          <span className={styles.businessOnlyBadge}>BUSINESS &amp; ENTERPRISE</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
-                  {cat.features.map((feat, fIdx) => (
+                  {cat.features.map((feat) => (
                     <tr key={feat.name} className={styles.featureRow}>
                       <td className={styles.featureNameCell}>
                         {feat.name}
                       </td>
                       <td className={styles.valueCell}>
-                        {feat.free === '✓' ? (
+                        {feat.col1 === '✓' ? (
                           <span className={styles.checkIcon}>✓</span>
-                        ) : feat.free === '✕' ? (
+                        ) : feat.col1 === '✕' ? (
                           <span className={styles.crossIcon}>✕</span>
                         ) : (
-                          feat.free
+                          feat.col1
                         )}
                       </td>
                       <td className={`${styles.valueCell} ${styles.valueCellPopular}`}>
-                        {feat.individual === '✓' ? (
+                        {feat.col2 === '✓' ? (
                           <span className={styles.checkIcon}>✓</span>
+                        ) : feat.col2 === '✕' ? (
+                          <span className={styles.crossIcon}>✕</span>
                         ) : (
-                          <span className={styles.boldCell}>{feat.individual}</span>
+                          <span className={styles.boldCell}>{feat.col2}</span>
                         )}
                       </td>
                       <td className={styles.valueCell}>
-                        {feat.team === '✓' ? (
+                        {feat.col3 === '✓' ? (
                           <span className={styles.checkIcon}>✓</span>
+                        ) : feat.col3 === '✕' ? (
+                          <span className={styles.crossIcon}>✕</span>
                         ) : (
-                          feat.team
+                          feat.col3
                         )}
                       </td>
                     </tr>
@@ -454,11 +700,11 @@ export default function SubscriptionPage() {
         </div>
       </section>
 
-      {/* 5. Learner Testimonials / Reviews (TryHackMe Style) */}
+      {/* 5. Learner Testimonials / Reviews */}
       <section className={styles.testimonialsSection}>
         <div className={styles.sectionHeaderWrap}>
           <div className={styles.sectionTag}>COMMUNITY PROOF</div>
-          <h2 className={styles.sectionHeading}>Loved by Developers &amp; Security Engineers</h2>
+          <h2 className={styles.sectionHeading}>Loved by Developers &amp; Security Teams</h2>
           <p className={styles.sectionSub}>
             Hear how hands-on Linux terminal practice with real root sandboxes transformed careers and study paths.
           </p>
@@ -491,7 +737,7 @@ export default function SubscriptionPage() {
           <div className={styles.sectionTag}>FAQ // QUESTIONS</div>
           <h2 className={styles.sectionHeading}>Frequently Asked Questions</h2>
           <p className={styles.sectionSub}>
-            Everything you need to know about billing, sandboxes, and verified certificates.
+            Everything you need to know about billing, sandboxes, and enterprise security.
           </p>
         </div>
 
@@ -526,19 +772,37 @@ export default function SubscriptionPage() {
       <section className={styles.bottomCtaBanner}>
         <div className={styles.ctaBannerInner}>
           <h2 className={styles.ctaBannerTitle}>
-            Ready to conquer the Linux terminal?
+            {view === 'individual'
+              ? 'Ready to conquer the Linux terminal?'
+              : 'Ready to elevate your engineering team’s terminal skills?'}
           </h2>
           <p className={styles.ctaBannerDesc}>
-            Join over 15,000 engineers and security researchers. Start free or jump straight into root sandboxes with Individual Access.
+            {view === 'individual'
+              ? 'Join over 15,000 engineers and security researchers. Start free or jump straight into root sandboxes with Individual Access.'
+              : 'Deploy hands-on Linux and security labs across your entire team in minutes with zero local configuration.'}
           </p>
           <div className={styles.ctaBannerBtns}>
-            <Link href="/checkout?plan=individual" className={styles.bannerPrimaryBtn}>
-              <span>Upgrade to Individual ($9/mo)</span>
-              <span>→</span>
-            </Link>
-            <Link href="/courses" className={styles.bannerSecondaryBtn}>
-              Explore Free Courses
-            </Link>
+            {view === 'individual' ? (
+              <>
+                <Link href="/checkout?plan=individual" className={styles.bannerPrimaryBtn}>
+                  <span>Upgrade to Individual ($9/mo)</span>
+                  <span>→</span>
+                </Link>
+                <Link href="/courses" className={styles.bannerSecondaryBtn}>
+                  Explore Free Courses
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/checkout?plan=team" className={styles.bannerPrimaryBtn}>
+                  <span>Get Team Trial (From $24/seat)</span>
+                  <span>→</span>
+                </Link>
+                <a href="mailto:enterprise@bashlab.io?subject=Schedule%20BashLab%20Demo" className={styles.bannerSecondaryBtn}>
+                  Schedule Enterprise Demo
+                </a>
+              </>
+            )}
           </div>
           <div className={styles.ctaGuaranteeNote}>
             🔒 30-Day Money-Back Guarantee • Cancel anytime with 1 click
@@ -546,5 +810,13 @@ export default function SubscriptionPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', padding: '120px 24px', textAlign: 'center', color: '#8c9ba8' }}>Loading pricing plans...</div>}>
+      <SubscriptionContent />
+    </Suspense>
   );
 }
