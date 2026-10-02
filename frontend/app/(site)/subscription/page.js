@@ -22,10 +22,10 @@ function AnimatedPrice({ value, currency = '$' }) {
 function SubscriptionContent() {
   const searchParams = useSearchParams();
   const initialCycle = searchParams.get('cycle') === 'monthly' ? 'monthly' : 'annual';
-  
+
   // Billing: 'annual' | 'monthly'
   const [billingCycle, setBillingCycle] = useState(initialCycle);
-  
+
   // FAQ accordion
   const [openFaq, setOpenFaq] = useState(0);
 

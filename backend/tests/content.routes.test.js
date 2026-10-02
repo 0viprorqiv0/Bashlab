@@ -46,11 +46,12 @@ function fakeAdmin(tables = {}) {
   return { from, writes };
 }
 
-async function start(t, { admin = fakeAdmin(), rpc = [], limits, rateMax = 1000 } = {}) {
+async function start(t, { admin = fakeAdmin(), rpc = [], sandbox = false, limits, rateMax = 1000 } = {}) {
   const userClient = (token) => ({ rpc: async (name, args) => { rpc.push({ token, name, args }); return { data: null, error: null }; } });
   const service = createContentService({ admin, userClient });
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'bashlab-content-'));
-  const server = createApp({ manager: new SessionManager({ root }), rateMax, auth: fakeAuth, content: { service, limits }, sandbox: false })
+  const manager = new SessionManager({ root });
+  const server = createApp({ manager, rateMax, auth: fakeAuth, content: { service, limits }, sandbox })
     .listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   t.after(async () => { await new Promise((resolve) => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
@@ -60,7 +61,7 @@ async function start(t, { admin = fakeAdmin(), rpc = [], limits, rateMax = 1000 
     headers: { 'Content-Type': 'application/json', ...(user ? { Authorization: `Bearer ${user}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  return { call, admin, rpc, base };
+  return { call, admin, rpc, base, manager };
 }
 
 test('every write endpoint requires a token', async (t) => {
@@ -173,6 +174,26 @@ test('progress on a draft lesson or draft course is a 404 for learners', async (
   }
   const { call } = await start(t, { admin: fakeAdmin({ lessons: draftLesson }) });
   assert.equal((await call('admin', 'PUT', `/api/progress/${ID}`, { status: 'done' })).status, 204); // admin may preview
+});
+
+test('practice sessions cannot be attached to hidden lessons and failed opens clean up the sandbox', async (t) => {
+  const hiddenLessons = [
+    { id: ID, status: 'draft', chapters: { courses: { status: 'published' } } },
+    { id: ID, status: 'published', chapters: { courses: { status: 'draft' } } },
+  ];
+  for (const lesson of hiddenLessons) {
+    const { call, admin, manager } = await start(t, { admin: fakeAdmin({ lessons: lesson }), sandbox: true });
+    const response = await call('alice', 'POST', '/api/sessions', { lessonId: ID });
+    assert.equal(response.status, 404);
+    assert.equal((await response.json()).error.code, 'LESSON_NOT_FOUND');
+    assert.equal(manager.sessions.size, 0);
+    assert.deepEqual(admin.writes, []);
+  }
+
+  const visible = { id: ID, status: 'published', chapters: { courses: { status: 'published' } } };
+  const { call, admin } = await start(t, { admin: fakeAdmin({ lessons: visible }), sandbox: true });
+  assert.equal((await call('alice', 'POST', '/api/sessions', { lessonId: ID })).status, 201);
+  assert.equal(admin.writes.find((write) => write.table === 'practice_sessions').values.lesson_id, ID);
 });
 
 test('the API sends hardening headers and hides its stack', async (t) => {

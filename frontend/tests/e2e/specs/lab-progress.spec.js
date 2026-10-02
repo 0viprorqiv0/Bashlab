@@ -58,3 +58,42 @@ test('the workspace lists the same labs as the course page, in the same order', 
   await page.goto(`/courses/shell-101/labs/${rows + 1}`);
   await expect(page.getByText('404')).toBeVisible();
 });
+
+test('legacy Markdown lessons show their content and cannot be marked complete without checks', async ({ page }) => {
+  const course = {
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    slug: 'legacy-preview',
+    title: 'Legacy Preview',
+    description: '',
+    level: 'beginner',
+    category: 'testing',
+    duration_minutes: 10,
+    status: 'published',
+    sort_order: 0,
+    chapters: [{
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      title: 'Legacy lessons',
+      sort_order: 0,
+      lessons: [{
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        slug: 'legacy-markdown',
+        title: 'Legacy Markdown',
+        status: 'published',
+        sort_order: 0,
+        objectives: [],
+        content_md: '# Legacy Markdown\n\nThis lesson remains readable from its Markdown content.',
+        test_template: null,
+        lesson_content: null,
+      }],
+    }],
+  };
+  await page.route('**/rest/v1/courses*', (route) => route.fulfill({ json: [course] }));
+  await page.route('**/rest/v1/progress*', (route) => route.fulfill({ json: [] }));
+
+  await page.goto('/courses/legacy-preview/labs/1');
+  await expect(page.getByLabel('Lesson content').getByRole('heading', { name: 'Legacy Markdown' })).toBeVisible();
+  await expect(page.getByText('This lesson remains readable from its Markdown content.')).toBeVisible();
+  await expect(page.getByText(/Objective Tasks/)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Check solution' })).toBeDisabled();
+  await expect(page.getByText('Completed', { exact: true })).toHaveCount(0);
+});

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './CourseDetail.module.css';
@@ -85,6 +85,7 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
   const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState({ loading: true });
   const [progressMap, setProgressMap] = useState(() => new Map());
+  const progressRevision = useRef(0);
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeTag, setActiveTag] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,9 +115,14 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
   // the course), and refetched when someone signs in or out.
   useEffect(() => {
     let active = true;
-    const loadProgress = () => fetchProgressMap(authClient.peekUserId())
-      .then((map) => { if (active) setProgressMap(map); })
-      .catch(() => {});
+    const loadProgress = () => {
+      const revision = progressRevision.current;
+      fetchProgressMap(authClient.peekUserId())
+        .then((map) => {
+          if (active && revision === progressRevision.current) setProgressMap(map);
+        })
+        .catch(() => {});
+    };
     loadProgress();
     const unsubscribe = authClient.subscribe((event) => {
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') loadProgress();
@@ -221,14 +227,20 @@ export default function CourseDetail({ courseId = 'shell-101' }) {
     }
     const willSolve = lab.status !== 'solved';
     const previous = progressMap.get(lab.id);
+    const nextProgress = willSolve
+      ? { lesson_id: lab.id, status: 'done', updated_at: new Date().toISOString() }
+      : null;
+    const revision = ++progressRevision.current;
     const apply = (row) => setProgressMap((prev) => {
       const next = new Map(prev);
       if (row) next.set(lab.id, row); else next.delete(lab.id);
       return next;
     });
-    apply(willSolve ? { lesson_id: lab.id, status: 'done', updated_at: new Date().toISOString() } : null);
+    apply(nextProgress);
     const { error } = willSolve ? await markLessonDone(user.id, lab.id) : await markLessonUndone(user.id, lab.id);
-    if (error) apply(previous); // Roll back the optimistic update.
+    if (progressRevision.current !== revision) return;
+    apply(error ? previous : nextProgress);
+    progressRevision.current++;
   }
 
   if (state.loading) return <PageLoading label="Loading course…" />;
