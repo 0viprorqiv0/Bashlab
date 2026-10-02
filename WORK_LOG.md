@@ -114,3 +114,22 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
     * Mobile (375x667): `screenshots/courses-catalog-mobile-full.png` (nút full-width, căn chỉnh hai đầu chuẩn mực).
 * **Trạng thái**: Hoàn thành.
 
+---
+
+### [2026-10-02 21:00] Điều hướng nút "Start learning" ở trang chủ (Home) sang `/courses`
+
+* **Yêu cầu**:
+  * Khi bấm nút "Start learning" trên hero banner ở trang chủ (`http://localhost:3000/`), tự động chuyển hướng trực tiếp đến trang danh mục khóa học `http://localhost:3000/courses` (thay vì cố gắng ép chuyển đến `/courses/shell-101` hoặc `/login`).
+* **Các thay đổi thực hiện**:
+  * [`frontend/components/landing/Lookbook.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/landing/Lookbook.jsx):
+    * Chuyển nút CTA chính từ thẻ `<a>` kèm handler `startLearning` sang component `<Link href="/courses" className={styles.btnPrimary}>`.
+    * Loại bỏ các hook không cần thiết (`useRouter`, `useAuth`, `authClient`) liên quan đến nút CTA cũ để tăng tốc độ render và loại bỏ client-side auth check dư thừa trên landing page.
+  * [`frontend/tests/e2e/specs/landing-start-learning.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/landing-start-learning.spec.js):
+    * Cập nhật test cases cho cả khách vãng lai (guest) và học viên đã đăng nhập (signed-in learner) để xác nhận khi bấm "Start learning" trên trang chủ sẽ chuyển hướng thẳng đến `/courses` và hiển thị tiêu đề `Courses.`.
+* **Kiểm chứng thực tế**:
+  * Frontend Linter: `npm --prefix frontend run lint` $\rightarrow$ **0 errors, 0 warnings**.
+  * Frontend E2E tests: `npm --prefix frontend run test:e2e -- landing-start-learning.spec.js` $\rightarrow$ **7/7 tests pass 100%**.
+  * Backend test suite: `npm --prefix backend test` $\rightarrow$ **70/70 tests pass 100%**.
+  * Visual Browser Verification: Script thực tế Playwright click vào nút "Start learning" từ `http://localhost:3000/` $\rightarrow$ URL chuyển sang `http://localhost:3000/courses` thành công và hiển thị đầy đủ danh sách khóa học.
+* **Trạng thái**: Hoàn thành.
+

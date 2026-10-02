@@ -1,5 +1,5 @@
 // The "Start learning" button (landing hero) and "Go to Lab" button (/courses catalog):
-// - Landing "Start learning": guests are sent to /login?next=/courses/shell-101, signed-in go to /courses/shell-101.
+// - Landing "Start learning": navigates to /courses (courses catalog).
 // - Course catalog "Go to Lab": redirects to the learner's active in-progress lab (or lab 1 if none).
 const { test, expect } = require('../support/session');
 const { adminClient } = require('../support/supabaseAdmin');
@@ -9,11 +9,11 @@ const startLearning = (page) => page.getByRole('link', { name: /^Start learning/
 const goToLab = (page) => page.getByRole('link', { name: /Go to Lab/i }).first();
 
 test.describe('guest', () => {
-  test('Start learning sends a signed-out visitor to /login with a way back to the course', async ({ page }) => {
+  test('Start learning on landing page navigates directly to /courses', async ({ page }) => {
     await page.goto('/');
     await startLearning(page).click();
-    await page.waitForURL('**/login**');
-    expect(new URL(page.url()).searchParams.get('next')).toBe('/courses/shell-101');
+    await page.waitForURL('**/courses');
+    await expect(page.getByRole('heading', { name: 'Courses.' })).toBeVisible();
   });
 
   test('Go to Lab in the course catalog sends a signed-out visitor to /login with next=/courses/shell-101/labs/1', async ({ page }) => {
@@ -38,11 +38,11 @@ test.describe('signed-in learner', () => {
     }
   });
 
-  test('Start learning on landing page goes straight to the course, no login screen', async ({ page }) => {
+  test('Start learning on landing page navigates directly to /courses', async ({ page }) => {
     await page.goto('/');
     await startLearning(page).click();
-    await page.waitForURL('**/courses/shell-101');
-    await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
+    await page.waitForURL('**/courses');
+    await expect(page.getByRole('heading', { name: 'Courses.' })).toBeVisible();
   });
 
   test('Go to Lab in the course catalog redirects a fresh learner directly to lab 1', async ({ page }) => {
