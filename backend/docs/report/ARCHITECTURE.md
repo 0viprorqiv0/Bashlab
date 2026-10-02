@@ -115,7 +115,7 @@ sequenceDiagram
   SB-->>U: kết quả → học viên tìm ra flag BASHLAB{…}
   U->>FE: dán flag vào ô "Submit flag"
   FE->>API: POST /api/labs/:lessonId/flag
-  API->>API: so sánh hằng thời gian (timingSafeEqual), giới hạn 10 lần/phút
+  API->>API: so sánh hằng thời gian (timingSafeEqual), giới hạn 10 lần nộp sai/phút
   API->>DB: ghi progress = done (bằng service_role)
   API-->>FE: {correct:true} → lab "solved"
 ```

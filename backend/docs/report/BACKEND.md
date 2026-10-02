@@ -35,7 +35,7 @@ backend/
 | Method | Đường dẫn | Ghi chú |
 |---|---|---|
 | PUT/DELETE | `/api/progress/:lessonId` | lab có flag thì **chặn đặt `done`** (403 `FLAG_REQUIRED`) |
-| POST | `/api/labs/:lessonId/flag` | nộp flag; giới hạn 10 lần/phút/người; đúng thì **server** ghi `done` |
+| POST | `/api/labs/:lessonId/flag` | nộp flag; giới hạn 10 lần nộp sai/phút/người; đúng thì **server** ghi `done` |
 | POST | `/api/sessions` | mở sandbox (1 học viên = 1 session, xếp hàng theo người) |
 | GET | `/api/sessions/active`, `/api/sessions/:id` | trạng thái phiên (chỉ chủ phiên) |
 | POST | `/api/sessions/:id/execute`, `/reset` | chạy lệnh; xoá workspace và đặt lại file mẫu |
@@ -52,7 +52,7 @@ Thứ tự: `helmet` → `cors` (chỉ origin trong danh sách) → ghi số li�
 | Rate limit nhóm sandbox | `RATE_LIMIT_MAX` = 30/phút/IP |
 | Rate limit auth | 300/phút/IP chung; 60/phút/IP nhóm nhạy cảm; **8/phút theo (IP, email)** khi đăng nhập |
 | Rate limit nội dung/admin | 600/phút/IP và 300/phút/người dùng |
-| Nộp flag | 10/phút/người dùng |
+| Nộp flag | 10 lần sai/phút/người dùng |
 | Token | cache kết quả xác minh 60 giây (giảm tải Supabase) |
 | Lỗi 500 | không lộ chi tiết, không lộ stack |
 
@@ -75,7 +75,7 @@ Tính an toàn khi lỗi: nếu runner không xác nhận được lệnh đã k
 - `labs/catalog.js` chứa **một flag cố định cho mỗi lab** (13 lab đã công bố) và danh sách file mẫu. Flag **không bao giờ gửi xuống trình duyệt**.
 - Khi mở lab, `labs/seed.js` ghi file mẫu vào `home/` của học viên với đúng quyền (ví dụ `check.sh` chạy được, `deploy.sh` ban đầu không chạy được); sau **Reset** thì ghi lại.
 - Hai kiểu lab: **tìm flag** (ví dụ `ls -la` thấy file ẩn) và **làm rồi mới ra flag** (`./check.sh` chỉ in flag khi trạng thái đúng).
-- Kiểm tra bằng `timingSafeEqual` trên hash SHA-256, giới hạn 10 lần/phút; đúng thì server ghi `progress = done`.
+- Kiểm tra bằng `timingSafeEqual` trên hash SHA-256, giới hạn 10 lần nộp sai/phút; đúng thì server ghi `progress = done`.
 
 ## 6. Cơ sở dữ liệu (Supabase / PostgreSQL)
 - **7 bảng**, **18 migration**, 9 hàm (gồm 2 hàm của trigger; ví dụ `is_admin`, `admin_set_user_role`, `admin_set_user_lock`, `admin_list_users`, `admin_stop_session`, `get_course_progress`, `validate_lesson_content`, …) và 2 trigger (`on_auth_user_created` tạo hồ sơ; `lessons_before_write` kiểm tra nội dung bài và slug không trùng).
