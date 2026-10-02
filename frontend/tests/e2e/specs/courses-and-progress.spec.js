@@ -34,6 +34,7 @@ test('My Learning shows the not-started state before any lab is solved', async (
 
 test('solving a lab from the table updates the row, the counters, and My Learning', async ({ page }) => {
   await page.goto('/courses/shell-101');
+  await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
   const row = page.locator('tr', { hasText: 'Terminal Fundamentals & Navigation' });
 
   // toggleSolveStatus (CourseDetail.jsx) updates the row optimistically

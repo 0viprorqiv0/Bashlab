@@ -38,6 +38,7 @@ pnpm-debug.log*
 coverage/
 frontend/tests/e2e/.auth/
 frontend/tests/e2e/report/
+test-results/
 frontend/test-results/
 screenshots/
 

@@ -20,7 +20,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const nextParam = encodeURIComponent(`/courses/${courseId}/labs/${labId}`);
-  const { loading, missing, error, labs, markDone, retry } = useCourseLabs(courseId);
+  const { loading, missing, error, labs, markDone, markStarted, retry } = useCourseLabs(courseId);
   const lab = labs.find((item) => String(item.id) === String(labId) || item.slug === labId);
 
   // Guests must log in before opening a lab — the instant local check avoids
@@ -38,15 +38,26 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
     if (lab && String(lab.id) !== String(labId)) router.replace(`/courses/${courseId}/labs/${lab.id}`);
   }, [lab, labId, courseId, router]);
 
+  useEffect(() => {
+    if (lab?.id) {
+      try {
+        localStorage.setItem(`bashlab:last_lab:${courseId}`, String(lab.id));
+      } catch {}
+      if (user && lab.status !== 'solved') {
+        markStarted?.(lab);
+      }
+    }
+  }, [courseId, lab, user, markStarted]);
+
   if (authLoading || !user) return <PageLoading label="Loading lab…" />;
   if (loading) return <PageLoading label="Loading lab…" />;
   if (error) return <PageError message={`Could not load this lab: ${error}`} onRetry={retry} />;
   if (missing || !lab) notFound();
   if (String(lab.id) !== String(labId)) return <PageLoading label="Loading lab…" />;
-  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} />;
+  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} markStarted={markStarted} />;
 }
 
-function Workspace({ courseId, labId, labs, markDone }) {
+function Workspace({ courseId, labId, labs, markDone, markStarted }) {
   const initialLabs = labs;
   const currentLab = initialLabs.find((item) => item.id === labId);
   const totalLabs = initialLabs.length;

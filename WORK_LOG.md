@@ -70,3 +70,47 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
     4. Giám sát Prometheus & OpenTelemetry.
     5. Đơn giản hóa kiến trúc (giữ nguyên giải pháp gọn nhẹ, tránh bloatware).
 * **Trạng thái**: Hoàn thành & đã commit (`fcf2388`).
+
+---
+
+## [2026-10-02 20:25] Chuyển đổi "Start learning" thành "Go to Lab" & Điều hướng thông minh đến Lab đang thực hiện
+* **Yêu cầu người dùng**:
+  * Tại trang `http://localhost:3000/courses`, đổi chữ "Start learning" thành **"Go to Lab"** (hoặc tương đương) kèm căn chỉnh giao diện phù hợp.
+  * Sau khi nhấn nút, hệ thống tự động redirect đến **lab cuối cùng đang thực hiện** của khoá học; nếu chưa có lab nào thì quay về **lab đầu tiên** (`/courses/${course.id}/labs/1`). Hiện tại có 1 khoá (`shell-101`).
+* **Các thay đổi thực hiện**:
+  * [`frontend/components/courses/CourseCatalog.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/courses/CourseCatalog.jsx):
+    * Truy vấn danh sách bài học đã published có kèm `sort_order` và kết hợp tải `fetchProgressMap(userId)` khi người dùng đăng nhập.
+    * Cài đặt hàm `getCourseTargetLab(course)`:
+      1. Ưu tiên bài có trạng thái `in_progress` mới nhất trong bảng `progress`.
+      2. Nếu không có bài `in_progress`, tự động trỏ đến bài chưa hoàn thành tiếp theo sau các bài đã `done`.
+      3. Kiểm tra `localStorage` (`bashlab:last_lab:${course.id}`) cho lab vừa mở gần nhất trên trình duyệt.
+      4. Fallback về bài 1 (`/courses/${course.id}/labs/1`) nếu người dùng mới hoặc đã hoàn thành toàn bộ khoá học.
+      5. Nếu là khách (chưa đăng nhập), chuyển hướng đến `/login?next=${encodeURIComponent(targetLabUrl)}`.
+    * Nút đổi thành `Go to Lab` kèm icon `arrow_forward`.
+    * Tiêu đề khoá học (`<h2>`) được bọc trong thẻ `<Link>` trỏ đến `/courses/${course.id}` để người dùng vẫn xem được syllabus/chi tiết khoá học khi cần.
+  * [`frontend/components/courses/CourseCatalog.module.css`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/courses/CourseCatalog.module.css):
+    * Căn chỉnh nút `.primaryAction` với khoảng cách `gap: 28px`, padding `11px 18px`, hiệu ứng hover translateY(-2px), bóng nhẹ và dịch chuyển arrow icon.
+    * Thêm hover styling cho link tiêu đề `h2 a`.
+    * Đảm bảo responsive hoàn hảo trên mobile (độ rộng 100%, căn đều hai bên giữa text và icon).
+  * [`frontend/lib/courseLabs.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/lib/courseLabs.js):
+    * Bổ sung hàm `markStarted(lab)` gọi `markLessonStarted` để cập nhật trạng thái `in_progress` vào cơ sở dữ liệu khi bắt đầu làm lab.
+  * [`frontend/components/workspace/LabWorkspace.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/workspace/LabWorkspace.jsx):
+    * Tự động lưu `localStorage.setItem('bashlab:last_lab:' + courseId, String(lab.id))` ngay khi mở lab.
+    * Gọi `markStarted` ghi nhận bài học đang được thực hiện vào cơ sở dữ liệu khi mở lab chưa hoàn thành.
+  * [`frontend/components/landing/Lookbook.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/landing/Lookbook.jsx):
+    * Loại bỏ dependency mock dữ liệu cũ `getFirstIncompleteLab` từ `labsData.js`, đồng bộ nút Hero trỏ đến `/courses/shell-101`.
+  * [`frontend/tests/e2e/specs/landing-start-learning.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/landing-start-learning.spec.js):
+    * Cập nhật và bổ sung đầy đủ bộ test E2E kiểm chứng nút "Go to Lab" và "Start learning", bao gồm cả khách vãng lai, học viên mới và học viên đã có tiến độ.
+  * [`frontend/tests/e2e/specs/courses-and-progress.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/courses-and-progress.spec.js):
+    * Thêm wait `User menu` để đồng bộ hoàn toàn quá trình hydrat hóa session trước khi click toggle lab hoàn thành.
+* **Kiểm chứng thực tế**:
+  * Chạy test Playwright E2E `landing-start-learning.spec.js` $\rightarrow$ **7/7 tests pass 100%**.
+  * Chạy test Playwright E2E `courses-and-progress.spec.js` $\rightarrow$ **4/4 tests pass 100%**.
+  * Chạy test Playwright E2E `smoke.spec.js` $\rightarrow$ **10/10 tests pass 100%**.
+  * Backend test suite: `npm --prefix backend test` $\rightarrow$ **70/70 tests pass 100%**.
+  * Frontend linter: `npm --prefix frontend run lint` $\rightarrow$ **0 errors, 0 warnings**.
+  * Ảnh chụp thực tế:
+    * Desktop: `screenshots/courses-catalog-desktop.png` (nút "Go to Lab ->", tiêu đề clickable, menu user gọn gàng).
+    * Mobile (375x667): `screenshots/courses-catalog-mobile-full.png` (nút full-width, căn chỉnh hai đầu chuẩn mực).
+* **Trạng thái**: Hoàn thành.
+

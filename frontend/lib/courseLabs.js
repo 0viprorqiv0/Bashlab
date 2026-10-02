@@ -7,7 +7,7 @@
 // whatever an admin adds, edits, reorders or unpublishes shows up here.
 import { useCallback, useEffect, useState } from 'react';
 import { authClient } from './authClient';
-import { fetchCourseWithLessons, fetchProgressMap, markLessonDone, toDisplayLab } from './learning';
+import { fetchCourseWithLessons, fetchProgressMap, markLessonDone, markLessonStarted, toDisplayLab } from './learning';
 
 export function labsOf(course, progressMap) {
   return (course?.lessons || []).map((lesson, index) => ({
@@ -50,6 +50,23 @@ export function useCourseLabs(courseSlug) {
     return { error };
   }, []);
 
+  const markStarted = useCallback(async (lab) => {
+    if (!lab?.lessonId) return { error: null };
+    const { error } = await markLessonStarted(null, lab.lessonId);
+    if (!error) {
+      setState((prev) => {
+        if (!prev.progress) return prev;
+        const progress = new Map(prev.progress);
+        const existing = progress.get(lab.lessonId);
+        if (existing?.status !== 'done') {
+          progress.set(lab.lessonId, { lesson_id: lab.lessonId, status: 'in_progress', updated_at: new Date().toISOString() });
+        }
+        return { ...prev, progress };
+      });
+    }
+    return { error };
+  }, []);
+
   const labs = state.course ? labsOf(state.course, state.progress) : [];
   return {
     loading: state.loading,
@@ -57,6 +74,7 @@ export function useCourseLabs(courseSlug) {
     error: state.error || '',
     labs,
     markDone,
+    markStarted,
     retry: () => setAttempt((n) => n + 1),
   };
 }
