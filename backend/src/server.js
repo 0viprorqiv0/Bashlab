@@ -15,6 +15,7 @@ import { rateLimiter } from './middleware/rateLimit.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createContentRouter } from './routes/content.js';
 import { createContentService, isUuid } from './services/contentService.js';
+import { seedLabWorkspace } from './labs/seed.js';
 import { createDashboardService } from './services/dashboardService.js';
 import { createAuthService } from './services/authService.js';
 import { createSupabaseAdmin, createSupabaseAnonFactory, createSupabaseUserFactory } from './lib/supabaseAdmin.js';
@@ -127,6 +128,16 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     records.delete(sessionId);
     content.service.closePracticeRecord(recordId).catch(() => {});
   };
+  // Puts the lab's starting files (and its flag) into the session's home directory.
+  // A seeding failure must not take the session down; the lab is just emptier.
+  const seedLab = async (session, lessonId) => {
+    if (!lessonId || typeof content?.service?.getLessonSlug !== 'function') return;
+    try {
+      await seedLabWorkspace(session, await content.service.getLessonSlug(lessonId, true));
+    } catch (error) {
+      console.error('lab files could not be prepared:', error.message);
+    }
+  };
   const cleanupStaleSession = (sessionId) => {
     sessionLeases.delete(sessionId);
     sessionLessons.delete(sessionId);
@@ -199,7 +210,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
         }
         // The lease remains the same resource owner. A lesson switch resets
         // the recorded workspace instead of allocating a second workspace.
-        await manager.withSession(active.id, (s) => manager.reset(s), { allowQuarantined: true });
+        await manager.withSession(active.id, async (s) => { await manager.reset(s); await seedLab(s, lessonId); }, { allowQuarantined: true });
         sessionLessons.set(active.id, lessonId);
         return res.status(200).json({
           ...manager.describe(active),
@@ -223,6 +234,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       sessionLessons.set(session.id, lessonId);
       await leaseStore.finishAllocation({ leaseId: lease.leaseId });
     }
+    await seedLab(session, lessonId);
     if (auth && content) {
       const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
       if (recordId) records.set(session.id, recordId);
@@ -296,6 +308,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   app.post('/api/sessions/:id/reset', ownSession, async (req, res) => {
     res.json(await manager.withSession(req.params.id, async session => {
       await manager.reset(session);
+      await seedLab(session, sessionLessons.get(session.id));
       return manager.describe(session);
     }));
   });

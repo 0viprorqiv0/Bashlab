@@ -249,6 +249,17 @@ export function createContentService({ admin, userClient }) {
       return data?.sandbox_session_id || null;
     },
 
+    // The lesson's slug (the key of its flag and starting files in src/labs/catalog.js).
+    async getLessonSlug(lessonId, isAdmin = false) {
+      assertUuid(lessonId, 'lessonId');
+      const { data, error } = await admin.from('lessons')
+        .select('slug, status, chapters(courses(status))').eq('id', lessonId).maybeSingle();
+      if (error) throw mapDbError(error);
+      const visible = data && (isAdmin || (data.status === 'published' && data.chapters?.courses?.status === 'published'));
+      if (!visible) throw new HttpError(404, 'LESSON_NOT_FOUND', 'Lesson not found');
+      return data.slug;
+    },
+
     async getLessonVerifier(lessonId, isAdmin = false) {
       assertUuid(lessonId, 'lessonId');
       const { data, error } = await admin.from('lessons')
