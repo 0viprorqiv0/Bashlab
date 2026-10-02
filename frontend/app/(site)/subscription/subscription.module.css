@@ -186,17 +186,20 @@
 
 .popularBadge {
   position: absolute;
-  top: -13px;
-  right: 28px;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: #68dfa0;
   color: #061014;
   font-weight: 800;
   font-size: 0.72rem;
   font-family: 'JetBrains Mono', monospace;
-  padding: 4px 14px;
+  padding: 4px 16px;
   border-radius: 999px;
   letter-spacing: 0.08em;
   box-shadow: 0 2px 12px rgba(104, 223, 160, 0.45);
+  white-space: nowrap;
+  z-index: 2;
 }
 
 .cardHeader {
