@@ -1,4 +1,5 @@
 .pageWrapper {
+  position: relative;
   min-height: 100vh;
   padding: 100px 24px 60px;
   max-width: 1120px;
@@ -6,6 +7,38 @@
   color: #f0f2f8;
   font-family: var(--font-body, 'Inter', sans-serif);
   box-sizing: border-box;
+}
+
+/* Background Media & Tint (Đồng bộ chuẩn từ trang Landing) */
+.newBgContainer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bgMedia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.bgDimOverlay {
+  position: absolute;
+  inset: 0;
+  /* Lớp tint tối đen giúp nền đằng sau chìm sâu và làm nổi bật nội dung */
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(6, 8, 14, 0.86) 0%,
+    rgba(3, 4, 8, 0.94) 100%
+  );
+  backdrop-filter: blur(2px);
 }
 
 .topBar {
@@ -73,6 +106,8 @@
 
 /* 2-Column Checkout Grid */
 .checkoutContainer {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 32px;
@@ -81,11 +116,13 @@
 
 /* Left Column: Form & 2 Sectors */
 .formPanel {
-  background: #0f131a;
+  background: rgba(15, 19, 26, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
   padding: 32px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
 
 .sectionHeader {
@@ -413,11 +450,13 @@
    RIGHT COLUMN: ORDER SUMMARY
    ======================================================== */
 .orderSummaryPanel {
-  background: #0f131a;
+  background: rgba(15, 19, 26, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
   padding: 28px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   position: sticky;
   top: 24px;
 }

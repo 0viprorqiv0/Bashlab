@@ -162,6 +162,19 @@ function CheckoutContent() {
 
   return (
     <div className={styles.pageWrapper}>
+      {/* Background Cityscape với lớp tint đen như trang Landing */}
+      <div className={styles.newBgContainer} aria-hidden="true">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className={styles.bgMedia}
+          src="/background/pixel-cityscape.1920x1080.mp4"
+        />
+        <div className={styles.bgDimOverlay} />
+      </div>
+
       {/* Main 2-Column Grid */}
       <main className={styles.checkoutContainer}>
         {/* LEFT COLUMN: Payment form with 2 Sectors */}
