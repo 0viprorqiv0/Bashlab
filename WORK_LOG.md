@@ -192,3 +192,35 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
   * Dọn dẹp: Đã xóa worktree tạm `/home/light/Downloads/bashlab-strict-lease` và thư mục agent tạm.
 * **Trạng thái**: Hoàn thành.
 
+---
+
+### [2026-10-02 21:40] Audit Backend Code bằng GPT-CLI & Thực hiện Real-User Live Testing toàn diện
+
+* **Yêu cầu**:
+  * Gọi `gpt-cli` (mô hình `gpt-5-6-thinking`) để rà soát, audit bảo mật và tính toàn vẹn của toàn bộ backend code vừa triển khai (vòng đời lease sandbox, quản lý session, cách ly runner, quota, phân quyền auth, concurrency).
+  * Thực hiện kiểm thử thủ công trực tiếp (manual test) như người dùng thật trên môi trường chạy thực tế (`http://localhost:3001` + Docker runner `bashlab-box`), không chỉ dựa vào unit test script.
+* **Kết quả Audit từ GPT-CLI ([`docs/BACKEND_AUDIT_REPORT.md`](file:///home/light/Documents/B3/web_app/Bashlab/docs/BACKEND_AUDIT_REPORT.md))**:
+  * **HIGH — Server đang chạy với In-Memory Lease Store mặc định**:
+    * Trong [`backend/src/server.js`](file:///home/light/Documents/B3/web_app/Bashlab/backend/src/server.js#L348), hàm `startServer()` khởi tạo `leaseStore = createMemoryLeaseStore(...)`.
+    * Mặc dù migration `019_sandbox_leases.sql` đã tạo bảng `sandbox_leases`, nhưng các hàm RPC (`claim_sandbox_lease`, `finish_sandbox_allocation`, v.v.) chưa được viết trong migration SQL mà chỉ có stub trong [`backend/src/services/sandboxLeaseStore.js`](file:///home/light/Documents/B3/web_app/Bashlab/backend/src/services/sandboxLeaseStore.js).
+    * Ảnh hưởng: Nếu backend restart hoặc chạy nhiều tiến trình Node (cluster/multi-instance), trạng thái lease trong RAM bị reset và không chia sẻ qua PostgreSQL.
+  * **MEDIUM — Race condition trong Memory Lease Store**:
+    * `claim()` trong `createMemoryLeaseStore` kiểm tra `leases.find` rồi `leases.set` mà không có mutex atomic, nếu có 2 request đồng thời trong cùng tick event loop thì có thể bị race.
+  * **MEDIUM — Ghép nối Runtime Session ID và Lease ID**:
+    * `beginCommand({ leaseId: session.id })` sử dụng trực tiếp `session.id` thay vì tách biệt tường minh trường `leaseId` (mặc dù hiện tại `manager.create` được truyền `id: lease.leaseId`).
+* **Kiểm thử thực tế như người dùng thật (Live Real-User Manual Test)**:
+  * Do subagent GPT-CLI bị chặn các lệnh bash chứa thông tin nhạy cảm (safety filter), toàn bộ kịch bản manual test người dùng đã được hiện thực hóa trực tiếp qua [`backend/scripts/manual-backend-test.mjs`](file:///home/light/Documents/B3/web_app/Bashlab/backend/scripts/manual-backend-test.mjs), tạo user thật trên Supabase và gọi live API `http://127.0.0.1:3001` tương tác với container runner `bashlab-box`.
+  * **Kết quả 10/10 kịch bản kiểm thử thực tế đạt 100%**:
+    1. **Xác thực Learner 1** (`POST /api/auth/login`): HTTP 200, cấp access token hợp lệ.
+    2. **Khởi tạo Sandbox & Lease** (`POST /api/sessions`): HTTP 201, tạo session và workspace thực tế tại `/home/student`.
+    3. **Thực thi lệnh cơ bản** (`POST /api/sessions/:id/execute`): Chạy `pwd; whoami; id`, trả về đúng `student`, `uid=10001(student) gid=10001(student)`, exitCode 0.
+    4. **Khóa loại trừ tương hỗ khi chạy đồng thời (Concurrency Mutex)**: Gửi đồng thời lệnh dài `sleep 2` và một lệnh tức thì. Lệnh thứ hai lập tức bị chặn với **HTTP 409 Conflict** (`code: SESSION_BUSY`, "Another operation is using this session").
+    5. **Giới hạn dung lượng đĩa (Storage Quota & ulimit)**: Ghi file 35MB `head -c 35M /dev/zero > large_blob.bin`. Bị kernel bắt cứng qua `RLIMIT_FSIZE` với mã thoát **exitCode 153 (`SIGXFSZ: File size limit exceeded`)** ngay tại ngưỡng 10MB!
+    6. **Cách ly thư mục & Jail Sandbox**: Thử đọc file nhạy cảm của hệ thống `cat /etc/shadow` $\rightarrow$ Trả về `No such file or directory` (Bubblewrap jail mount tách biệt hoàn toàn, không lộ file root host).
+    7. **Bảo mật phân quyền chéo người dùng (Cross-User Isolation)**: Learner 2 đăng nhập và cố gắng `GET` hoặc `POST execute` vào session của Learner 1 $\rightarrow$ Đều nhận **HTTP 404 Not Found** (session hoàn toàn vô hình với user khác).
+    8. **Đảm bảo bất biến 1 user = 1 active session (Rebind)**: Learner 1 yêu cầu mở lab khác khi đang có session $\rightarrow$ Trả về **HTTP 200, `reused: true`**, tái sử dụng workspace và lease mà không sinh session rác.
+    9. **Xóa session & giải phóng lease** (`DELETE /api/sessions/:id`): Trả về **HTTP 204 No Content**, dọn dẹp sạch workspace.
+    10. **Truy cập sau khi xóa**: `GET /api/sessions/:id` sau khi xóa $\rightarrow$ Nhận **HTTP 404 Not Found**.
+  * **Automated Backend Tests**: `npm --prefix backend test` $\rightarrow$ **74/74 tests PASS**.
+* **Trạng thái**: Hoàn thành kiểm thử và báo cáo.
+
