@@ -11,6 +11,10 @@ export const routeGroup = (path = '') => path.split('?')[0].split('/').slice(0, 
   .map((part) => (/^[0-9a-f]{8}-[0-9a-f]{4}-|^\d+$/i.test(part) ? ':id' : part)).join('/') || '/';
 const statusClass = (status) => `${Math.floor(status / 100)}xx`;
 
+// Prometheus text format: inside label="…" a backslash, a double quote and a
+// newline must be escaped, or one hostile URL (GET /a"b) corrupts the whole scrape.
+export const escapeLabel = (value) => String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+
 // What an HTTP outcome means for the "who is signing in" panel.
 const AUTH_EVENTS = {
   'POST /api/auth/login': (s) => (s === 200 ? 'login_ok' : s === 429 ? 'login_throttled' : 'login_failed'),
@@ -41,7 +45,9 @@ export class MetricsService {
   }
 
   recordHttp(method, path, status, durationSec) {
-    const group = routeGroup(path);
+    // Unknown URLs are attacker-chosen text: lump them together so junk paths
+    // cannot fill the series cap and push real routes into "other".
+    const group = status === 404 ? 'other' : routeGroup(path);
     let key = `${method} ${group} ${statusClass(status)}`;
     if (!this.http.has(key) && this.http.size >= MAX_HTTP_SERIES) key = `${method} other ${statusClass(status)}`;
     this.http.set(key, (this.http.get(key) || 0) + 1);
@@ -136,7 +142,7 @@ export class MetricsService {
     out += '# TYPE bashlab_http_requests_total counter\n';
     for (const [key, count] of this.http) {
       const [method, route, klass] = key.split(' ');
-      out += `bashlab_http_requests_total{method="${method}",route="${route}",class="${klass}"} ${count}\n`;
+      out += `bashlab_http_requests_total{method="${escapeLabel(method)}",route="${escapeLabel(route)}",class="${klass}"} ${count}\n`;
     }
     out += '\n# HELP bashlab_http_request_duration_seconds HTTP request duration in seconds\n';
     out += '# TYPE bashlab_http_request_duration_seconds histogram\n';
