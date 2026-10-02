@@ -96,6 +96,33 @@ const REVIEWS = [
   },
 ];
 
+export function SponsorsBar({ className = '' }) {
+  return (
+    <div className={`${styles.sponsorsSection} ${className}`}>
+      <span className={styles.sponsorsLabel}>
+        Trusted by developers from teams at
+      </span>
+      <div className={styles.sponsorsTrack} role="list" aria-label="Sponsors and partners">
+        {SPONSORS.map((s) => (
+          <a
+            key={s.name}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.sponsorItem}
+            style={{ '--brand-color': s.brandColor }}
+            role="listitem"
+            title={`Visit ${s.name}`}
+          >
+            {s.icon}
+            <span>{s.name}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ReviewsSponsors() {
   return (
     <div className={styles.container}>
@@ -158,28 +185,7 @@ export default function ReviewsSponsors() {
       </div>
 
       {/* Sponsors & Backers Pill */}
-      <div className={styles.sponsorsSection}>
-        <span className={styles.sponsorsLabel}>
-          Trusted by developers from teams at
-        </span>
-        <div className={styles.sponsorsTrack} role="list" aria-label="Sponsors and partners">
-          {SPONSORS.map((s) => (
-            <a
-              key={s.name}
-              href={s.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.sponsorItem}
-              style={{ '--brand-color': s.brandColor }}
-              role="listitem"
-              title={`Visit ${s.name}`}
-            >
-              {s.icon}
-              <span>{s.name}</span>
-            </a>
-          ))}
-        </div>
-      </div>
+      <SponsorsBar />
     </div>
   );
 }

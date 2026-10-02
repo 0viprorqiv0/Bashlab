@@ -60,3 +60,5 @@ _backups/
 
 .claude/
 /Background/
+Example/
+env/
