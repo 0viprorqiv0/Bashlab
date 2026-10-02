@@ -35,7 +35,6 @@ function CheckoutContent() {
   const [couponDiscount, setCouponDiscount] = useState(0);
 
   // Modals
-  const [isMomoOpen, setIsMomoOpen] = useState(false);
   const [quickSim, setQuickSim] = useState({ open: false, provider: '' });
 
   // Processing & Success State
@@ -70,7 +69,6 @@ function CheckoutContent() {
   const rawSubtotal = billingCycle === 'annual' ? (planType === 'team' ? 290 : 89) : baseRate;
   const discountAmount = couponApplied ? rawSubtotal * couponDiscount : 0;
   const finalTotal = Math.max(0, rawSubtotal - discountAmount);
-  const vndAmount = (finalTotal * 25400).toLocaleString('vi-VN');
 
   // Format card number with spaces every 4 digits
   function handleCardNumberChange(e) {
@@ -122,7 +120,6 @@ function CheckoutContent() {
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      setIsMomoOpen(false);
       setQuickSim({ open: false, provider: '' });
       setOrderId('BL-' + Math.random().toString(36).substring(2, 9).toUpperCase());
       setIsSuccess(true);
@@ -133,7 +130,6 @@ function CheckoutContent() {
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
-        setIsMomoOpen(false);
         setQuickSim({ open: false, provider: '' });
       }
     }
@@ -197,9 +193,11 @@ function CheckoutContent() {
                 onClick={() => setQuickSim({ open: true, provider: 'Apple Pay' })}
                 title="Pay with Apple Pay"
               >
-                <svg viewBox="0 0 48 18" width="48" height="18" fill="currentColor">
-                  <path d="M7.7 7.7c-.5.6-1.3 1-2.1 1-.1-1 .3-1.9.8-2.5.5-.6 1.4-1 2.2-1.1.1 1-.4 2-.9 2.6zm.9 1.4c-1.2-.1-2.3-.8-2.9-.8-.6 0-1.5.7-2.5.7-1.3 0-2.5-.7-3.2-1.9-1.4-2.4-.4-6 1-7.9.7-1 1.8-1.6 2.9-1.6 1.1 0 2.2.8 2.9.8.6 0 1.9-.8 3.2-.8 1.1 0 2.1.6 2.7 1.4-2.4 1.4-2 4.7.4 5.7-.5 1.5-1.3 3.1-2.5 4.5-.6.7-1.3 1.2-2 1.2zm8.7 5.1h-2.1V2.8h4.4c2.5 0 4.1 1.6 4.1 3.7 0 2.2-1.6 3.7-4.1 3.7h-2.3v4zm0-6.1h2.2c1.4 0 2.2-.8 2.2-1.9 0-1.1-.8-1.9-2.2-1.9h-2.2v3.8zm14.3 6.1l-.3-1.6c-.6 1.1-1.7 1.8-3.1 1.8-2 0-3.3-1.3-3.3-3.2 0-2.1 1.6-3.2 4.4-3.3l2-.1v-.5c0-1-.7-1.6-1.9-1.6-1.1 0-1.8.4-2.1 1.3l-1.8-.5c.6-1.5 1.9-2.2 3.9-2.2 2.3 0 3.8 1.2 3.8 3.2v6.7h-1.6zm-2.9-1.5c1.4 0 2.6-.9 2.6-2.1v-.8l-1.8.1c-1.6.1-2.5.6-2.5 1.7 0 .9.7 1.5 1.7 1.5zm8.9 4.3l3.5-10.4h2.2l-5.1 14.1h-2.1l1.8-4.5-3.3-9.6h2.2l2.3 6.9 1.1-3.5-2.6-3.4z" />
-                </svg>
+                <img
+                  src="/Apple_Pay_logo.svg"
+                  alt="Apple Pay"
+                  className={styles.applePayLogo}
+                />
               </button>
 
               {/* Google Pay */}
@@ -209,32 +207,16 @@ function CheckoutContent() {
                 onClick={() => setQuickSim({ open: true, provider: 'Google Pay' })}
                 title="Pay with Google Pay"
               >
-                <svg viewBox="0 0 48 18" width="48" height="18" fill="none">
-                  <path d="M7.8 7.3v2.8h5.3c-.2 1.3-1.5 3.8-5.3 3.8-3.2 0-5.8-2.7-5.8-5.9s2.6-5.9 5.8-5.9c1.8 0 3.1.8 3.8 1.5l2.2-2.1C12.4.2 10.3-.7 7.8-.7 3.5-.7 0 2.8 0 7.1s3.5 7.8 7.8 7.8c4.5 0 7.5-3.2 7.5-7.6 0-.5-.1-.9-.1-1.3H7.8v1.3z" fill="#fff"/>
-                  <path d="M22.1 14.5V2.8h-3v11.7h3z" fill="#fff"/>
-                  <path d="M28.4 6.8c-2.4 0-4.1 1.8-4.1 4.1 0 2.4 1.7 4.1 4.1 4.1s4.1-1.8 4.1-4.1c0-2.4-1.7-4.1-4.1-4.1zm0 6.6c-1.3 0-2.4-1.1-2.4-2.5s1.1-2.5 2.4-2.5 2.4 1.1 2.4 2.5-1.1 2.5-2.4 2.5z" fill="#fff"/>
-                  <path d="M41.4 6.8l-3.8 9.6h-2.1l1.4-3.1-2.5-6.5h2.2l1.4 4.3 1.4-4.3h2z" fill="#fff"/>
-                </svg>
-              </button>
-
-              {/* MoMo Pay */}
-              <button
-                type="button"
-                className={`${styles.btnQuickPay} ${styles.btnMomoPay}`}
-                onClick={() => setIsMomoOpen(true)}
-                title="Pay with MoMo Wallet"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-                </svg>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5, marginLeft: 6 }}>
-                  MoMo
-                </span>
+                <img
+                  src="/Google_Pay_Logo.svg"
+                  alt="Google Pay"
+                  className={styles.googlePayLogo}
+                />
               </button>
             </div>
 
             <div className={styles.quickSubtext}>
-              1-click instant biometric or QR code authorization
+              1-click instant biometric authorization
             </div>
           </div>
 
@@ -455,79 +437,7 @@ function CheckoutContent() {
       </main>
 
       {/* ========================================================
-          MODAL 1: MOMO PAY SCANNER POPUP
-          ======================================================== */}
-      {isMomoOpen && (
-        <div className={styles.modalOverlay} role="presentation" onClick={() => setIsMomoOpen(false)}>
-          <div className={styles.modalBox} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHead}>
-              <div className={styles.modalHeadTitle}>
-                <span style={{ color: '#ff60be', fontSize: 18 }}>●</span>
-                Pay with MoMo Wallet
-              </div>
-              <button
-                type="button"
-                className={styles.modalCloseBtn}
-                onClick={() => setIsMomoOpen(false)}
-              >
-                &times;
-              </button>
-            </div>
-
-            <div className={styles.modalBody}>
-              <span className={styles.momoBadge}>QUICK QR SCANNER</span>
-
-              <div className={styles.qrContainer}>
-                <svg viewBox="0 0 100 100" fill="#a50064">
-                  <rect x="5" y="5" width="26" height="26" rx="4" fill="#a50064"/>
-                  <rect x="9" y="9" width="18" height="18" rx="2" fill="#fff"/>
-                  <rect x="13" y="13" width="10" height="10" rx="1" fill="#a50064"/>
-
-                  <rect x="69" y="5" width="26" height="26" rx="4" fill="#a50064"/>
-                  <rect x="73" y="9" width="18" height="18" rx="2" fill="#fff"/>
-                  <rect x="77" y="13" width="10" height="10" rx="1" fill="#a50064"/>
-
-                  <rect x="5" y="69" width="26" height="26" rx="4" fill="#a50064"/>
-                  <rect x="9" y="73" width="18" height="18" rx="2" fill="#fff"/>
-                  <rect x="13" y="77" width="10" height="10" rx="1" fill="#a50064"/>
-
-                  <rect x="36" y="8" width="6" height="6" fill="#a50064"/>
-                  <rect x="46" y="8" width="8" height="6" fill="#a50064"/>
-                  <rect x="58" y="8" width="6" height="6" fill="#a50064"/>
-
-                  <rect x="36" y="18" width="8" height="8" fill="#a50064"/>
-                  <rect x="48" y="20" width="6" height="12" fill="#a50064"/>
-                  <rect x="58" y="18" width="7" height="6" fill="#a50064"/>
-
-                  <rect x="10" y="38" width="14" height="6" fill="#a50064"/>
-                  <rect x="28" y="38" width="16" height="14" fill="#a50064"/>
-                  <rect x="48" y="38" width="14" height="8" fill="#a50064"/>
-                  <rect x="68" y="38" width="18" height="6" fill="#a50064"/>
-
-                  <rect x="40" y="40" width="20" height="20" rx="4" fill="#a50064"/>
-                  <circle cx="50" cy="50" r="5" fill="#fff"/>
-                </svg>
-              </div>
-
-              <div className={styles.qrInstructions}>
-                Open the <strong>MoMo</strong> app on your phone and select <strong>&ldquo;Scan QR Code&rdquo;</strong> to complete payment of <strong>{vndAmount} VND</strong>.
-              </div>
-
-              <button
-                type="button"
-                className={styles.btnMomoDeeplink}
-                onClick={() => processSuccess('MoMo Wallet')}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>phone_android</span>
-                Open MoMo App (Simulate payment)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
-          MODAL 2: APPLE PAY / GOOGLE PAY SIMULATOR
+          APPLE PAY / GOOGLE PAY SIMULATOR
           ======================================================== */}
       {quickSim.open && (
         <div
@@ -550,14 +460,24 @@ function CheckoutContent() {
             </div>
 
             <div className={styles.modalBody}>
-              <div style={{ fontSize: 42, marginBottom: 12 }}>
-                {quickSim.provider.includes('Apple') ? '🍎' : '🌐'}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+                {quickSim.provider.includes('Apple') ? (
+                  <div style={{ background: '#000', padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)' }}>
+                    <img src="/Apple_Pay_logo.svg" alt="Apple Pay" style={{ height: 28, filter: 'brightness(0) invert(1)', display: 'block' }} />
+                  </div>
+                ) : (
+                  <div style={{ background: '#fff', padding: '10px 20px', borderRadius: 8, border: '1px solid #dadce0' }}>
+                    <img src="/Google_Pay_Logo.svg" alt="Google Pay" style={{ height: 28, display: 'block' }} />
+                  </div>
+                )}
               </div>
               <h3 style={{ fontSize: 18, color: '#fff', marginBottom: 6 }}>
                 Confirm with {quickSim.provider}
               </h3>
               <p style={{ fontSize: 13.5, color: '#9ba3b8', marginBottom: 24, lineHeight: 1.6 }}>
-                Double-click side button or authenticate with Touch ID / Face ID to approve payment of{' '}
+                {quickSim.provider.includes('Apple')
+                  ? 'Double-click side button or authenticate with Touch ID / Face ID to approve payment of '
+                  : 'Confirm your Google account and authorize payment of '}
                 <strong style={{ color: '#68dfa0' }}>${finalTotal.toFixed(2)} USD</strong> to BashLab.
               </p>
 
@@ -566,7 +486,7 @@ function CheckoutContent() {
                 className={styles.btnSubmitPayment}
                 onClick={() => processSuccess(quickSim.provider)}
               >
-                Authorize with Touch ID / Face ID (Simulate payment)
+                Authorize Payment (Simulate)
               </button>
             </div>
           </div>

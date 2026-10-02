@@ -174,9 +174,22 @@
 
 .quickButtonsGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
   margin-bottom: 8px;
+}
+
+.applePayLogo {
+  height: 22px;
+  width: auto;
+  display: block;
+  filter: brightness(0) invert(1);
+}
+
+.googlePayLogo {
+  height: 20px;
+  width: auto;
+  display: block;
 }
 
 .btnQuickPay {
@@ -206,28 +219,15 @@
 }
 
 .btnGooglePay {
-  background: #0c0f17;
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #ffffff;
+  color: #202124;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 .btnGooglePay:hover {
-  background: #151b26;
-  border-color: rgba(255, 255, 255, 0.35);
+  background: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
-}
-
-.btnMomoPay {
-  background: linear-gradient(135deg, #a50064 0%, #d82d8b 100%);
-  color: #ffffff;
-  border-color: rgba(216, 45, 139, 0.4);
-  box-shadow: 0 4px 14px rgba(165, 0, 100, 0.25);
-}
-.btnMomoPay:hover {
-  background: linear-gradient(135deg, #b8006f 0%, #e8389b 100%);
-  border-color: #ff5eb9;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 22px rgba(216, 45, 139, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
 .quickSubtext {

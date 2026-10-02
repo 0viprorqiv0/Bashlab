@@ -6,7 +6,9 @@ import dynamic from 'next/dynamic';
 import styles from './Lookbook.module.css';
 import CuriosityWord from './animations/CuriosityWord';
 import ReviewsSponsors from './ReviewsSponsors';
+import SubscriptionTeaser from './SubscriptionTeaser';
 import { getTabCompletions, findCommonPrefix } from './terminalTabCompletion';
+import { getFirstIncompleteLab } from '@/data/labsData';
 import Footer from '../layout/Footer';
 
 /* Cyber backdrop loads independently from main content */
@@ -21,8 +23,8 @@ const STORE_KEY = 'bashlab:lookbook-snap';
 const PAGES = [
   { id: 'start', label: 'Start' },
   { id: 'try', label: 'Try' },
-  { id: 'learn', label: 'Learn' },
   { id: 'reviews', label: 'Reviews' },
+  { id: 'pricing', label: 'Pricing' },
   { id: 'questions', label: 'Questions' },
 ];
 
@@ -426,6 +428,7 @@ function renderQuoteContent(quote, charCount, isIdle) {
 }
 
 export default function Lookbook() {
+  const firstIncompleteLab = getFirstIncompleteLab();
   const sectionRefs = useRef([]);
   const scrollTimer = useRef(null);
   const snappingUntil = useRef(0);
@@ -463,6 +466,7 @@ export default function Lookbook() {
   const [historyIdx, setHistoryIdx] = useState(-1);
   const autoRunTimersRef = useRef([]);
   const autoRunActiveRef = useRef(false);
+  const hasAutoRunRef = useRef(false);
 
   const cancelAutoRun = useCallback(() => {
     if (!autoRunActiveRef.current) return;
@@ -645,7 +649,10 @@ export default function Lookbook() {
   useEffect(() => {
     try {
       const v = window.localStorage.getItem(STORE_KEY);
-      if (v === '0') setEnabled(false);
+      if (v === '0') {
+        window.localStorage.removeItem(STORE_KEY);
+      }
+      setEnabled(true);
     } catch {
       /* giữ mặc định ON */
     }
@@ -660,13 +667,13 @@ export default function Lookbook() {
   const smoothScrollTo = useCallback((target) => {
     const duration = 0.72;
     snappingUntil.current = Date.now() + Math.round(duration * 1000 + 50);
-    const targetTop = typeof target === 'number'
-      ? target
-      : (target ? (target.offsetTop ?? (target.getBoundingClientRect().top + window.scrollY)) : 0);
 
     if (window.lenis) {
-      window.lenis.scrollTo(targetTop, { duration });
+      window.lenis.scrollTo(target, { duration });
     } else {
+      const targetTop = typeof target === 'number'
+        ? target
+        : (target ? (target.getBoundingClientRect().top + window.pageYOffset) : 0);
       window.scrollTo({ top: targetTop, behavior: reducedMotion() ? 'auto' : 'smooth' });
     }
   }, []);
@@ -679,7 +686,7 @@ export default function Lookbook() {
     if (index === 0) {
       smoothScrollTo(0);
     } else if (el) {
-      smoothScrollTo(el.offsetTop ?? (el.getBoundingClientRect().top + window.scrollY));
+      smoothScrollTo(el);
     }
   }, [smoothScrollTo]);
 
@@ -740,10 +747,9 @@ export default function Lookbook() {
         }
       }
       if (best >= 0 && bestAbs > 2) {
-        const target = best === 0 ? 0 : (sections[best].offsetTop ?? (sections[best].getBoundingClientRect().top + window.scrollY));
         setActive(best);
         targetIndexRef.current = best;
-        smoothScrollTo(target);
+        smoothScrollTo(best === 0 ? 0 : sections[best]);
       }
     }
 
@@ -776,12 +782,11 @@ export default function Lookbook() {
         }
       }
 
-      // Khóa và nuốt hoàn toàn sự kiện wheel để trình duyệt và Lenis không cuộn tự do
+      // Nuốt sự kiện wheel để snap mượt
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
 
-      // Nếu đang trong thời gian chặn dội (echo) của 1 nấc cuộn: bỏ qua ngay, KHÔNG gia hạn cooldown
+      // Nếu đang trong thời gian chặn dội (echo) của 1 nấc cuộn: bỏ qua ngay
       if (wheelLockRef.current) {
         return;
       }
@@ -789,10 +794,6 @@ export default function Lookbook() {
       // Bỏ qua rung lắc vi mô (< 10px)
       if (Math.abs(e.deltaY) < 10) return;
 
-      const sections = sectionRefs.current.filter(Boolean);
-      if (sections.length < PAGES.length) return;
-
-      // Khóa ngắn (160ms) chỉ để hấp thụ các xung lặp của cùng 1 nấc con lăn, không tạo cảm giác cooldown
       wheelLockRef.current = true;
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
       wheelTimerRef.current = setTimeout(() => {
@@ -803,12 +804,12 @@ export default function Lookbook() {
 
       if (e.deltaY > 0) {
         // Lăn xuống: chuyển đúng 1 khung tiếp theo
-        if (cur < PAGES.length - 1) {
+        if (cur < PAGES.length - 1 && (cur + 1 === 0 || sectionRefs.current[cur + 1])) {
           goTo(cur + 1);
         }
       } else if (e.deltaY < 0) {
         // Lăn lên: chuyển đúng 1 khung trước đó
-        if (cur > 0) {
+        if (cur > 0 && (cur - 1 === 0 || sectionRefs.current[cur - 1])) {
           goTo(cur - 1);
         }
       }
@@ -831,9 +832,6 @@ export default function Lookbook() {
       const diffY = touchStartY - e.changedTouches[0].clientY;
       if (Math.abs(diffY) < 45) return;
 
-      const sections = sectionRefs.current.filter(Boolean);
-      if (sections.length < PAGES.length) return;
-
       wheelLockRef.current = true;
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
       wheelTimerRef.current = setTimeout(() => {
@@ -844,12 +842,12 @@ export default function Lookbook() {
 
       if (diffY > 0) {
         // Vuốt lên -> sang đúng 1 khung kế tiếp
-        if (cur < PAGES.length - 1) {
+        if (cur < PAGES.length - 1 && (cur + 1 === 0 || sectionRefs.current[cur + 1])) {
           goTo(cur + 1);
         }
       } else if (diffY < 0) {
         // Vuốt xuống -> về đúng 1 khung trước đó
-        if (cur > 0) {
+        if (cur > 0 && (cur - 1 === 0 || sectionRefs.current[cur - 1])) {
           goTo(cur - 1);
         }
       }
@@ -1143,35 +1141,46 @@ export default function Lookbook() {
 
 
 
-  /* Tự động chạy lệnh ls rồi whoami khi vừa vào trang web hoặc refresh trang web */
+  /* Tự động chạy lệnh ls rồi whoami:
+     Cứ scroll đến khung terminal là trigger đếm ngược 0.3s rồi tự chạy.
+     Kể cả khi scroll luôn sang page khác thì terminal vẫn tiếp tục chạy hoàn tất.
+  */
   useEffect(() => {
-    if (reducedMotion()) {
-      autoRunActiveRef.current = false;
-      setLogEntries([
-        { type: 'prompt', cmd: 'ls', user: 'guest', dir: '' },
-        { type: 'output', content: 'System/   about.txt   courses/   getting-started.txt' },
-        { type: 'prompt', cmd: 'whoami', user: 'guest', dir: '' },
-        { type: 'output', content: 'guest' },
-      ]);
-      return undefined;
-    }
-
+    if (active !== 1 || hasAutoRunRef.current) return;
+    hasAutoRunRef.current = true;
     autoRunActiveRef.current = true;
+
     const timers = [];
+    const START_DELAY = 300;
+
+    if (reducedMotion()) {
+      const t = setTimeout(() => {
+        setLogEntries([
+          { type: 'prompt', cmd: 'ls', user: 'guest', dir: '' },
+          { type: 'output', content: 'System/   about.txt   courses/   getting-started.txt' },
+          { type: 'prompt', cmd: 'whoami', user: 'guest', dir: '' },
+          { type: 'output', content: 'guest' },
+        ]);
+        autoRunActiveRef.current = false;
+      }, START_DELAY);
+      timers.push(t);
+      autoRunTimersRef.current = timers;
+      return;
+    }
 
     // Bước 1: Gõ lệnh 'ls'
     timers.push(
       setTimeout(() => {
         if (!autoRunActiveRef.current) return;
         setInputValue('l');
-      }, 280)
+      }, START_DELAY + 120)
     );
 
     timers.push(
       setTimeout(() => {
         if (!autoRunActiveRef.current) return;
         setInputValue('ls');
-      }, 420)
+      }, START_DELAY + 260)
     );
 
     // Bước 2: Thực thi 'ls'
@@ -1183,7 +1192,7 @@ export default function Lookbook() {
           { type: 'prompt', cmd: 'ls', user: 'guest', dir: '' },
           { type: 'output', content: 'System/   about.txt   courses/   getting-started.txt' },
         ]);
-      }, 620)
+      }, START_DELAY + 480)
     );
 
     // Bước 3: Gõ lệnh 'whoami'
@@ -1193,7 +1202,7 @@ export default function Lookbook() {
         setTimeout(() => {
           if (!autoRunActiveRef.current) return;
           setInputValue(s);
-        }, 980 + idx * 70)
+        }, START_DELAY + 760 + idx * 65)
       );
     });
 
@@ -1209,14 +1218,17 @@ export default function Lookbook() {
           { type: 'output', content: 'guest' },
         ]);
         autoRunActiveRef.current = false;
-      }, 980 + whoamiSteps.length * 70 + 180)
+      }, START_DELAY + 760 + whoamiSteps.length * 65 + 160)
     );
 
     autoRunTimersRef.current = timers;
+  }, [active]);
 
+  // Dọn dẹp timer khi toàn bộ component unmount
+  useEffect(() => {
     return () => {
       autoRunActiveRef.current = false;
-      timers.forEach(clearTimeout);
+      autoRunTimersRef.current.forEach(clearTimeout);
     };
   }, []);
 
@@ -2381,13 +2393,11 @@ export default function Lookbook() {
               Learn Bash one small step at a time. Try a command, understand what it does, and build confidence through guided practice.
             </p>
             <div className={styles.heroCtas}>
-              <a href="/courses/shell-101" className={styles.btnPrimary}>
+              <a href={firstIncompleteLab ? `/courses/shell-101/labs/${firstIncompleteLab.id}` : '/courses/shell-101'} className={styles.btnPrimary}>
                 <span>Start learning</span>
-                <span aria-hidden="true">→</span>
               </a>
               <button type="button" className={styles.btnSecondary} onClick={() => goTo(1)}>
                 <span>Try your first command</span>
-                <span aria-hidden="true">↓</span>
               </button>
             </div>
             <p className={styles.heroPwd}>
@@ -2409,9 +2419,12 @@ export default function Lookbook() {
         <div className={styles.wrap}>
           <div className={styles.tryGrid}>
             <div className={`${styles.tryCol} ${styles.reveal} ${styles.tryIntro}`}>
-              <h2 id="try-heading" className={styles.h2}>Ask the terminal where you are.</h2>
+              <h2 id="try-heading" className={styles.h2}>
+                Mastering the terminal,<br />
+                <span style={{ color: 'var(--lb-accent)' }}>made effortless.</span>
+              </h2>
               <div className={styles.bottomNote}>
-                <p className={styles.smallNote}>You have seen a command. Next, learn when and why to use it.</p>
+                <p className={styles.smallNote}>A safe browser sandbox. No setup, no fear of breaking things — just type and explore.</p>
               </div>
             </div>
             <div className={`${styles.tryCol} ${styles.reveal}`}>
@@ -2674,113 +2687,30 @@ export default function Lookbook() {
         </div>
       </section>
 
-      {/* ===== 03 / LEARN — trái 3 rows 58 / phải heading 42 ===== */}
-      <section ref={setSection(2)} id="learn" aria-labelledby="learn-heading" className={`${styles.section} ${styles.sLearn} ${visibleSections[2] ? styles.isVisible : ''}`}>
-        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#78CBD4' }} />
-        <div className={styles.wrap}>
-          <div className={styles.learnGrid}>
-            <div className={`${styles.learnSteps} ${styles.reveal}`}>
-              <div className={styles.pipelineWrap}>
-                {/* 3 Cyber Pipeline Glass Cards */}
-                <div className={styles.pipeList}>
-                  {PIPELINE_STEPS.map((step, idx) => (
-                    <div
-                      key={step.num}
-                      className={styles.pipeItem}
-                      style={{
-                        '--node-color': step.color,
-                        '--node-glow': step.glow,
-                        '--card-accent': step.color,
-                        '--card-glow': step.glow,
-                        '--tag-color': step.color,
-                        '--tag-border': `${step.color}45`,
-                        '--tag-bg': `${step.color}10`,
-                        '--tag-bg-hover': `${step.color}22`,
-                        '--tag-glow': step.glow,
-                        '--icon-bg': `${step.color}18`,
-                      }}
-                    >
-                      {/* Neon Node + Connector Segment */}
-                      <div className={styles.pipeCol} aria-hidden="true">
-                        <div className={styles.pipeNode}>
-                          <span>{step.num}</span>
-                        </div>
-                        {idx === 0 && <div className={`${styles.pipeSegment} ${styles.pipeSegment1}`} />}
-                        {idx === 1 && <div className={`${styles.pipeSegment} ${styles.pipeSegment2}`} />}
-                      </div>
-
-                      {/* Glassmorphism Card */}
-                      <div className={styles.pipeCard}>
-                        <div className={styles.pipeCardHead}>
-                          <div className={styles.pipeTitleGroup}>
-                            <div className={styles.pipeIcon} style={{ color: step.color }}>
-                              {step.icon}
-                            </div>
-                            <h3 className={styles.pipeCardTitle}>{step.title}</h3>
-                          </div>
-                          <span className={styles.pipeTag}>{step.tag}</span>
-                        </div>
-
-                        <p className={styles.pipeDesc}>{step.desc}</p>
-
-                        <div className={styles.pipeFoot}>
-                          <span className={styles.pipeFootDot} />
-                          <span>{step.subtext}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className={`${styles.learnSide} ${styles.reveal}`}>
-              <h2 id="learn-heading" className={styles.h2}>
-                Understand it. Try it.<br />
-                <span style={{ color: 'var(--lb-accent)' }}>Make it stick.</span>
-              </h2>
-              <p className={styles.body}>
-                Learn Bash through hands-on practice. Read a quick visual guide, run real commands in your browser, and get instant feedback.
-              </p>
-              <div className={styles.learnFeatures}>
-                <div className={styles.learnFeatureItem} style={{ '--feat-color': '#68DFA0', '--feat-bg': 'rgba(104, 223, 160, 0.08)', '--feat-border': 'rgba(104, 223, 160, 0.25)' }}>
-                  <span className={styles.learnFeatureNum}>01</span>
-                  <span>Visual guides, no memorization</span>
-                </div>
-                <div className={styles.learnFeatureItem} style={{ '--feat-color': '#78CBD4', '--feat-bg': 'rgba(120, 203, 212, 0.08)', '--feat-border': 'rgba(120, 203, 212, 0.25)' }}>
-                  <span className={styles.learnFeatureNum}>02</span>
-                  <span>Real Linux terminal in your browser</span>
-                </div>
-                <div className={styles.learnFeatureItem} style={{ '--feat-color': '#FFB800', '--feat-bg': 'rgba(255, 184, 0, 0.08)', '--feat-border': 'rgba(255, 184, 0, 0.25)' }}>
-                  <span className={styles.learnFeatureNum}>03</span>
-                  <span>Instant pass/fail checks on every lesson</span>
-                </div>
-              </div>
-              <div className={styles.bottomNote}>
-                <p className={styles.smallNote}>Shell 101 turns these simple steps into lasting muscle memory.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== 04 / REVIEWS & SPONSORS ===== */}
-      <section ref={setSection(3)} id="reviews" aria-labelledby="reviews-heading" className={`${styles.section} ${styles.sCourse} ${visibleSections[3] ? styles.isVisible : ''}`}>
+      {/* ===== 03 / REVIEWS & SPONSORS ===== */}
+      <section ref={setSection(2)} id="reviews" aria-labelledby="reviews-heading" className={`${styles.section} ${styles.sCourse} ${visibleSections[2] ? styles.isVisible : ''}`}>
         <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#68DFA0' }} />
         <div className={styles.wrap}>
           <div className={`${styles.reviewsHead} ${styles.reveal}`}>
             <div className={styles.philosophyTag} aria-hidden="true">
               <span>COMMUNITY</span>
               <span className={styles.tagArrow}>&gt;</span>
-              <span>TRUSTED</span>
+              <span>STUDENTS</span>
               <span className={styles.tagArrow}>&gt;</span>
               <span>PARTNERS</span>
-              <span className={styles.tagArrow}>&gt;</span>
-              <span>4.9/5★</span>
             </div>
-            <h2 id="reviews-heading" className={styles.h2}>Loved by engineers. Backed by community.</h2>
+            <h2 id="reviews-heading" className={styles.h2}>Loved by students. Built for future engineers.</h2>
           </div>
 
           <ReviewsSponsors />
+        </div>
+      </section>
+
+      {/* ===== 04 / SUBSCRIPTION TEASER ===== */}
+      <section ref={setSection(3)} id="pricing" aria-labelledby="pricing-heading" className={`${styles.section} ${styles.sCourse} ${visibleSections[3] ? styles.isVisible : ''}`}>
+        <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#FFB800' }} />
+        <div className={styles.wrap}>
+          <SubscriptionTeaser />
         </div>
       </section>
 
