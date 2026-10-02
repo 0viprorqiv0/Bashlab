@@ -192,7 +192,7 @@ Admin đầu tiên phải tạo bằng SQL (chưa có admin nào để cấp quy
 ```
 NEXT_PUBLIC_SUPABASE_URL=<Project URL>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>          # chỉ để đọc dữ liệu dưới RLS
-API_PROXY_TARGET=http://127.0.0.1:3001            # URL backend mà Next.js server truy cập được
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3001            # URL backend mà Next.js server truy cập được
 ```
 
 Backend cần chạy cùng lúc: `cd backend && npm run start:api` (Windows/không

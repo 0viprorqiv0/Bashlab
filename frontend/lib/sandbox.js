@@ -3,10 +3,10 @@
 // 503 SANDBOX_DISABLED and the lab falls back to manual completion.
 // Every call carries the learner's access token: the API only lets a user
 // touch sandbox sessions they created.
-import { API_BASE as BASE, API_CONFIGURED } from './api';
+import { API_BASE as BASE } from './api';
 import { authClient } from './authClient';
 
-export const sandboxEnabled = API_CONFIGURED && process.env.NEXT_PUBLIC_SANDBOX_ENABLED !== 'false';
+export const sandboxEnabled = Boolean(BASE) && process.env.NEXT_PUBLIC_SANDBOX_ENABLED !== 'false';
 
 async function authHeader() {
   const token = await authClient.getAccessToken();

@@ -37,7 +37,7 @@ test -f .env.local || cp .env.local.example .env.local
 nano .env.local
 ```
 
-Điền `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` từ đúng project Supabase. Khi frontend và backend cùng chạy trong WSL, đặt `API_PROXY_TARGET=http://127.0.0.1:3001` và `NEXT_PUBLIC_SANDBOX_API_URL=http://127.0.0.1:3001` để proxy đăng nhập và terminal trong bài học gọi API local. Trong `backend/.env`, cần có `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` và `SUPABASE_ANON_KEY` của cùng project; đặt `HOST=127.0.0.1` và `SANDBOX_ENABLED=true`. Chỉ dùng anon/publishable key ở frontend; không đặt service-role key hoặc mật khẩu database trong `.env.local`.
+Điền `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` từ đúng project Supabase. Khi frontend và backend cùng chạy trong WSL, đặt `NEXT_PUBLIC_API_URL=http://127.0.0.1:3001` và `NEXT_PUBLIC_SANDBOX_API_URL=http://127.0.0.1:3001` để proxy đăng nhập và terminal trong bài học gọi API local. Trong `backend/.env`, cần có `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` và `SUPABASE_ANON_KEY` của cùng project; đặt `HOST=127.0.0.1` và `SANDBOX_ENABLED=true`. Chỉ dùng anon/publishable key ở frontend; không đặt service-role key hoặc mật khẩu database trong `.env.local`.
 
 Để hiện hai khóa `Shell 201` và `Linux Permissions & Security` trong **Coming next** cho guest và learner, chủ project cần mở **Supabase Dashboard → SQL Editor**, chọn đúng project, rồi chạy nội dung file [`backend/db/migrations/013_public_upcoming_courses.sql`](../backend/db/migrations/013_public_upcoming_courses.sql). Migration yêu cầu migrations 001–012 đã được áp dụng. Có thể kiểm tra trạng thái bằng:
 
@@ -89,7 +89,7 @@ cd /mnt/c/Bash_lab/frontend
 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
-Chờ Next.js báo `Ready`, mở [http://localhost:3000](http://localhost:3000), rồi đăng nhập bằng tài khoản Supabase của project đã cấu hình. Trong `frontend/.env.local`, đặt `API_PROXY_TARGET=http://127.0.0.1:3001`. Không dùng IP WSL vì địa chỉ đó có thể đổi khi WSL khởi động lại. Sau khi sửa `.env.local`, khởi động lại frontend.
+Chờ Next.js báo `Ready`, mở [http://localhost:3000](http://localhost:3000), rồi đăng nhập bằng tài khoản Supabase của project đã cấu hình. Trong `frontend/.env.local`, đặt `NEXT_PUBLIC_API_URL=http://127.0.0.1:3001`. Không dùng IP WSL vì địa chỉ đó có thể đổi khi WSL khởi động lại. Sau khi sửa `.env.local`, khởi động lại frontend.
 
 Chỉ chạy frontend bằng lệnh WSL ở trên. Nếu trước đó đã chạy frontend từ PowerShell/Windows, dừng tiến trình Windows cũ bằng `Ctrl+C` trong cửa sổ của nó; nếu không, trình duyệt có thể vào nhầm Next.js Windows trên `localhost:3000` và nhận lỗi proxy cũ.
 

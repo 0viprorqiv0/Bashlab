@@ -38,7 +38,7 @@ notepad .env.local
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key-cua-du-an>
-API_PROXY_TARGET=http://127.0.0.1:3001
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3001
 ```
 
 Thay các giá trị trong dấu `<...>` bằng thông tin thật. Không dùng service-role key trong frontend. Khởi động lại frontend sau khi sửa file môi trường.
@@ -69,7 +69,7 @@ Frontend chạy được không có nghĩa toàn bộ chức năng đã sẵn s�
 
 Backend mặc định dùng cổng `3001`. Xem [hướng dẫn chạy backend](backend/RUNNING.md) để chuẩn bị Linux/WSL, Docker và runner. Backend sandbox có yêu cầu riêng; không chạy trực tiếp các lệnh Linux đó trong PowerShell.
 
-Nếu backend chạy trong WSL, đặt `API_PROXY_TARGET` thành địa chỉ backend mà tiến trình Next.js truy cập được. Tránh để frontend và backend dùng cùng cổng.
+Nếu backend chạy trong WSL, đặt `NEXT_PUBLIC_API_URL` thành địa chỉ backend mà tiến trình Next.js truy cập được. Tránh để frontend và backend dùng cùng cổng.
 
 ## 6. Mở lại và dừng trang web
 
@@ -91,4 +91,4 @@ Sau đó mở địa chỉ server trong trình duyệt. Để dừng, nhấn **C
 | Trình duyệt báo không thể kết nối | Kiểm tra `npm run dev` còn chạy, đợi server sẵn sàng và mở đúng cổng ở dòng `Local`. |
 | Cổng `3000` đang được sử dụng | Dùng địa chỉ server thông báo, hoặc chạy `npm run dev -- --port 3005` rồi mở `http://localhost:3005`. |
 | Lỗi Supabase hoặc không có dữ liệu khóa học | Kiểm tra `.env.local` và database của dự án; xem phần cấu hình trong [README](README.md). |
-| API báo lỗi kết nối | Kiểm tra backend đã chạy và `API_PROXY_TARGET` trỏ đúng địa chỉ; khởi động lại frontend sau khi sửa biến. |
+| API báo lỗi kết nối | Kiểm tra backend đã chạy và `NEXT_PUBLIC_API_URL` trỏ đúng địa chỉ; khởi động lại frontend sau khi sửa biến. |
