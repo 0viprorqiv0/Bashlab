@@ -382,3 +382,19 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
     5. **Lab Workspace**: [`frontend/screenshots/workspace-intact.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/workspace-intact.png) - Không gian làm việc 100vh với ChatGPT Sidebar và nút Check Solution hoạt động trơn tru.
 * **Trạng thái**: Hoàn thành xuất sắc.
 
+---
+
+### [2026-10-02 23:27] Tối ưu Navbar: Loại bỏ chữ "Admin" thừa bên ngoài Header
+
+* **Mục tiêu**: Khi người dùng đã có mục **"Admin panel"** trực quan bên trong menu Popover dropdown của avatar, việc để chữ "Admin" dạng văn bản đơn lẻ bên ngoài cạnh avatar gây rối mắt và thừa thãi.
+* **Thay đổi**:
+  * [`frontend/components/layout/Navbar.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/layout/Navbar.jsx): Bỏ liên kết văn bản `Admin` bên ngoài cạnh avatar.
+  * Giữ trọn vẹn mục "Admin panel" (kèm icon `admin_panel_settings`) trong menu dropdown và mobile menu.
+* **Kiểm chứng thực tế**:
+  * Chụp ảnh màn hình trạng thái Header gọn gàng: [`navbar-clean-no-admin-link.png`](file:///home/light/.gemini/antigravity-cli/brain/1452835d-ecd2-4990-8c8e-966c5ec35541/navbar-clean-no-admin-link.png).
+  * Chụp ảnh màn hình dropdown mở: [`navbar-dropdown-admin-panel.png`](file:///home/light/.gemini/antigravity-cli/brain/1452835d-ecd2-4990-8c8e-966c5ec35541/navbar-dropdown-admin-panel.png).
+  * ESLint: 0 warnings, 0 errors.
+  * E2E: Pass 100%.
+* **Trạng thái**: Hoàn thành.
+
+

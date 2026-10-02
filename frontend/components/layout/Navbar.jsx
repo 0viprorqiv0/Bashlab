@@ -85,15 +85,6 @@ export default function Navbar({ isTransparent = false }) {
         <div className="flex items-center gap-3">
           {!authReady ? null : user ? (
             <div className="relative hidden sm:flex items-center gap-2" ref={dropdownRef}>
-              {user.role === 'Admin' && (
-                <Link
-                  href="/admin/content"
-                  aria-label="Open admin content settings"
-                  className="font-code text-xs text-on-surface-variant hover:text-white transition-colors focus-visible"
-                >
-                  Admin
-                </Link>
-              )}
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 className="flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors focus-visible border border-transparent hover:border-white/10 max-w-[190px] md:max-w-[240px] lg:max-w-[280px]"
