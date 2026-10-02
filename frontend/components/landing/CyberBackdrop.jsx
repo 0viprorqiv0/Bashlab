@@ -95,7 +95,8 @@ export default function CyberBackdrop() {
       );
 
       // Clamp resumed frames so tab visibility changes cannot jump the orbit.
-      const t = uniforms.uTime.value + Math.min(clock.getDelta(), 0.05);
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const t = uniforms.uTime.value + delta;
       uniforms.uTime.value = t;
       if (meteorRequested) {
         meteorRequested = false;
@@ -126,7 +127,9 @@ export default function CyberBackdrop() {
           });
         }
       }
-      uniforms.uPointer.value.z += ((pointer.active ? 1 : 0) - uniforms.uPointer.value.z) * 0.08;
+      // Frame-rate independent continuous damp for 120fps+ high-refresh displays
+      const pointerDamp = 1 - Math.pow(1 - 0.08, Math.min(delta, 0.05) * 60);
+      uniforms.uPointer.value.z += ((pointer.active ? 1 : 0) - uniforms.uPointer.value.z) * pointerDamp;
       uniforms.uPulse.value = Math.min(1, (performance.now() - pulseStarted) / 1300);
 
       /* gentle drift of the whole field */
@@ -142,8 +145,9 @@ export default function CyberBackdrop() {
 
       /* eased pointer parallax — background only, tiny range */
       if (parallaxOn) {
-        pointer.x += (pointer.tx - pointer.x) * 0.045;
-        pointer.y += (pointer.ty - pointer.y) * 0.045;
+        const parallaxDamp = 1 - Math.pow(1 - 0.045, Math.min(delta, 0.05) * 60);
+        pointer.x += (pointer.tx - pointer.x) * parallaxDamp;
+        pointer.y += (pointer.ty - pointer.y) * parallaxDamp;
         camera.position.x = pointer.x;
         camera.position.y = pointer.y;
         camera.lookAt(0, 0.4, -4);
@@ -187,7 +191,9 @@ export default function CyberBackdrop() {
         renderer = new THREE.WebGLRenderer({
           alpha: true,
           antialias: false,
-          powerPreference: 'low-power',
+          powerPreference: 'high-performance',
+          depth: false,
+          stencil: false,
         });
       } catch {
         if (!cancelled) setMode('static');
@@ -203,6 +209,8 @@ export default function CyberBackdrop() {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       const canvas = renderer.domElement;
       canvas.setAttribute('aria-hidden', 'true');
+      canvas.style.transform = 'translateZ(0)';
+      canvas.style.willChange = 'transform';
       host.appendChild(canvas);
       for (let i = 0; i < 1; i += 1) {
         const meteor = document.createElement('span');

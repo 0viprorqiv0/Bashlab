@@ -38,12 +38,25 @@ html {
 }
 
 /* Khóa cố định thanh cuộn, ngăn Lenis (overflow: clip) hoặc modal làm ẩn scrollbar gây giật layout ngang */
+html.lenis,
+html.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
 html.lenis.lenis-stopped,
 html.lenis-stopped,
 .lenis:not(.lenis-autoToggle).lenis-stopped,
 :root:has(.termMax) {
   overflow-y: scroll !important;
   overflow-x: hidden !important;
+}
+
+/* Tối ưu hóa pipeline render cho màn hình tần số quét cao (120Hz/144Hz+) */
+canvas,
+video,
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {

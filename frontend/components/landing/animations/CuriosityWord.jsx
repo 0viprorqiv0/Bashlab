@@ -285,7 +285,7 @@ export default function CuriosityWord({ word = WORD, transformTo = null, isGlitc
     function tick(now) {
       frame = 0;
       if (disposed || document.hidden) { reset(); return; }
-      const dt = previous ? (now - previous) / 1000 : 1 / 60;
+      const dt = previous ? (now - previous) / 1000 : 1 / 120;
       previous = now;
       if (playing) {
         const elapsed = now - started;
@@ -331,7 +331,7 @@ export default function CuriosityWord({ word = WORD, transformTo = null, isGlitc
 
           context?.clearRect(0, 0, width + padding * 2, height + padding * 2);
           const target = transformTo;
-          const shouldFlicker = (now - lastScrambleTime) >= 32;
+          const shouldFlicker = (now - lastScrambleTime) >= 16;
           if (shouldFlicker) {
             lastScrambleTime = now;
           }

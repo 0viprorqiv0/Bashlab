@@ -29,9 +29,9 @@ export default function Footer({ className = '', isLanding = false }) {
           <span>© 2026 <a href="/" onClick={handleEasterEggClick} className={styles.brandLink}>BashLab</a>. All rights reserved.</span>
         </div>
         <nav className={styles.nav} aria-label="Footer links">
-          <a href="/#questions" className={styles.link}>Terms &amp; Conditions</a>
+          <a href="/terms" className={styles.link}>Terms &amp; Conditions</a>
           <a href="mailto:contact@bashlab.io" className={styles.link}>Contact</a>
-          <a href="/#learn" className={styles.link}>About</a>
+          <a href="/about" className={styles.link}>About</a>
         </nav>
       </div>
     </footer>

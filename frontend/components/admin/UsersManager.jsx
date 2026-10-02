@@ -1,13 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './Admin.module.css';
+import userStyles from './UsersManager.module.css';
 import ReasonDialog from './ReasonDialog';
+import ManageUserModal from './ManageUserModal';
 import { useAdmin } from './AdminGate';
 
 const PAGE_SIZE = 20;
-const formatDate = (value) => (value ? new Date(value).toLocaleString() : '—');
+
+function formatRelativeTime(dateString) {
+  if (!dateString) return 'Never';
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  return `${diffMonths}mo ago`;
+}
+
 
 export default function UsersManager() {
   const me = useAdmin();
@@ -16,8 +34,11 @@ export default function UsersManager() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState({ rows: [], total: 0, loading: true, error: '' });
   const [activeAdmins, setActiveAdmins] = useState(0);
+  const [sortOption, setSortOption] = useState('default');
   const [dialog, setDialog] = useState(null);
   const [notice, setNotice] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userProgressMap, setUserProgressMap] = useState({});
 
   const load = useCallback(async () => {
     setResult((prev) => ({ ...prev, loading: true }));
@@ -26,12 +47,36 @@ export default function UsersManager() {
       supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('is_locked', false),
     ]);
     setActiveAdmins(count || 0);
-    setResult({ rows: data || [], total: data?.[0]?.total_count ?? 0, loading: false, error: error?.message || '' });
+
+    const rows = data || [];
+    setResult({ rows, total: rows?.[0]?.total_count ?? 0, loading: false, error: error?.message || '' });
+
+    // Fetch progress counts for current rows
+    if (rows.length > 0) {
+      const userIds = rows.map((u) => u.id);
+      try {
+        const { data: progressData } = await supabase
+          .from('progress')
+          .select('user_id, status')
+          .in('user_id', userIds)
+          .eq('status', 'done');
+
+        if (progressData) {
+          const map = {};
+          progressData.forEach((item) => {
+            map[item.user_id] = (map[item.user_id] || 0) + 1;
+          });
+          setUserProgressMap((prev) => ({ ...prev, ...map }));
+        }
+      } catch {
+        // Fallback silently if progress cannot be fetched
+      }
+    }
   }, [query, page]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Debounce the search box so every keystroke doesn't hit the database.
+  // Debounce the search input
   useEffect(() => {
     const timer = setTimeout(() => { setPage(0); setQuery(search.trim()); }, 300);
     return () => clearTimeout(timer);
@@ -46,6 +91,11 @@ export default function UsersManager() {
       danger: newRole === 'learner',
       run: (reason) => supabase.rpc('admin_set_user_role', { target: user.id, new_role: newRole, reason }),
       done: `Role of ${user.email} changed to ${newRole}.`,
+      onSuccess: () => {
+        if (selectedUser?.id === user.id) {
+          setSelectedUser((prev) => ({ ...prev, role: newRole }));
+        }
+      },
     });
   }
 
@@ -58,85 +108,208 @@ export default function UsersManager() {
       danger: lock,
       run: (reason) => supabase.rpc('admin_set_user_lock', { target: user.id, locked: lock, reason }),
       done: `${user.email} ${lock ? 'locked' : 'unlocked'}.`,
+      onSuccess: () => {
+        if (selectedUser?.id === user.id) {
+          setSelectedUser((prev) => ({ ...prev, is_locked: lock }));
+        }
+      },
     });
   }
 
-  async function confirm(reason) {
+  function handleDeleteUserNotice(user) {
+    window.alert(
+      `User ${user.email} cannot be permanently erased via standard client RLS to protect platform audit trails.\n\nTo disable access immediately, please use [Lock Account].`
+    );
+  }
+
+  async function confirmDialog(reason) {
     const { error } = await dialog.run(reason);
     if (error) return error.message;
     setNotice(dialog.done);
+    if (dialog.onSuccess) dialog.onSuccess();
     setDialog(null);
     await load();
     return null;
   }
 
+  // Sorted rows
+  const sortedRows = useMemo(() => {
+    const list = [...result.rows];
+    if (sortOption === 'role') {
+      return list.sort((a, b) => (b.role === 'admin' ? 1 : 0) - (a.role === 'admin' ? 1 : 0));
+    }
+    if (sortOption === 'active') {
+      return list.sort((a, b) => new Date(b.last_sign_in_at || 0) - new Date(a.last_sign_in_at || 0));
+    }
+    if (sortOption === 'name') {
+      return list.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+    }
+    return list;
+  }, [result.rows, sortOption]);
+
   const pages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
+  const activeLearnersCount = Math.max(0, result.total - activeAdmins);
 
   return (
-    <div>
-      <header className={styles.header}>
-        <div><h1>Users<span>.</span></h1><p>Roles and account status. Every change is recorded in the admin log.</p></div>
+    <div className={userStyles.wrapper}>
+      <header className={userStyles.header}>
+        <div>
+          <h1>Learners &amp; Access<span>.</span></h1>
+          <p>Roles, active progress metrics and account status. Every change is audited.</p>
+        </div>
       </header>
-      {notice && <p className={styles.successText} role="status">{notice}</p>}
 
-      <div className={styles.toolbar}>
-        <input className={styles.search} type="search" placeholder="Search by email or name" aria-label="Search users"
-          value={search} onChange={(event) => setSearch(event.target.value)} />
-        <span className={styles.muted}>{result.total} users · {activeAdmins} active admin{activeAdmins === 1 ? '' : 's'}</span>
-      </div>
+      {notice && (
+        <div className={userStyles.noticeBar} role="status">
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
+          {notice}
+        </div>
+      )}
 
-      <div className={`${styles.panel} ${styles.tableWrap}`}>
-        <table className={styles.table}>
-          <thead>
-            <tr><th>User</th><th>Role</th><th>Status</th><th>Email</th><th>Last sign-in</th><th aria-label="Actions" /></tr>
-          </thead>
-          <tbody>
-            {result.rows.map((user) => {
-              const isLastAdmin = user.role === 'admin' && !user.is_locked && activeAdmins <= 1;
-              const isMe = user.id === me.id;
-              return (
-                <tr key={user.id}>
-                  <td>
-                    <div>{user.name || '—'}{isMe && <span className={styles.muted}> (you)</span>}</div>
-                    <div className={styles.muted}>{user.email}</div>
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${user.role === 'admin' ? styles.badgeCyan : styles.badgeGray}`}>{user.role}</span>
-                    {isLastAdmin && <div className={styles.muted} style={{ marginTop: 4 }}>Last active admin</div>}
-                  </td>
-                  <td><span className={`${styles.badge} ${user.is_locked ? styles.badgeRed : styles.badgeGreen}`}>{user.is_locked ? 'Locked' : 'Active'}</span></td>
-                  <td><span className={`${styles.badge} ${user.email_confirmed_at ? styles.badgeGreen : styles.badgeAmber}`}>{user.email_confirmed_at ? 'Verified' : 'Unverified'}</span></td>
-                  <td className={styles.muted}>{formatDate(user.last_sign_in_at)}</td>
-                  <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                    <button type="button" className={styles.ghostButton} onClick={() => openRoleDialog(user)}
-                      disabled={isLastAdmin && user.role === 'admin'}
-                      title={isLastAdmin ? 'The last active admin cannot be demoted' : undefined}>
-                      {user.role === 'admin' ? 'Make learner' : 'Make admin'}
-                    </button>
-                    <button type="button" className={styles.ghostButton} onClick={() => openLockDialog(user)}
-                      disabled={(isLastAdmin && !user.is_locked) || (isMe && !user.is_locked)}
-                      title={isMe ? 'You cannot lock yourself' : isLastAdmin ? 'The last active admin cannot be locked' : undefined}>
-                      {user.is_locked ? 'Unlock' : 'Lock'}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {!result.loading && result.rows.length === 0 && (
-              <tr><td colSpan={6} className={styles.muted}>{result.error || 'No users match your search.'}</td></tr>
-            )}
-          </tbody>
-        </table>
-        <div className={styles.pager}>
-          <span>Page {page + 1} of {pages}</span>
-          <div>
-            <button type="button" className={styles.button} disabled={page === 0} onClick={() => setPage((value) => value - 1)}>Previous</button>
-            <button type="button" className={styles.button} disabled={page + 1 >= pages} onClick={() => setPage((value) => value + 1)}>Next</button>
+      {/* Top control bar: search, sort, active counter */}
+      <div className={userStyles.controlBar}>
+        <div className={userStyles.searchBox}>
+          <span className={`material-symbols-outlined ${userStyles.searchIcon}`}>search</span>
+          <input
+            type="search"
+            placeholder="Search learners by name or email..."
+            aria-label="Search learners"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className={userStyles.filtersGroup}>
+          <select
+            className={userStyles.selectDropdown}
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            aria-label="Sort users"
+          >
+            <option value="default">Sort: Default</option>
+            <option value="role">Sort: Role (Admins first)</option>
+            <option value="active">Sort: Last Active</option>
+            <option value="name">Sort: Name (A-Z)</option>
+          </select>
+
+          <div className={userStyles.activeCounter}>
+            <strong>{activeLearnersCount}</strong> Active Learners · <strong>{activeAdmins}</strong> Admin{activeAdmins === 1 ? '' : 's'}
           </div>
         </div>
       </div>
 
-      {dialog && <ReasonDialog {...dialog} onConfirm={confirm} onCancel={() => setDialog(null)} />}
+      {/* User Directory Table / Card Rows */}
+      <div className={userStyles.userTable}>
+        <div className={userStyles.tableHeader}>
+          <div>Learner Profile</div>
+          <div>Role</div>
+          <div>Progress</div>
+          <div>Last Active</div>
+          <div style={{ textAlign: 'right' }}>Actions</div>
+        </div>
+
+        <div>
+          {sortedRows.map((user) => {
+            const isMe = user.id === me?.id;
+            const completedLabs = userProgressMap[user.id] || 0;
+
+            return (
+              <div key={user.id} className={userStyles.userRow}>
+                {/* Profile column without avatar */}
+                <div className={userStyles.userDetails}>
+                  <div className={userStyles.userName}>
+                    {user.name || user.email.split('@')[0]}
+                    {isMe && <span className={styles.muted} style={{ fontSize: 11 }}>(you)</span>}
+                  </div>
+                  <div className={userStyles.userEmail}>{user.email}</div>
+                </div>
+
+                {/* Role Column */}
+                <div>
+                  <span
+                    className={`${userStyles.badgePill} ${
+                      user.role === 'admin' ? userStyles.badgeAdmin : userStyles.badgeLearner
+                    }`}
+                  >
+                    {user.role}
+                  </span>
+                  {user.is_locked && <span className={`${userStyles.badgePill} ${userStyles.badgeLocked}`}>Locked</span>}
+                </div>
+
+                {/* Progress Metric */}
+                <div className={userStyles.metricText}>
+                  {completedLabs} Labs Completed
+                </div>
+
+                {/* Last Active Status */}
+                <div className={userStyles.statusText}>
+                  {user.last_sign_in_at ? `Active ${formatRelativeTime(user.last_sign_in_at)}` : 'Never logged in'}
+                </div>
+
+                {/* Manage Action */}
+                <div style={{ textAlign: 'right' }}>
+                  <button
+                    type="button"
+                    className={userStyles.btnManage}
+                    onClick={() => setSelectedUser(user)}
+                    aria-label={`Manage ${user.name || user.email}`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>tune</span>
+                    Manage
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {!result.loading && sortedRows.length === 0 && (
+            <div className={userStyles.emptyState}>
+              {result.error || 'No learners match your search criteria.'}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination bar */}
+        <div className={userStyles.pager}>
+          <span>
+            Page {page + 1} of {pages} ({result.total} users)
+          </span>
+          <div className={userStyles.pagerBtns}>
+            <button
+              type="button"
+              className={userStyles.pagerBtn}
+              disabled={page === 0}
+              onClick={() => setPage((v) => v - 1)}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className={userStyles.pagerBtn}
+              disabled={page + 1 >= pages}
+              onClick={() => setPage((v) => v + 1)}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Popup Modal when clicking [ Manage ] */}
+      {selectedUser && (
+        <ManageUserModal
+          user={selectedUser}
+          currentUser={me}
+          activeAdminsCount={activeAdmins}
+          onClose={() => setSelectedUser(null)}
+          onToggleRole={openRoleDialog}
+          onToggleLock={openLockDialog}
+          onDeleteUser={handleDeleteUserNotice}
+        />
+      )}
+
+      {/* Audit Reason Dialog */}
+      {dialog && <ReasonDialog {...dialog} onConfirm={confirmDialog} onCancel={() => setDialog(null)} />}
     </div>
   );
 }

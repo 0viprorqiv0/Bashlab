@@ -1,0 +1,252 @@
+.pageWrapper {
+  min-height: 100vh;
+  padding: 120px 24px 80px;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  box-sizing: border-box;
+}
+
+.headerSection {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.title {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  font-weight: 800;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.02em;
+  color: #fff;
+  line-height: 1.15;
+}
+
+.titleAccent {
+  color: #68dfa0;
+  text-shadow: 0 0 25px rgba(104, 223, 160, 0.35);
+}
+
+.subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Grid chứa 3 gói */
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-bottom: 64px;
+  align-items: stretch;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.cardPopular {
+  background: linear-gradient(180deg, rgba(16, 36, 30, 0.85) 0%, rgba(10, 20, 26, 0.85) 100%);
+  border: 1px solid #68dfa0;
+  box-shadow: 0 0 30px rgba(104, 223, 160, 0.15);
+}
+
+.cardPopular:hover {
+  border-color: #68dfa0;
+  box-shadow: 0 0 35px rgba(104, 223, 160, 0.25);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -12px;
+  right: 24px;
+  background: #68dfa0;
+  color: #061014;
+  font-weight: 800;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 4px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.08em;
+  box-shadow: 0 2px 10px rgba(104, 223, 160, 0.4);
+}
+
+.cardName {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.cardDesc {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 20px 0;
+  min-height: 40px;
+  line-height: 1.5;
+}
+
+.priceBlock {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.priceValue {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.pricePeriod {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.featuresBlock {
+  flex-grow: 1;
+  margin-bottom: 28px;
+}
+
+.featuresLabel {
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+  color: #78cbd4;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.featuresList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+  font-family: 'Inter', sans-serif;
+}
+
+.checkIcon {
+  color: #68dfa0;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.crossIcon {
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.featureItemDisabled {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ctaBtn {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transition: all 0.2s ease;
+  margin-top: auto;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.ctaBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.ctaBtnPopular {
+  border: none;
+  background: #68dfa0;
+  color: #061014;
+  box-shadow: 0 0 20px rgba(104, 223, 160, 0.35);
+}
+
+.ctaBtnPopular:hover {
+  background: #78cbd4;
+  box-shadow: 0 0 25px rgba(120, 203, 212, 0.45);
+}
+
+.footerRow {
+  text-align: center;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #78cbd4;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-family: 'JetBrains Mono', monospace;
+  transition: gap 0.2s ease, color 0.2s ease;
+}
+
+.backLink:hover {
+  gap: 12px;
+  color: #68dfa0;
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .pageWrapper {
+    padding-top: 100px;
+  }
+
+  .pricingGrid {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+  }
+
+  .cardDesc {
+    min-height: auto;
+  }
+}

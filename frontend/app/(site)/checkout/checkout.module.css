@@ -1,0 +1,568 @@
+.container {
+  min-height: 100vh;
+  padding: 110px 24px 80px;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  box-sizing: border-box;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #78cbd4;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-family: 'JetBrains Mono', monospace;
+  transition: gap 0.2s ease, color 0.2s ease;
+}
+
+.backBtn:hover {
+  gap: 12px;
+  color: #68dfa0;
+}
+
+.secureBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: #68dfa0;
+  background: rgba(104, 223, 160, 0.08);
+  border: 1px solid rgba(104, 223, 160, 0.25);
+  padding: 5px 14px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.secureIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.headerSection {
+  margin-bottom: 36px;
+}
+
+.heading {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: clamp(1.9rem, 3.2vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px 0;
+}
+
+.headingAccent {
+  color: #68dfa0;
+  text-shadow: 0 0 25px rgba(104, 223, 160, 0.35);
+}
+
+.subheading {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 2-Column Checkout Layout */
+.checkoutLayout {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 36px;
+  align-items: start;
+}
+
+/* Left Form Area */
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.sectionBox {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 28px 24px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.stepNum {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #68dfa0;
+  color: #061014;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+}
+
+.input,
+.select {
+  width: 100%;
+  background: rgba(20, 24, 32, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: #fff;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #68dfa0;
+  box-shadow: 0 0 14px rgba(104, 223, 160, 0.25);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.inputHint {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+/* Payment Methods Selector */
+.paymentTabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.payTab {
+  background: rgba(20, 24, 32, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.payTab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.payTabActive {
+  background: rgba(104, 223, 160, 0.12);
+  border-color: #68dfa0;
+  color: #68dfa0;
+  box-shadow: 0 0 16px rgba(104, 223, 160, 0.2);
+}
+
+.payTabIcon {
+  width: 22px;
+  height: 22px;
+}
+
+/* QR Code Section */
+.qrBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 18px;
+  background: rgba(10, 14, 20, 0.6);
+  border: 1px dashed rgba(104, 223, 160, 0.35);
+  border-radius: 12px;
+  gap: 14px;
+}
+
+.qrImageWrap {
+  background: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.qrImage {
+  width: 140px;
+  height: 140px;
+}
+
+.qrNotice {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.45;
+}
+
+.qrCodeSyntax {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #68dfa0;
+  background: rgba(104, 223, 160, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Right Summary Column */
+.summaryColumn {
+  position: sticky;
+  top: 100px;
+}
+
+.summaryCard {
+  background: linear-gradient(180deg, rgba(16, 36, 30, 0.88) 0%, rgba(10, 20, 26, 0.9) 100%);
+  border: 1px solid rgba(104, 223, 160, 0.5);
+  border-radius: 18px;
+  padding: 28px 24px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(104, 223, 160, 0.12);
+}
+
+.summaryTitle {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 18px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Cycle switch */
+.cycleSwitch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: rgba(10, 14, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.cycleBtn {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cycleBtnActive {
+  background: rgba(104, 223, 160, 0.18);
+  border: 1px solid rgba(104, 223, 160, 0.4);
+  color: #68dfa0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cycleSaveTag {
+  font-size: 0.65rem;
+  color: #ffb800;
+  font-weight: 700;
+}
+
+.planPerksList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.35;
+}
+
+.perkCheck {
+  color: #68dfa0;
+  font-weight: 700;
+}
+
+/* Coupon Area */
+.couponArea {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.couponBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.couponBtn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Price rows */
+.priceBreakdown {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 16px;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.priceRowTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+  margin-top: 4px;
+}
+
+.totalLabel {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.totalValue {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #68dfa0;
+}
+
+/* Submit Pay CTA */
+.paySubmitBtn {
+  width: 100%;
+  background: #68dfa0;
+  border: none;
+  color: #061014;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(104, 223, 160, 0.35);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.paySubmitBtn:hover:not(:disabled) {
+  background: #78cbd4;
+  box-shadow: 0 6px 26px rgba(120, 203, 212, 0.45);
+  transform: translateY(-2px);
+}
+
+.paySubmitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.termsText {
+  text-align: center;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.4;
+  margin-top: 14px;
+}
+
+/* Success Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.successCard {
+  background: #0f172a;
+  border: 1px solid #68dfa0;
+  border-radius: 20px;
+  padding: 40px 32px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 50px rgba(104, 223, 160, 0.25);
+  animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.successIconWrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(104, 223, 160, 0.15);
+  border: 2px solid #68dfa0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px auto;
+  color: #68dfa0;
+}
+
+.successTitle {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 10px 0;
+}
+
+.successMsg {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.orderIdBadge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  background: rgba(20, 24, 32, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 28px;
+  display: inline-block;
+  color: #78cbd4;
+}
+
+.successCtaBtn {
+  display: block;
+  width: 100%;
+  background: #68dfa0;
+  color: #061014;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(104, 223, 160, 0.35);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.successCtaBtn:hover {
+  background: #78cbd4;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 900px) {
+  .checkoutLayout {
+    grid-template-columns: 1fr;
+  }
+  .summaryColumn {
+    position: static;
+  }
+}
