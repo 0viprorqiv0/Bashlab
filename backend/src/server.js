@@ -44,7 +44,8 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     referrerPolicy: { policy: 'no-referrer' },
   }));
-  app.use(cors({ origin: origins, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
+  // credentials: the refresh-token cookie travels on cross-origin fetches from the allow-listed frontend only.
+  app.use(cors({ origin: origins, credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
   // Prometheus and JSON metrics endpoint

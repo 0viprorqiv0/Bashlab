@@ -4,7 +4,7 @@
 // actual security boundary — the same way a learner with dev tools open
 // could try to bypass the UI.
 const path = require('path');
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('../support/session');
 const { signIn, forToken, forBackend } = require('../support/apiClient');
 const { adminClient } = require('../support/supabaseAdmin');
 const { loadUsers } = require('../support/testUsers');
@@ -32,7 +32,7 @@ test.afterAll(async () => {
 });
 
 test.describe('admin UI guard (UX layer)', () => {
-  test.use({ storageState: path.join(authDir, 'learner.json') });
+  test.use({ asRole: 'learner' });
   for (const section of ['content', 'users', 'activity']) {
     test(`a logged-in learner sees 403 on /admin/${section}`, async ({ page }) => {
       await page.goto(`/admin/${section}`);
@@ -42,7 +42,7 @@ test.describe('admin UI guard (UX layer)', () => {
 });
 
 test.describe('admin UI guard (admin allowed)', () => {
-  test.use({ storageState: path.join(authDir, 'admin.json') });
+  test.use({ asRole: 'admin' });
   test('an admin reaches /admin/content and does not see the 403 page', async ({ page }) => {
     await page.goto('/admin/content');
     await expect(page.getByRole('heading', { name: 'Content' })).toBeVisible();

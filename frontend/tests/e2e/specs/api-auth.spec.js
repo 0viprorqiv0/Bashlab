@@ -6,19 +6,21 @@ const { test, expect } = require('@playwright/test');
 const { adminClient, createTestUser, deleteTestUserSafe, emailLink } = require('../support/supabaseAdmin');
 const { env } = require('../support/env');
 
-const API = 'http://127.0.0.1:3001/api/auth';
+const API = 'http://localhost:3001/api/auth';
 const ORIGIN = 'http://localhost:3000';
 
-async function call(method, path, { body, token, origin = ORIGIN } = {}) {
+async function call(method, path, { body, token, origin = ORIGIN, cookie } = {}) {
   const response = await fetch(API + path, {
     method,
-    headers: { Origin: origin, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { ...(origin ? { Origin: origin } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(cookie ? { Cookie: cookie } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: response.status, headers: response.headers, json: await response.json().catch(() => null) };
 }
 
 const login = (user, password = user.password) => call('POST', '/login', { body: { email: user.email, password } });
+// The refresh token only ever travels as the HttpOnly cookie: "name=value" for a Cookie request header.
+const cookieOf = (response) => (response.headers.get('set-cookie') || '').split(';')[0];
 
 test.describe('sessions', () => {
   let user;
@@ -30,6 +32,14 @@ test.describe('sessions', () => {
     expect(ok.status).toBe(200);
     expect(ok.json.profile.role).toBe('learner');
     expect(ok.json.user.email).toBe(user.email);
+
+    // The refresh token is delivered as an HttpOnly cookie and is NOT in the body.
+    expect(JSON.stringify(ok.json)).not.toContain('refresh');
+    const setCookie = ok.headers.get('set-cookie');
+    expect(setCookie).toMatch(/^bashlab_rt=/);
+    expect(setCookie).toMatch(/HttpOnly/i);
+    expect(setCookie).toMatch(/SameSite=Lax/i);
+    expect(setCookie).toMatch(/Path=\/api\/auth/);
 
     const wrongPassword = await login(user, 'definitely-wrong-1');
     const unknownUser = await call('POST', '/login', { body: { email: 'nobody.here@bashlab-e2e.test', password: 'definitely-wrong-1' } });
@@ -46,16 +56,50 @@ test.describe('sessions', () => {
     expect((await call('GET', '/me', { token: 'not.a.jwt' })).status).toBe(401);
   });
 
-  test('refresh issues a new access token; logout ends the session so its refresh token dies', async () => {
-    const { json } = await login(user);
-    const refreshed = await call('POST', '/refresh', { body: { refresh_token: json.session.refresh_token } });
+  test('refresh re-issues an access token from the cookie (and rotates it); logout ends the session so the cookie dies', async () => {
+    const first = await login(user);
+    const refreshed = await call('POST', '/refresh', { cookie: cookieOf(first) });
     expect(refreshed.status).toBe(200);
     expect(refreshed.json.session.access_token).toBeTruthy();
+    expect(JSON.stringify(refreshed.json)).not.toContain('refresh');
+    const rotated = cookieOf(refreshed);
+    expect(rotated).toMatch(/^bashlab_rt=/);
 
-    const active = refreshed.json.session;
-    expect((await call('POST', '/logout', { token: active.access_token })).status).toBe(200);
-    const afterLogout = await call('POST', '/refresh', { body: { refresh_token: active.refresh_token } });
+    expect((await call('POST', '/logout', { token: refreshed.json.session.access_token })).status).toBe(200);
+    const afterLogout = await call('POST', '/refresh', { cookie: rotated });
     expect(afterLogout.status).toBe(401);
+    expect(afterLogout.headers.get('set-cookie')).toMatch(/Max-Age=0/); // the browser is told to drop it
+  });
+
+  test('a refresh token in the body is never accepted; without the cookie there is nothing to refresh', async () => {
+    const first = await login(user);
+    const raw = decodeURIComponent(cookieOf(first).split('=')[1]);
+    expect((await call('POST', '/refresh', { body: { refresh_token: raw } })).status).toBe(400);
+    expect((await call('POST', '/refresh')).status).toBe(400);
+  });
+
+  test('cookie endpoints (refresh, logout, session) refuse a foreign or missing Origin — CSRF', async () => {
+    const first = await login(user);
+    for (const path of ['/refresh', '/logout', '/session']) {
+      for (const origin of ['https://evil.example', null]) {
+        const res = await call('POST', path, { origin, cookie: cookieOf(first), body: { refresh_token: 'x' } });
+        expect(res.status, `${path} from ${origin}`).toBe(403);
+        expect(res.json.error.code).toBe('BAD_ORIGIN');
+      }
+    }
+    // ...and the session is still alive afterwards: nothing was revoked or cleared.
+    expect((await call('POST', '/refresh', { cookie: cookieOf(first) })).status).toBe(200);
+  });
+
+  test('/session exchanges the emailed-link refresh token for the cookie; a forged one is refused', async () => {
+    expect([400, 401]).toContain((await call('POST', '/session', { body: { refresh_token: 'forged-token' } })).status);
+    const link = await emailLink('magiclink', user.email, { redirectPath: '/verify-email' });
+    const redirect = await fetch(link, { redirect: 'manual' });
+    const fragment = new URLSearchParams(redirect.headers.get('location').split('#')[1]);
+    const adopted = await call('POST', '/session', { body: { refresh_token: fragment.get('refresh_token') } });
+    expect(adopted.status).toBe(200);
+    expect(cookieOf(adopted)).toMatch(/^bashlab_rt=/);
+    expect(JSON.stringify(adopted.json)).not.toContain('refresh');
   });
 });
 
@@ -172,7 +216,9 @@ test.describe('registration, verification and recovery', () => {
   test('reset-password: a normal login token cannot be used, only an emailed recovery token', async () => {
     const user = await createTestUser({ prefix: 'apireset' });
     try {
-      const { json } = await login(user);
+      const firstLogin = await login(user);
+      const { json } = firstLogin;
+      const earlierCookie = cookieOf(firstLogin);
       const stolen = await call('POST', '/reset-password', { token: json.session.access_token, body: { password: 'Attacker-Chosen-1!' } });
       expect(stolen.status).toBe(403);
       expect(stolen.json.error.code).toBe('RECOVERY_REQUIRED');
@@ -186,7 +232,7 @@ test.describe('registration, verification and recovery', () => {
       expect((await login(user)).status).toBe(401);
       expect((await login(user, 'Recovered-Pass-2026!')).status).toBe(200);
       // Every earlier session was revoked by the reset.
-      expect((await call('POST', '/refresh', { body: { refresh_token: json.session.refresh_token } })).status).toBe(401);
+      expect((await call('POST', '/refresh', { cookie: earlierCookie })).status).toBe(401);
     } finally {
       await deleteTestUserSafe(user);
     }

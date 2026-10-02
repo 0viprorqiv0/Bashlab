@@ -1,11 +1,11 @@
 // /admin/activity — Sessions tab (admin_stop_session RPC) and Admin log tab
 // (reads admin_logs, the audit trail every admin_* RPC writes to).
 const path = require('path');
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('../support/session');
 const { adminClient } = require('../support/supabaseAdmin');
 const { loadUsers } = require('../support/testUsers');
 
-test.use({ storageState: path.join(__dirname, '..', '.auth', 'admin.json') });
+test.use({ asRole: 'admin' });
 
 let users;
 let sessionId;

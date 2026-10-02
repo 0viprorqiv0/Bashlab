@@ -9,18 +9,28 @@ phải đã tích hợp.
 Từ 2026-09-30 mọi thao tác đăng nhập/tài khoản đi qua Express
 (`backend/src/routes/auth.js` → `services/authService.js`); trình duyệt không
 còn gọi `supabase.auth.*` (client Supabase ở frontend được cấu hình
-`accessToken` nên gọi auth sẽ throw). Frontend chỉ giữ token do API trả về
-(`lib/authClient.js`, localStorage `bashlab.session`) và dùng nó cho các truy
-vấn dữ liệu qua Supabase + RLS.
+`accessToken` nên gọi auth sẽ throw). **Không có token nào nằm trong
+localStorage/sessionStorage**: refresh token chỉ tồn tại ở cookie `bashlab_rt`
+(`HttpOnly; SameSite=Lax; Path=/api/auth`, thêm `Secure` ở production — JS không đọc được),
+access token (~1h) chỉ nằm trong bộ nhớ của tab (`lib/authClient.js`) và được cấp lại từ
+cookie khi tải trang/sắp hết hạn; localStorage chỉ giữ `bashlab.uid` (id người dùng, không bí mật).
+Access token dùng cho các truy vấn dữ liệu qua Supabase + RLS.
+
+Yêu cầu triển khai: API và frontend phải **cùng site** (cùng domain đăng ký, hoặc reverse proxy
+cùng origin) để cookie được gửi; dev dùng `localhost` cho cả hai (`lib/api.js` tự đổi
+`127.0.0.1` thành hostname của trang). Các endpoint dùng cookie (`refresh`, `logout`, `session`)
+bắt buộc header `Origin` nằm trong `CORS_ORIGINS` (chống CSRF), CORS bật `credentials`.
+Biến `COOKIE_SECURE=true|false` ghi đè cờ `Secure` (mặc định bật khi `NODE_ENV=production`).
 
 Lỗi luôn có dạng `{ "error": { "code": "...", "message": "..." } }`.
 
 | Endpoint | Auth | Body → kết quả |
 |---|---|---|
 | `POST /api/auth/register` | – | `{email, password}` → 202 `{status:'verification_sent'}`. Giống hệt nhau cho email mới và email đã có (chống dò tài khoản), không bao giờ trả session |
-| `POST /api/auth/login` | – | `{email, password}` → `{session:{access_token,refresh_token,expires_at,expires_in}, user, profile:{name,role}}`. Lỗi: 401 `INVALID_CREDENTIALS` (không phân biệt sai mật khẩu/không có user), 403 `EMAIL_NOT_CONFIRMED`, 403 `ACCOUNT_LOCKED`, 429 |
-| `POST /api/auth/refresh` | – | `{refresh_token}` → `{session}`; 401 nếu token bị thu hồi |
-| `POST /api/auth/logout` | Bearer | thu hồi session hiện tại |
+| `POST /api/auth/login` | – | `{email, password}` → `{session:{access_token,expires_at,expires_in}, user, profile:{name,role}}` + `Set-Cookie: bashlab_rt` (refresh token KHÔNG nằm trong body). Lỗi: 401 `INVALID_CREDENTIALS` (không phân biệt sai mật khẩu/không có user), 403 `EMAIL_NOT_CONFIRMED`, 403 `ACCOUNT_LOCKED`, 429 |
+| `POST /api/auth/refresh` | cookie + `Origin` | → `{session}` và cookie mới (xoay vòng); 400/401 nếu token sai/bị thu hồi (kèm xoá cookie). Body bị bỏ qua |
+| `POST /api/auth/session` | `Origin` | `{refresh_token}` lấy từ fragment link email xác minh → đặt cookie, trả `{session}` |
+| `POST /api/auth/logout` | `Origin` (+ Bearer nếu có) | xoá cookie; có Bearer thì thu hồi session phía server |
 | `POST /api/auth/forgot-password` | – | `{email}` → luôn 200 `{status:'sent'}` |
 | `POST /api/auth/resend-verification` | – | `{email}` → luôn 200 |
 | `POST /api/auth/reset-password` | Bearer = **token trong link mail** | `{password}`. Token đăng nhập thường bị từ chối (403 `RECOVERY_REQUIRED`); link quá 1 giờ → 401 `RECOVERY_EXPIRED`; thành công thì thu hồi mọi session |

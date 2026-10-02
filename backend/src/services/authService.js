@@ -93,9 +93,10 @@ export function mapAuthError(error) {
   }
 }
 
+// The refresh token is deliberately NOT part of what the browser's JavaScript
+// receives: the route layer moves it into an HttpOnly cookie.
 const publicSession = (session) => ({
   access_token: session.access_token,
-  refresh_token: session.refresh_token,
   expires_at: session.expires_at,
   expires_in: session.expires_in,
 });
@@ -145,14 +146,14 @@ export function createAuthService({ admin, anon, log = console }) {
         await admin.auth.admin.signOut(data.session.access_token, 'local').catch(() => {});
         throw fail(403, 'ACCOUNT_LOCKED', 'Your account has been locked by an administrator.');
       }
-      return { session: publicSession(data.session), user: publicUser(data.user), profile: publicProfile(profile) };
+      return { session: publicSession(data.session), refreshToken: data.session.refresh_token, user: publicUser(data.user), profile: publicProfile(profile) };
     },
 
     async refresh({ refreshToken }) {
       if (typeof refreshToken !== 'string' || !refreshToken) throw fail(400, 'INVALID_TOKEN', 'refresh_token is required.');
       const { data, error } = await anon().auth.refreshSession({ refresh_token: refreshToken });
       if (error || !data.session) throw error ? mapAuthError(error) : fail(401, 'UNAUTHENTICATED', 'Your session has expired. Please log in again.');
-      return { session: publicSession(data.session) };
+      return { session: publicSession(data.session), refreshToken: data.session.refresh_token };
     },
 
     async logout({ accessToken }) {

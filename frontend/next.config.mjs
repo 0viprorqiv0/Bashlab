@@ -4,9 +4,11 @@ const isDev = process.env.NODE_ENV !== 'production';
 // data) Supabase. Anything else - including an injected third-party script's
 // beacon - is blocked by the CSP below.
 const origin = (value) => { try { return value ? new URL(value).origin : null; } catch { return null; } };
-const apiOrigin = origin(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SANDBOX_API_URL)
-  || (isDev ? 'http://127.0.0.1:3001' : null);
-const connect = ["'self'", apiOrigin, origin(process.env.NEXT_PUBLIC_SUPABASE_URL), isDev ? 'ws:' : null].filter(Boolean);
+const apiOrigin = origin(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SANDBOX_API_URL);
+// In development the API is reached through whichever loopback name the page
+// uses (see lib/api.js), so both are allowed there.
+const connect = ["'self'", apiOrigin, isDev ? 'http://localhost:3001' : null, isDev ? 'http://127.0.0.1:3001' : null,
+  origin(process.env.NEXT_PUBLIC_SUPABASE_URL), isDev ? 'ws:' : null].filter(Boolean);
 
 const csp = [
   "default-src 'self'",
@@ -41,6 +43,9 @@ export default {
   distDir: process.platform === 'win32' ? '.next-win' : '.next-wsl',
   poweredByHeader: false,
   async headers() {
+    // Debug switch (dev only): NO_SECURITY_HEADERS=1 npm run dev, to rule the
+    // headers in or out when something in the browser looks different.
+    if (isDev && process.env.NO_SECURITY_HEADERS === '1') return [];
     return [{ source: '/:path*', headers: securityHeaders }];
   },
 };

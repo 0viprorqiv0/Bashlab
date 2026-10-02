@@ -77,10 +77,10 @@ async function startApi(t, setup = {}, limits = {}) {
   await new Promise((resolve) => server.once('listening', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
   const base = `http://127.0.0.1:${server.address().port}/api/auth`;
-  const call = async (method, path, { body, token, origin = ORIGIN, raw } = {}) => {
+  const call = async (method, path, { body, token, origin = ORIGIN, raw, cookie } = {}) => {
     const response = await fetch(base + path, {
       method,
-      headers: { ...(body !== undefined || raw ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), Origin: origin },
+      headers: { ...(body !== undefined || raw ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(cookie ? { Cookie: cookie } : {}), ...(origin ? { Origin: origin } : {}) },
       body: raw ?? (body === undefined ? undefined : JSON.stringify(body)),
     });
     return { status: response.status, headers: response.headers, json: await response.json().catch(() => null) };
@@ -103,10 +103,16 @@ test('login validates input and never distinguishes "no such user" from "wrong p
 
 test('login returns a session + role, normalises the email, exposes no secrets', async (t) => {
   const { call } = await startApi(t, { users: learner, profiles: { ...learnerProfile } });
-  const { status, json } = await call('POST', '/login', { body: { email: '  ADA@Example.com ', password: 'correct-horse-1' } });
+  const { status, json, headers } = await call('POST', '/login', { body: { email: '  ADA@Example.com ', password: 'correct-horse-1' } });
   assert.equal(status, 200);
   assert.deepEqual(Object.keys(json).sort(), ['profile', 'session', 'user']);
-  assert.deepEqual(Object.keys(json.session).sort(), ['access_token', 'expires_at', 'expires_in', 'refresh_token']);
+  assert.deepEqual(Object.keys(json.session).sort(), ['access_token', 'expires_at', 'expires_in']); // no refresh_token in the body
+  assert.equal(JSON.stringify(json).includes('refresh'), false);
+  const cookie = headers.get('set-cookie');
+  assert.match(cookie, /^bashlab_rt=/);
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /SameSite=Lax/);
+  assert.match(cookie, /Path=\/api\/auth/);
   assert.equal(json.profile.role, 'learner');
   assert.equal('is_locked' in json.profile, false);
   assert.equal('avatar_url' in json.profile, false);
@@ -212,16 +218,48 @@ test('me / profile refuse a locked account', async (t) => {
 
 test('refresh and logout', async (t) => {
   const { call, calls } = await startApi(t);
-  assert.equal((await call('POST', '/refresh', { body: {} })).json.error.code, 'INVALID_TOKEN');
-  assert.equal((await call('POST', '/refresh', { body: { refresh_token: 'stolen-or-old' } })).status, 401);
-  const ok = await call('POST', '/refresh', { body: { refresh_token: 'good-refresh' } });
+  // No cookie, or a body token (never accepted here): nothing to refresh with.
+  assert.equal((await call('POST', '/refresh')).json.error.code, 'INVALID_TOKEN');
+  assert.equal((await call('POST', '/refresh', { body: { refresh_token: 'good-refresh' } })).status, 400);
+  const rejected = await call('POST', '/refresh', { cookie: 'bashlab_rt=stolen-or-old' });
+  assert.equal(rejected.status, 401);
+  assert.match(rejected.headers.get('set-cookie'), /bashlab_rt=;.*Max-Age=0/); // dead cookie is cleared
+  const ok = await call('POST', '/refresh', { cookie: 'other=1; bashlab_rt=good-refresh' });
   assert.equal(ok.status, 200);
   assert.equal(ok.json.session.access_token, 'new');
+  assert.equal(JSON.stringify(ok.json).includes('r2'), false);
+  assert.match(ok.headers.get('set-cookie'), /^bashlab_rt=r2;/); // rotated cookie
 
-  assert.equal((await call('POST', '/logout')).status, 401);
+  // Logout clears the cookie even without (or with an expired) access token...
+  const bare = await call('POST', '/logout');
+  assert.equal(bare.status, 200);
+  assert.match(bare.headers.get('set-cookie'), /bashlab_rt=;.*Max-Age=0/);
+  assert.equal(calls.signOut.length, 0);
+  // ...and also revokes the session when a token is presented.
   const token = jwt({ sub: 'u1' });
   assert.equal((await call('POST', '/logout', { token })).status, 200);
   assert.deepEqual(calls.signOut.at(-1), { token, scope: 'local' });
+});
+
+test('cookie endpoints refuse requests from foreign or missing origins (CSRF)', async (t) => {
+  const { call } = await startApi(t);
+  for (const path of ['/refresh', '/logout', '/session']) {
+    for (const origin of ['https://evil.example', null]) {
+      const res = await call('POST', path, { origin, cookie: 'bashlab_rt=good-refresh', body: { refresh_token: 'good-refresh' } });
+      assert.equal(res.status, 403, `${path} from ${origin}`);
+      assert.equal(res.json.error.code, 'BAD_ORIGIN');
+      assert.equal(res.headers.get('set-cookie'), null);
+    }
+  }
+});
+
+test('/session turns the emailed-link refresh token into the cookie (and nothing else can read it)', async (t) => {
+  const { call } = await startApi(t);
+  assert.equal((await call('POST', '/session', { body: { refresh_token: 'forged' } })).status, 401);
+  const ok = await call('POST', '/session', { body: { refresh_token: 'good-refresh' } });
+  assert.equal(ok.status, 200);
+  assert.match(ok.headers.get('set-cookie'), /^bashlab_rt=r2;.*HttpOnly/);
+  assert.equal('refresh_token' in ok.json.session, false);
 });
 
 test('login is rate limited per account, and the limit leaves other accounts alone', async (t) => {

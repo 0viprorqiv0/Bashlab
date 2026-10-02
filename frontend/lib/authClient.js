@@ -1,39 +1,69 @@
 // Frontend side of authentication. The browser never talks to Supabase Auth:
 // every login/register/reset/refresh/profile call goes to the backend API
-// (/api/auth/*). This module only stores the returned session and keeps it
-// fresh by asking the API to refresh it.
+// (/api/auth/*).
+//
+// Where the session lives (nothing secret is ever written to web storage):
+//   - the refresh token: an HttpOnly cookie set by the API — page JavaScript
+//     (and therefore any injected script) cannot read it;
+//   - the access token (~1h): in memory only, re-issued from the cookie when the
+//     page loads or the token is about to expire;
+//   - localStorage keeps just the signed-in user's id as a hint, so pages can
+//     start fetching data before the network round-trip that confirms it.
 import { ApiError, apiFetch } from './api';
 
-const STORAGE_KEY = 'bashlab.session';
+const HINT_KEY = 'bashlab.uid';
+const LEGACY_KEY = 'bashlab.session'; // older builds stored the tokens here
 const REFRESH_MARGIN_MS = 60_000;
 
 const listeners = new Set();
-let memory = null; // used when localStorage is unavailable (private mode)
+let access = null; // { token, expiresAt } — memory only
+let hintMemory = null; // used when localStorage is unavailable (private mode)
 let refreshing = null;
 
 const emit = (event, payload) => listeners.forEach((listener) => listener(event, payload));
 
-function readSession() {
+function readHint() {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : memory;
+    return window.localStorage.getItem(HINT_KEY) || hintMemory;
   } catch {
-    return memory;
+    return hintMemory;
   }
 }
 
-function writeSession(session) {
-  memory = session;
+function writeHint(userId) {
+  hintMemory = userId;
   try {
-    if (session) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    else window.localStorage.removeItem(STORAGE_KEY);
+    if (userId) window.localStorage.setItem(HINT_KEY, userId);
+    else window.localStorage.removeItem(HINT_KEY);
   } catch { /* storage blocked: memory copy still works for this tab */ }
 }
 
+function setSession(session, userId) {
+  access = session ? { token: session.access_token, expiresAt: session.expires_at * 1000 } : null;
+  if (userId !== undefined) writeHint(userId);
+}
+
+// A user id inside a JWT, read locally (not verified): used when the API
+// response did not carry the user (silent refresh).
+function subjectOf(token) {
+  try {
+    const payload = token.split('.')[1];
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))).sub || null;
+  } catch {
+    return null;
+  }
+}
+
 if (typeof window !== 'undefined') {
-  // Another tab logged in/out or refreshed: tell this tab's UI.
+  // Tokens that an older build left in web storage are removed, not migrated:
+  // they are exactly what this design keeps out of reach of scripts.
+  try { window.localStorage.removeItem(LEGACY_KEY); } catch { /* ignore */ }
+  // Another tab logged in/out: tell this tab's UI.
   window.addEventListener('storage', (event) => {
-    if (event.key === STORAGE_KEY) emit('SESSION_CHANGED');
+    if (event.key === HINT_KEY) {
+      access = null; // whoever is signed in now is decided by the cookie, not by this tab's old token
+      emit('SESSION_CHANGED');
+    }
   });
 }
 
@@ -43,46 +73,33 @@ export const authClient = {
     return () => listeners.delete(listener);
   },
 
-  hasSession: () => Boolean(readSession()?.access_token),
+  hasSession: () => Boolean(readHint()),
 
-  // The user id inside the stored token, read locally (no network, NOT
+  // The signed-in user's id as remembered by this browser (no network, NOT
   // verified). Good only for starting data requests early — RLS still decides
-  // what comes back, and /api/auth/me remains the authority on who is signed
-  // in. Lets pages fetch their data in parallel with that check instead of
-  // waiting ~250ms for it.
-  peekUserId() {
-    try {
-      const token = readSession()?.access_token;
-      const payload = token?.split('.')[1];
-      if (!payload) return null;
-      const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-      return JSON.parse(json).sub || null;
-    } catch {
-      return null;
-    }
-  },
+  // what comes back, and /api/auth/me remains the authority on who is signed in.
+  peekUserId: () => readHint(),
 
-  // A token that is valid right now, refreshing through the API when it is
-  // about to expire. null = signed out.
+  // A token that is valid right now, re-issued from the refresh cookie when the
+  // page has none yet or it is about to expire. null = signed out.
   async getAccessToken() {
-    const session = readSession();
-    if (!session?.access_token) return null;
-    if (session.expires_at * 1000 - Date.now() > REFRESH_MARGIN_MS) return session.access_token;
+    if (access && access.expiresAt - Date.now() > REFRESH_MARGIN_MS) return access.token;
+    if (!readHint()) return null; // never signed in here: don't ask the API
     if (!refreshing) {
-      refreshing = apiFetch('/api/auth/refresh', { method: 'POST', body: { refresh_token: session.refresh_token } })
+      refreshing = apiFetch('/api/auth/refresh', { method: 'POST' })
         .then((data) => {
-          writeSession(data.session);
+          setSession(data.session, subjectOf(data.session.access_token));
           emit('TOKEN_REFRESHED');
           return data.session.access_token;
         })
         .catch((error) => {
           // Only a rejected refresh token ends the session; a network blip must not log the user out.
-          if (error instanceof ApiError && [400, 401].includes(error.status)) {
-            writeSession(null);
+          if (error instanceof ApiError && [400, 401, 403].includes(error.status)) {
+            setSession(null, null);
             emit('SIGNED_OUT');
             return null;
           }
-          return session.access_token;
+          return access?.token || null;
         })
         .finally(() => { refreshing = null; });
     }
@@ -91,7 +108,7 @@ export const authClient = {
 
   async login(email, password) {
     const data = await apiFetch('/api/auth/login', { method: 'POST', body: { email, password } });
-    writeSession(data.session);
+    setSession(data.session, data.user.id);
     emit('SIGNED_IN', { user: data.user, profile: data.profile });
     return data;
   },
@@ -101,25 +118,28 @@ export const authClient = {
   resendVerification: (email) => apiFetch('/api/auth/resend-verification', { method: 'POST', body: { email } }),
 
   // `token` is the recovery token from the emailed link, not the login session.
-  resetPassword: (token, password) => apiFetch('/api/auth/reset-password', { method: 'POST', token, body: { password } }),
-
-  async logout() {
-    const token = readSession()?.access_token;
-    writeSession(null);
-    emit('SIGNED_OUT');
-    if (token) await apiFetch('/api/auth/logout', { method: 'POST', token }).catch(() => {});
+  async resetPassword(token, password) {
+    const result = await apiFetch('/api/auth/reset-password', { method: 'POST', token, body: { password } });
+    setSession(null, null); // every session was revoked by the reset
+    return result;
   },
 
-  // Emailed verification links land on /verify-email#access_token=…: confirm the
-  // token with the API and, if valid, start the session from it.
-  async adoptSession({ access_token: token, refresh_token: refreshToken, expires_at: expiresAt, expires_in: expiresIn }) {
-    const data = await apiFetch('/api/auth/me', { token });
-    writeSession({
-      access_token: token,
-      refresh_token: refreshToken,
-      expires_in: Number(expiresIn) || 3600,
-      expires_at: Number(expiresAt) || Math.floor(Date.now() / 1000) + (Number(expiresIn) || 3600),
-    });
+  async logout() {
+    const token = access?.token;
+    setSession(null, null);
+    emit('SIGNED_OUT');
+    // Clears the cookie (and revokes the session when a token is at hand).
+    await apiFetch('/api/auth/logout', { method: 'POST', token }).catch(() => {});
+  },
+
+  // Emailed verification links land on /verify-email#access_token=…&refresh_token=…:
+  // the refresh token is handed to the API once, which turns it into the
+  // HttpOnly cookie; the URL fragment is already wiped by the page.
+  async adoptSession({ refresh_token: refreshToken }) {
+    const { session } = await apiFetch('/api/auth/session', { method: 'POST', body: { refresh_token: refreshToken } });
+    setSession(session, subjectOf(session.access_token));
+    const data = await apiFetch('/api/auth/me', { token: session.access_token });
+    setSession(session, data.user.id);
     emit('SIGNED_IN', data);
     return data;
   },
@@ -131,7 +151,7 @@ export const authClient = {
       return await apiFetch('/api/auth/me', { token });
     } catch (error) {
       if (error instanceof ApiError && [401, 403].includes(error.status)) {
-        writeSession(null);
+        setSession(null, null);
         emit('SIGNED_OUT', { reason: error.code });
         return null;
       }

@@ -3,12 +3,12 @@
 // learner from auth.setup.js, and restores it to plain/unlocked afterwards
 // so other spec files see a known baseline.
 const path = require('path');
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('../support/session');
 const { adminClient } = require('../support/supabaseAdmin');
 const { signIn } = require('../support/apiClient');
 const { loadUsers } = require('../support/testUsers');
 
-test.use({ storageState: path.join(__dirname, '..', '.auth', 'admin.json') });
+test.use({ asRole: 'admin' });
 
 let users;
 test.beforeAll(() => { users = loadUsers(); });

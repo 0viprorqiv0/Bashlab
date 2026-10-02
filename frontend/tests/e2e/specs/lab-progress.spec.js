@@ -2,11 +2,11 @@
 // writes through PUT /api/progress/:lessonId, and the workspace, the course
 // page and My Learning all read it back from the database.
 const path = require('path');
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('../support/session');
 const { adminClient } = require('../support/supabaseAdmin');
 const { loadUsers } = require('../support/testUsers');
 
-test.use({ storageState: path.join(__dirname, '..', '.auth', 'learner.json') });
+test.use({ asRole: 'learner' });
 
 let users;
 test.beforeAll(() => { users = loadUsers(); });

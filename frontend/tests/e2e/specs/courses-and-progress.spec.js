@@ -3,11 +3,11 @@
 // the row, the toolbar counter, the sidebar progress card, and My Learning —
 // all backed by real writes to `progress` (see lib/learning.js markLessonDone).
 const path = require('path');
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('../support/session');
 const { adminClient } = require('../support/supabaseAdmin');
 const { loadUsers } = require('../support/testUsers');
 
-test.use({ storageState: path.join(__dirname, '..', '.auth', 'learner.json') });
+test.use({ asRole: 'learner' });
 
 let users;
 test.beforeAll(() => { users = loadUsers(); });
