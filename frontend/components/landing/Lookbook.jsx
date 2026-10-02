@@ -5,15 +5,16 @@ import { flushSync } from 'react-dom';
 import dynamic from 'next/dynamic';
 import styles from './Lookbook.module.css';
 import CuriosityWord from './animations/CuriosityWord';
-import CourseBento from './CourseBento';
+import ReviewsSponsors from './ReviewsSponsors';
 import { getTabCompletions, findCommonPrefix } from './terminalTabCompletion';
 import { getFirstIncompleteLab } from '@/data/labsData';
+import Footer from '../layout/Footer';
 
 /* Cyber backdrop loads independently from main content */
 const CyberBackdrop = dynamic(() => import('./CyberBackdrop'), { ssr: false });
 
-/* Thuật toán Lookbook Snap — không dùng CSS scroll-snap */
-const SNAP_DEBOUNCE = 400;
+/* Thuật toán Lookbook Snap — snap thẳng vào từng khung */
+const SNAP_DEBOUNCE = 180;
 const DESKTOP_MIN = 901;
 const STORE_KEY = 'bashlab:lookbook-snap';
 
@@ -22,7 +23,7 @@ const PAGES = [
   { id: 'start', label: 'Start' },
   { id: 'try', label: 'Try' },
   { id: 'learn', label: 'Learn' },
-  { id: 'course', label: 'Course' },
+  { id: 'reviews', label: 'Reviews' },
   { id: 'questions', label: 'Questions' },
 ];
 
@@ -439,7 +440,7 @@ export default function Lookbook() {
   const termReopenRef = useRef(null);
   const placeholderRef = useRef(null);
   const backdropRef = useRef(null);
-  const inlineHeightRef = useRef(320);
+  const inlineHeightRef = useRef(390);
   const isAnimatingRef = useRef(false);
 
 
@@ -460,8 +461,17 @@ export default function Lookbook() {
   const [toast, setToast] = useState(null);
   const [openAcc, setOpenAcc] = useState(null);
   const [inputValue, setInputValue] = useState('');
-  const [cmdHistory, setCmdHistory] = useState([]);
+  const [cmdHistory, setCmdHistory] = useState(['ls', 'whoami']);
   const [historyIdx, setHistoryIdx] = useState(-1);
+  const autoRunTimersRef = useRef([]);
+  const autoRunActiveRef = useRef(false);
+
+  const cancelAutoRun = useCallback(() => {
+    if (!autoRunActiveRef.current) return;
+    autoRunActiveRef.current = false;
+    autoRunTimersRef.current.forEach(clearTimeout);
+    autoRunTimersRef.current = [];
+  }, []);
   /* Kích thước terminal: default | minimized | expanded | closed */
   const [termSize, setTermSize] = useState('default');
   /* Trạng thái fade màu nền theme khi phóng to/thu nhỏ terminal: 'idle' | 'gray-in' | 'gray-out' */
@@ -623,16 +633,14 @@ export default function Lookbook() {
   const [visibleSections, setVisibleSections] = useState({ 0: true, 1: true, 2: true, 3: true, 4: true });
   const termSizeRef = useRef('default');
   termSizeRef.current = termSize;
-  const [logEntries, setLogEntries] = useState([
-    { type: 'info', content: '// Suggested command ready. Click below or press Enter to run:' },
-    { type: 'prompt', cmd: 'pwd' },
-    { type: 'output', content: '/bashlab' },
-    { type: 'desc', content: 'pwd prints your current directory. This path belongs to the demo.' },
-  ]);
+  const [logEntries, setLogEntries] = useState([]);
 
   const activeRef = useRef(0);
   const enabledRef = useRef(true);
   const wasPingingRef = useRef(false);
+  const wheelLockRef = useRef(false);
+  const wheelTimerRef = useRef(null);
+  const targetIndexRef = useRef(null);
   activeRef.current = active;
   enabledRef.current = enabled;
 
@@ -651,18 +659,31 @@ export default function Lookbook() {
     toastTimer.current = window.setTimeout(() => setToast(null), 2200);
   }, []);
 
+  const smoothScrollTo = useCallback((target) => {
+    const duration = 0.72;
+    snappingUntil.current = Date.now() + Math.round(duration * 1000 + 50);
+    const targetTop = typeof target === 'number'
+      ? target
+      : (target ? (target.offsetTop ?? (target.getBoundingClientRect().top + window.scrollY)) : 0);
+
+    if (window.lenis) {
+      window.lenis.scrollTo(targetTop, { duration });
+    } else {
+      window.scrollTo({ top: targetTop, behavior: reducedMotion() ? 'auto' : 'smooth' });
+    }
+  }, []);
+
   const goTo = useCallback((index) => {
     const el = sectionRefs.current[index];
     if (!el && index !== 0) return;
+    targetIndexRef.current = index;
     setActive(index);
-    snappingUntil.current = Date.now() + 1800;
-    if (window.lenis) {
-      window.lenis.scrollTo(index === 0 ? 0 : el, { duration: 0.9 });
-    } else {
-      const top = index === 0 ? 0 : (el ? el.getBoundingClientRect().top + window.scrollY : 0);
-      window.scrollTo({ top, behavior: reducedMotion() ? 'auto' : 'smooth' });
+    if (index === 0) {
+      smoothScrollTo(0);
+    } else if (el) {
+      smoothScrollTo(el.offsetTop ?? (el.getBoundingClientRect().top + window.scrollY));
     }
-  }, []);
+  }, [smoothScrollTo]);
 
   /* Lắng nghe sự kiện kích hoạt Easter Egg từ Footer */
   useEffect(() => {
@@ -702,41 +723,13 @@ export default function Lookbook() {
     }
 
     function onScrollStop() {
+      targetIndexRef.current = null;
       if (termSizeRef.current === 'expanded') return;
       if (!enabledRef.current) return;
       if (!isDesktop()) return;
       if (Date.now() < snappingUntil.current) return;
       const sections = sectionRefs.current.filter(Boolean);
       if (sections.length < PAGES.length) return;
-      const y = window.scrollY;
-      const s5 = sections[PAGES.length - 1];
-      const s5Top = s5.getBoundingClientRect().top + y;
-
-      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-
-      // Nếu đã cuộn chạm hoặc gần sát đáy trang (vùng hiển thị Footer), cho phép dừng tự do, không snap ngược
-      if (y >= maxScroll - 5) return;
-
-      const smoothScrollTo = (target) => {
-        snappingUntil.current = Date.now() + 750;
-        if (window.lenis) {
-          window.lenis.scrollTo(target, { duration: 0.7 });
-        } else {
-          window.scrollTo({ top: target, behavior: reducedMotion() ? 'auto' : 'smooth' });
-        }
-      };
-
-      // Xử lý vùng giữa Section 5 và Footer
-      if (y > s5Top) {
-        // Nếu đã cuộn quá Section 5 hơn 35px, snap mượt xuống đáy để hiện trọn vẹn Footer
-        if (y - s5Top >= 35) {
-          smoothScrollTo(maxScroll);
-        } else {
-          // Nếu chỉ chớm cuộn lố Section 5 (<35px), snap mượt trở lại đầu Section 5
-          smoothScrollTo(s5Top);
-        }
-        return;
-      }
 
       let best = -1;
       let bestAbs = Infinity;
@@ -748,9 +741,10 @@ export default function Lookbook() {
           best = i;
         }
       }
-      if (best >= 0 && bestAbs <= window.innerHeight / 4 && bestAbs > 2) {
-        const target = sections[best].getBoundingClientRect().top + window.scrollY;
+      if (best >= 0 && bestAbs > 2) {
+        const target = best === 0 ? 0 : (sections[best].offsetTop ?? (sections[best].getBoundingClientRect().top + window.scrollY));
         setActive(best);
+        targetIndexRef.current = best;
         smoothScrollTo(target);
       }
     }
@@ -764,30 +758,148 @@ export default function Lookbook() {
       scrollTimer.current = window.setTimeout(onScrollStop, SNAP_DEBOUNCE);
     }
 
+    function onWheel(e) {
+      if (termSizeRef.current === 'expanded') return;
+      if (!enabledRef.current) return;
+      if (!isDesktop()) return;
+
+      const targetEl = e.target;
+      if (targetEl) {
+        const scrollable = targetEl.closest?.(`.${styles.termLog}`) || targetEl.closest?.('[role="dialog"]');
+        if (scrollable) {
+          const hasScroll = scrollable.scrollHeight > scrollable.clientHeight;
+          if (hasScroll) {
+            const atTop = scrollable.scrollTop <= 0 && e.deltaY < 0;
+            const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 2 && e.deltaY > 0;
+            if (!atTop && !atBottom) {
+              return;
+            }
+          }
+        }
+      }
+
+      // Khóa và nuốt hoàn toàn sự kiện wheel để trình duyệt và Lenis không cuộn tự do
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      // Nếu đang trong thời gian chặn dội (echo) của 1 nấc cuộn: bỏ qua ngay, KHÔNG gia hạn cooldown
+      if (wheelLockRef.current) {
+        return;
+      }
+
+      // Bỏ qua rung lắc vi mô (< 10px)
+      if (Math.abs(e.deltaY) < 10) return;
+
+      const sections = sectionRefs.current.filter(Boolean);
+      if (sections.length < PAGES.length) return;
+
+      // Khóa ngắn (160ms) chỉ để hấp thụ các xung lặp của cùng 1 nấc con lăn, không tạo cảm giác cooldown
+      wheelLockRef.current = true;
+      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
+      wheelTimerRef.current = setTimeout(() => {
+        wheelLockRef.current = false;
+      }, 160);
+
+      const cur = targetIndexRef.current !== null ? targetIndexRef.current : activeRef.current;
+
+      if (e.deltaY > 0) {
+        // Lăn xuống: chuyển đúng 1 khung tiếp theo
+        if (cur < PAGES.length - 1) {
+          goTo(cur + 1);
+        }
+      } else if (e.deltaY < 0) {
+        // Lăn lên: chuyển đúng 1 khung trước đó
+        if (cur > 0) {
+          goTo(cur - 1);
+        }
+      }
+    }
+
+    let touchStartY = 0;
+    function onTouchStart(e) {
+      if (e.touches && e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+      }
+    }
+
+    function onTouchEnd(e) {
+      if (termSizeRef.current === 'expanded') return;
+      if (!enabledRef.current) return;
+      if (!isDesktop()) return;
+      if (wheelLockRef.current) return;
+      if (!e.changedTouches || e.changedTouches.length === 0) return;
+
+      const diffY = touchStartY - e.changedTouches[0].clientY;
+      if (Math.abs(diffY) < 45) return;
+
+      const sections = sectionRefs.current.filter(Boolean);
+      if (sections.length < PAGES.length) return;
+
+      wheelLockRef.current = true;
+      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
+      wheelTimerRef.current = setTimeout(() => {
+        wheelLockRef.current = false;
+      }, 180);
+
+      const cur = targetIndexRef.current !== null ? targetIndexRef.current : activeRef.current;
+
+      if (diffY > 0) {
+        // Vuốt lên -> sang đúng 1 khung kế tiếp
+        if (cur < PAGES.length - 1) {
+          goTo(cur + 1);
+        }
+      } else if (diffY < 0) {
+        // Vuốt xuống -> về đúng 1 khung trước đó
+        if (cur > 0) {
+          goTo(cur - 1);
+        }
+      }
+    }
+
     function onKey(e) {
       if (termSizeRef.current === 'expanded') return;
       if (!enabledRef.current) return;
-      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      if (!['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(e.key)) return;
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (!isDesktop()) return;
       e.preventDefault();
-      const cur = activeRef.current;
-      if (e.key === 'ArrowDown' && cur < PAGES.length - 1) goTo(cur + 1);
-      if (e.key === 'ArrowUp' && cur > 0) goTo(cur - 1);
+      const cur = targetIndexRef.current !== null ? targetIndexRef.current : activeRef.current;
+
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        if (cur < PAGES.length - 1) {
+          goTo(cur + 1);
+        }
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        if (cur > 0) {
+          goTo(cur - 1);
+        }
+      } else if (e.key === 'Home') {
+        goTo(0);
+      } else if (e.key === 'End') {
+        goTo(PAGES.length - 1);
+      }
     }
 
     updateActive();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
+      window.removeEventListener('wheel', onWheel, { capture: true });
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('keydown', onKey);
       if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
+      if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
     };
-  }, [goTo]);
+  }, [goTo, smoothScrollTo]);
 
   useEffect(() => {
     const els = sectionRefs.current.filter(Boolean);
@@ -814,7 +926,7 @@ export default function Lookbook() {
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [logEntries]);
+  }, [logEntries, inputValue]);
 
   useEffect(() => () => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -1033,6 +1145,83 @@ export default function Lookbook() {
 
 
 
+  /* Tự động chạy lệnh ls rồi whoami khi vừa vào trang web hoặc refresh trang web */
+  useEffect(() => {
+    if (reducedMotion()) {
+      autoRunActiveRef.current = false;
+      setLogEntries([
+        { type: 'prompt', cmd: 'ls', user: 'guest', dir: '' },
+        { type: 'output', content: 'System/   about.txt   courses/   getting-started.txt' },
+        { type: 'prompt', cmd: 'whoami', user: 'guest', dir: '' },
+        { type: 'output', content: 'guest' },
+      ]);
+      return undefined;
+    }
+
+    autoRunActiveRef.current = true;
+    const timers = [];
+
+    // Bước 1: Gõ lệnh 'ls'
+    timers.push(
+      setTimeout(() => {
+        if (!autoRunActiveRef.current) return;
+        setInputValue('l');
+      }, 280)
+    );
+
+    timers.push(
+      setTimeout(() => {
+        if (!autoRunActiveRef.current) return;
+        setInputValue('ls');
+      }, 420)
+    );
+
+    // Bước 2: Thực thi 'ls'
+    timers.push(
+      setTimeout(() => {
+        if (!autoRunActiveRef.current) return;
+        setInputValue('');
+        setLogEntries([
+          { type: 'prompt', cmd: 'ls', user: 'guest', dir: '' },
+          { type: 'output', content: 'System/   about.txt   courses/   getting-started.txt' },
+        ]);
+      }, 620)
+    );
+
+    // Bước 3: Gõ lệnh 'whoami'
+    const whoamiSteps = ['w', 'wh', 'who', 'whoa', 'whoam', 'whoami'];
+    whoamiSteps.forEach((s, idx) => {
+      timers.push(
+        setTimeout(() => {
+          if (!autoRunActiveRef.current) return;
+          setInputValue(s);
+        }, 980 + idx * 70)
+      );
+    });
+
+    // Bước 4: Thực thi 'whoami'
+    timers.push(
+      setTimeout(() => {
+        if (!autoRunActiveRef.current) return;
+        setInputValue('');
+        setLogEntries([
+          { type: 'prompt', cmd: 'ls', user: 'guest', dir: '' },
+          { type: 'output', content: 'System/   about.txt   courses/   getting-started.txt' },
+          { type: 'prompt', cmd: 'whoami', user: 'guest', dir: '' },
+          { type: 'output', content: 'guest' },
+        ]);
+        autoRunActiveRef.current = false;
+      }, 980 + whoamiSteps.length * 70 + 180)
+    );
+
+    autoRunTimersRef.current = timers;
+
+    return () => {
+      autoRunActiveRef.current = false;
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
   /* Dọn dẹp timer trạng thái LED & Ping */
   useEffect(() => () => {
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
@@ -1170,16 +1359,7 @@ export default function Lookbook() {
     if (cmd.toLowerCase() === 'clear') {
       setIsWaitingPassword(false);
       setIsWaitingFlag(false);
-      setLogEntries(
-        isRoot
-          ? []
-          : [
-              {
-                type: 'info',
-                content: '// Terminal cleared. Type pwd, help, or click a chip:',
-              },
-            ]
-      );
+      setLogEntries([]);
       setInputValue('');
       return;
     }
@@ -1776,10 +1956,6 @@ export default function Lookbook() {
             ? 'P4nd0r4/   System/   about.txt   courses/   getting-started.txt'
             : 'System/   about.txt   courses/   getting-started.txt',
         });
-        next.push({
-          type: 'desc',
-          content: 'ls lists entries in the demo root.',
-        });
       }
       setLogEntries(next);
       setInputValue('');
@@ -1792,12 +1968,6 @@ export default function Lookbook() {
         type: 'output',
         content: currentDir ? `/bashlab/${currentDir}` : '/bashlab',
       });
-      if (!isRoot) {
-        next.push({
-          type: 'desc',
-          content: 'pwd prints your current directory. This path belongs to the demo.',
-        });
-      }
       setLogEntries(next);
       setInputValue('');
       return;
@@ -1867,15 +2037,7 @@ export default function Lookbook() {
 
     // 12. Lệnh whoami
     if (lowerCmd === 'whoami') {
-      if (isRoot) {
-        next.push({ type: 'output', content: 'root' });
-      } else {
-        next.push({ type: 'output', content: 'guest' });
-        next.push({
-          type: 'desc',
-          content: 'You are a curious learner. BashLab helps you turn that curiosity into command-line skills.',
-        });
-      }
+      next.push({ type: 'output', content: isRoot ? 'root' : 'guest' });
       setLogEntries(next);
       setInputValue('');
       return;
@@ -1886,9 +2048,6 @@ export default function Lookbook() {
       const pingPlan = preparePingPlan(cmd);
       if (pingPlan.immediate) {
         next.push({ type: pingPlan.type, content: pingPlan.content });
-        if (!isRoot && pingPlan.desc) {
-          next.push({ type: 'desc', content: pingPlan.desc });
-        }
         setLogEntries(next);
         setInputValue('');
         return;
@@ -1913,16 +2072,10 @@ export default function Lookbook() {
 
       cumulativeDelay += 350;
       const finalTimer = setTimeout(() => {
-        setLogEntries((prev) => {
-          const updated = [
-            ...prev,
-            { type: 'output', content: pingPlan.stats },
-          ];
-          if (!isRoot && pingPlan.desc) {
-            updated.push({ type: 'desc', content: pingPlan.desc });
-          }
-          return updated;
-        });
+        setLogEntries((prev) => [
+          ...prev,
+          { type: 'output', content: pingPlan.stats },
+        ]);
         setIsPinging(false);
       }, cumulativeDelay);
       timers.push(finalTimer);
@@ -1940,9 +2093,6 @@ export default function Lookbook() {
     ) {
       const ifconfigPlan = prepareIfconfig(cmd, isRoot);
       next.push({ type: ifconfigPlan.type, content: ifconfigPlan.content });
-      if (!isRoot && ifconfigPlan.desc) {
-        next.push({ type: 'desc', content: ifconfigPlan.desc });
-      }
       setLogEntries(next);
       setInputValue('');
       return;
@@ -1960,10 +2110,6 @@ export default function Lookbook() {
           type: 'output',
           content: 'Available demo commands: pwd, ls, whoami, ping google.com, ifconfig, cat about.txt, courses, help, clear',
         });
-        next.push({
-          type: 'desc',
-          content: 'Simulated commands to explore how Bash interaction works.',
-        });
       }
       setLogEntries(next);
       setInputValue('');
@@ -1974,9 +2120,6 @@ export default function Lookbook() {
     const hit = RESPONSES[lowerCmd];
     if (hit) {
       next.push({ type: 'output', content: hit.out });
-      if (!isRoot) {
-        next.push({ type: 'desc', content: hit.desc });
-      }
     } else {
       next.push({ type: 'error', content: 'This demo supports a few commands. Type help to see them.' });
     }
@@ -2036,6 +2179,17 @@ export default function Lookbook() {
   };
 
   function handleTermKeyDown(e) {
+    if (autoRunActiveRef.current) {
+      cancelAutoRun();
+      setInputValue('');
+      setLogEntries([
+        { type: 'prompt', cmd: 'ls', user: 'guest', dir: '' },
+        { type: 'output', content: 'System/   about.txt   courses/   getting-started.txt' },
+        { type: 'prompt', cmd: 'whoami', user: 'guest', dir: '' },
+        { type: 'output', content: 'guest' },
+      ]);
+    }
+
     if (e.key === 'c' && e.ctrlKey) {
       if (isPinging) {
         e.preventDefault();
@@ -2155,10 +2309,22 @@ export default function Lookbook() {
   const renderedQuote = renderQuoteContent(currentQuote, charCount, typeMode === 'idle');
 
   return (
-    <div className={styles.lookbook}>
+    <div className={`${styles.lookbook} ${styles.customBgActive}`}>
+      {/* Background Cityscape với lớp tint đen làm nổi bật nội dung */}
+      <div className={styles.newBgContainer} aria-hidden="true">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className={styles.bgMedia}
+          src="/background/pixel-cityscape.1920x1080.mp4"
+        />
+        <div className={styles.bgDimOverlay} />
+      </div>
+
       {/* ===== 01 / START — Hero giữa (cấu trúc cũ) ===== */}
       <section ref={setSection(0)} id="start" aria-labelledby="hero-heading" className={`${styles.section} ${styles.sHero} ${visibleSections[0] ? styles.isVisible : ''}`}>
-        <CyberBackdrop />
         <div className={styles.wrap}>
           <div
             className={`${styles.heroCenter} ${styles.reveal}`}
@@ -2385,13 +2551,6 @@ export default function Lookbook() {
                       </span>
                     </div>
                     <div className={styles.termHeadRight}>
-                      <div className={styles.termStatusBadge}>
-                        <span
-                          className={`${styles.statusLed} ${sysStatus === 'EXEC_OK' ? styles.statusLedActive : ''}`}
-                          aria-hidden="true"
-                        />
-                        <span className={styles.statusText}>{sysStatus}</span>
-                      </div>
                       <span className={styles.termDemoHint}>
                         {termSize === 'expanded' ? 'Terminal session' : 'Interactive demo'}
                       </span>
@@ -2467,8 +2626,8 @@ export default function Lookbook() {
                       return <div key={i} style={{ color: 'var(--lb-faint)' }}>{e.content}</div>;
                     })}
 
-                    {/* Dòng nhập lệnh trực tiếp kiểu Terminal thật khi phóng to (expanded) */}
-                    {termSize === 'expanded' && !isPinging && (
+                    {/* Dòng nhập lệnh trực tiếp kiểu Terminal thật */}
+                    {!isPinging && (
                       <div className={styles.realTermLine} onClick={(ev) => ev.stopPropagation()}>
                         <span className={`${isWaitingPassword ? styles.termPrompt : (isWaitingFlag ? '' : (isRoot ? styles.termPromptRoot : styles.termPrompt))} ${styles.realTermPrompt}`}>
                           {isWaitingPassword
@@ -2506,74 +2665,6 @@ export default function Lookbook() {
                       </div>
                     )}
                   </div>
-
-                  {termSize !== 'expanded' && !isPinging && (
-                    <>
-                      <div className={styles.termInputRow}>
-                        <span className={isWaitingPassword ? styles.termPrompt : (isWaitingFlag ? '' : (isRoot ? styles.termPromptRoot : styles.termPrompt))}>
-                          {isWaitingPassword
-                            ? '[sudo] password for guest: '
-                            : isWaitingFlag
-                              ? ''
-                              : (isRoot
-                                  ? (currentDir ? `root@bashlab:~/${currentDir}# ` : 'root@bashlab:~# ')
-                                  : (currentDir ? `guest@bashlab:~/${currentDir}$ ` : 'guest@bashlab:~$ '))}
-                        </span>
-                        <input
-                          ref={termInputRef}
-                          type="text"
-                          className={styles.termInput}
-                          value={inputValue}
-                          onChange={(e) => setInputValue(e.target.value)}
-                          onKeyDown={handleTermKeyDown}
-                          style={
-                            isWaitingPassword
-                              ? { color: 'transparent', caretColor: 'transparent', userSelect: 'none' }
-                              : undefined
-                          }
-                          placeholder={
-                            isWaitingPassword || isWaitingFlag || isRoot
-                              ? ''
-                              : 'Type pwd, ls, whoami, ifconfig, help...'
-                          }
-                          spellCheck={false}
-                          autoComplete="off"
-                          aria-label={
-                            isWaitingPassword
-                              ? 'Password input'
-                              : isWaitingFlag
-                                ? 'Flag input'
-                                : 'Command input'
-                          }
-                        />
-                        <button className={styles.runBtn} type="button" onClick={() => executeCommand(inputValue)}>
-                          {isWaitingPassword || isWaitingFlag ? 'SUBMIT' : 'RUN'}
-                        </button>
-                      </div>
-                      <div className={styles.termChips}>
-                        <div className={styles.chipGroup} role="group" aria-label="Suggested commands">
-                          {(isRoot
-                            ? ['whoami', 'ls', 'pwd', 'ifconfig', 'exit', 'help']
-                            : ['pwd', 'ls', 'whoami', 'ifconfig', 'help']
-                          ).map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              disabled={isWaitingPassword || isWaitingFlag}
-                              onClick={() => executeCommand(c)}
-                              className={`${styles.chip} ${c === (isRoot ? 'whoami' : 'pwd') ? styles.chipPrimary : ''}`}
-                              aria-label={`Run ${c} command`}
-                            >
-                              {c === (isRoot ? 'whoami' : 'pwd')
-                                ? (isRoot ? '▶ Run root command: whoami' : '▶ Run demo command: pwd')
-                                : c}
-                            </button>
-                          ))}
-                        </div>
-                        <button className={styles.clearBtn} type="button" disabled={isWaitingPassword || isWaitingFlag} onClick={() => executeCommand('clear')}>CLEAR</button>
-                      </div>
-                    </>
-                  )}
                     </div>
                   </div>
                 </div>
@@ -2674,28 +2765,24 @@ export default function Lookbook() {
         </div>
       </section>
 
-      {/* ===== 04 / COURSE — spotlight Shell 101 Bento Grid ===== */}
-      <section ref={setSection(3)} id="course" aria-labelledby="course-heading" className={`${styles.section} ${styles.sCourse} ${visibleSections[3] ? styles.isVisible : ''}`}>
+      {/* ===== 04 / REVIEWS & SPONSORS ===== */}
+      <section ref={setSection(3)} id="reviews" aria-labelledby="reviews-heading" className={`${styles.section} ${styles.sCourse} ${visibleSections[3] ? styles.isVisible : ''}`}>
         <div aria-hidden="true" className={styles.tick} style={{ backgroundColor: '#68DFA0' }} />
         <div className={styles.wrap}>
-          <div className={`${styles.courseHead} ${styles.reveal}`}>
-            <div className={styles.courseHeadRow}>
-              <div>
-                <h2 id="course-heading" className={styles.h2}>Your next command starts in Shell 101.</h2>
-              </div>
-              <div className={styles.philosophyTag} aria-hidden="true">
-                <span>PRACTICE</span>
-                <span className={styles.tagArrow}>&gt;</span>
-                <span>LEARN</span>
-                <span className={styles.tagArrow}>&gt;</span>
-                <span>BUILD</span>
-                <span className={styles.tagArrow}>&gt;</span>
-                <span>BELONG</span>
-              </div>
+          <div className={`${styles.reviewsHead} ${styles.reveal}`}>
+            <div className={styles.philosophyTag} aria-hidden="true">
+              <span>COMMUNITY</span>
+              <span className={styles.tagArrow}>&gt;</span>
+              <span>TRUSTED</span>
+              <span className={styles.tagArrow}>&gt;</span>
+              <span>PARTNERS</span>
+              <span className={styles.tagArrow}>&gt;</span>
+              <span>4.9/5★</span>
             </div>
+            <h2 id="reviews-heading" className={styles.h2}>Loved by engineers. Backed by community.</h2>
           </div>
 
-          <CourseBento onPractice={() => goTo(1)} />
+          <ReviewsSponsors />
         </div>
       </section>
 
@@ -2734,6 +2821,7 @@ export default function Lookbook() {
             </div>
           </div>
         </div>
+        <Footer isLanding className={styles.faqFooter} />
       </section>
 
       {/* ===== Right-Rail 28px: dot + divider + toggle một trục ===== */}
@@ -2753,16 +2841,6 @@ export default function Lookbook() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className={styles.snapToggle}
-          aria-pressed={enabled}
-          aria-label={`Lookbook scroll snap ${enabled ? 'on' : 'off'}`}
-          title="Toggle Lookbook scroll snap"
-          onClick={toggleSnap}
-        >
-          <span aria-hidden="true" />
-        </button>
       </nav>
 
       {/* notPandora.exe Video Modal (Cửa sổ nhỏ phát video Never Gonna Give You Up) */}
@@ -2830,6 +2908,8 @@ export default function Lookbook() {
           </div>
         </div>
       )}
+
+
 
       <div className={`${styles.toast} ${toast ? styles.toastShow : ''}`} role="status" aria-live="polite">
         {toast}

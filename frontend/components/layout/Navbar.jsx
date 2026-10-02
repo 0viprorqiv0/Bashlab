@@ -101,11 +101,7 @@ export default function Navbar({ isTransparent = false }) {
   return (
     <header
       style={{ height: '64px' }}
-      className={`fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 ${
-        isTransparent
-          ? 'border-b border-[#26313d]/60 bg-[#111720]/35 backdrop-blur-md'
-          : 'border-b border-[#26313d] bg-[#111720]/95 shadow-[0_8px_28px_rgba(0,0,0,0.3)] backdrop-blur-xl'
-      }`}
+      className="fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 border-b border-[#26313d] bg-[#111720] shadow-[0_8px_28px_rgba(0,0,0,0.3)]"
       role="banner"
     >
       <div className="w-full max-w-[1340px] mx-auto flex items-center justify-between">
@@ -185,7 +181,7 @@ export default function Navbar({ isTransparent = false }) {
           ) : (
             <>
               <Link href="/login" className="hidden sm:inline-flex text-xs font-code text-on-surface-variant hover:text-white px-3 py-1.5 transition-colors focus-visible">Log in</Link>
-              <Link href="/my-learning" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Start learning</Link>
+              <Link href="/register" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Sign up</Link>
             </>
           )}
 
@@ -241,8 +237,8 @@ export default function Navbar({ isTransparent = false }) {
               ) : (
                 <>
                   <Link href="/login" className="text-sm font-code text-on-surface-variant hover:text-white text-center py-2 focus-visible" onClick={() => setMobileOpen(false)}>Log in</Link>
-                  <Link href="/my-learning" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
-                    Start learning
+                  <Link href="/register" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
+                    Sign up
                     <span className="material-symbols-outlined text-base">arrow_forward</span>
                   </Link>
                 </>
