@@ -104,3 +104,18 @@ test('queue never runs more than four jobs concurrently', async () => {
   assert.equal(peak, 4);
   assert.equal(active, 0);
 });
+
+
+test('reaper removal notifies API lifecycle cleanup observers immediately', async t => {
+  const { manager, session } = await setup(t);
+  const removed = [];
+  manager.onRemoved((id) => removed.push(id));
+  session.lastActiveAt = 0;
+  assert.equal(await reapOnce(manager, Date.now()), 1);
+  assert.deepEqual(removed, [session.id]);
+});
+
+test('server-bound verifier lookup is independent from the database lesson id', async () => {
+  const verifierKeys = new Map([['11111111-1111-4111-8111-111111111111', 'files-03']]);
+  assert.equal(verifierKeys.get('11111111-1111-4111-8111-111111111111'), 'files-03');
+});

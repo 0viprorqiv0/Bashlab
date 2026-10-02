@@ -174,7 +174,9 @@
   max-width: min(1280px, 88vw);
 }
 
-.faqFooter {
+/* Footer.module.css also defines .footer as position: relative. Scope this
+   rule through the FAQ section so it wins regardless of CSS bundle order. */
+.sFaq .faqFooter {
   position: absolute;
   bottom: clamp(10px, 1.8vh, 18px);
   left: 0;
@@ -1562,7 +1564,10 @@
 }
 
 /* ---------- Mobile: cuộn tự nhiên ---------- */
-@media (max-width: 900px) {
+/* Keep the section-height policy aligned with the pricing teaser. Below
+   960px its three plan cards intentionally stack into one column, so a
+   viewport-height section would let that content overflow into FAQ. */
+@media (max-width: 960px) {
   .section { height: auto; min-height: 0; overflow: visible; padding: 72px 20px 44px; justify-content: flex-start; }
   .sCourse {
     padding-top: clamp(84px, 11vw, 100px);
@@ -1579,7 +1584,7 @@
   .sFaq .wrap {
     margin: 0 0 2rem;
   }
-  .faqFooter {
+  .sFaq .faqFooter {
     position: static;
     padding-left: 0;
     padding-right: 0;

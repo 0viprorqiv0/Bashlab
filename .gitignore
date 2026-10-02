@@ -39,6 +39,7 @@ coverage/
 frontend/tests/e2e/.auth/
 frontend/tests/e2e/report/
 frontend/test-results/
+screenshots/
 
 # Python bytecode
 __pycache__/
