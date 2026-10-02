@@ -81,8 +81,7 @@ export default function Dashboard() {
       {state.error ? <p className={styles.errorText} role="alert">Could not load the dashboard: {state.error}</p> : null}
       {data && !data.available ? (
         <p className={dash.banner} role="status">
-          <strong>Prometheus is not connected.</strong> {data.reason} The charts below need the monitoring stack
-          (<code>monitoring/README.md</code>, set <code>PROMETHEUS_URL</code> for the API); the headline numbers come straight from the database.
+          <strong>Prometheus is not connected.</strong>
         </p>
       ) : null}
 
