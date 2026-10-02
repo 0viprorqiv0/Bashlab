@@ -117,17 +117,22 @@ function Workspace({ courseId, labId, labs, markDone }) {
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const sessionIdRef = useRef(null);
+  // Bumped whenever the instance is stopped/unmounted so a create still in flight is discarded, not adopted.
+  const generationRef = useRef(0);
 
   useEffect(() => {
     setShowHint(false);
   }, [labId]);
 
   // Start instance: opens a real sandbox session via the backend API.
-  async function handleStartInstance(isStale = () => false) {
+  async function handleStartInstance() {
     if (!sandboxEnabled) {
       setInstanceStatus('stopped');
       return;
     }
+    if (sessionIdRef.current) { endSession(sessionIdRef.current); sessionIdRef.current = null; }
+    const generation = ++generationRef.current;
+    const isStale = () => generationRef.current !== generation;
     setInstanceStatus('restarting');
     setTerminalLogs([{ type: 'output', text: 'Booting container instance...' }]);
     try {
@@ -148,9 +153,20 @@ function Workspace({ courseId, labId, labs, markDone }) {
     }
   }
 
+  // The API forgot this session (idle timeout, admin stop, API restart): drop it
+  // so the learner gets a clear way back instead of repeating the same error.
+  function sessionGone(error) {
+    if (error.code !== 'SESSION_NOT_FOUND' && error.code !== 'SESSION_QUARANTINED') return false;
+    sessionIdRef.current = null;
+    setInstanceStatus('stopped');
+    setTerminalLogs((prev) => [...prev, { type: 'output', text: '[error] This sandbox session ended (idle timeout or restart). Click the red dot or "Start Instance" for a new one.' }]);
+    return true;
+  }
+
   // Red button: Stop / Toggle instance
   function handleToggleStopInstance() {
     if (instanceStatus === 'running' || instanceStatus === 'restarting') {
+      generationRef.current++; // discards a create that has not answered yet
       if (sessionIdRef.current) endSession(sessionIdRef.current);
       sessionIdRef.current = null;
       setInstanceStatus('stopped');
@@ -178,6 +194,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
       setTerminalLogs((prev) => [...prev, { type: 'output', text: 'Instance restarted successfully.' }]);
       inputRef.current?.focus();
     } catch (error) {
+      if (sessionGone(error)) return;
       setInstanceStatus('stopped');
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Restart failed: ${error.message}` }]);
     }
@@ -186,17 +203,20 @@ function Workspace({ courseId, labId, labs, markDone }) {
   // Open a sandbox session as soon as the lab loads; close it on the way out
   // (lab change or navigating away) so containers do not leak.
   useEffect(() => {
-    let stale = false;
     const closeSession = () => {
       if (!sessionIdRef.current) return;
       endSession(sessionIdRef.current);
       sessionIdRef.current = null;
     };
-    handleStartInstance(() => stale);
+    handleStartInstance();
     window.addEventListener('pagehide', closeSession); // tab closed / reloaded: unmount cleanup never runs
+    // Back/forward cache restores the page without re-running effects, after pagehide closed the session.
+    const reopen = (event) => { if (event.persisted && !sessionIdRef.current) handleStartInstance(); };
+    window.addEventListener('pageshow', reopen);
     return () => {
-      stale = true;
+      generationRef.current++; // eslint-disable-line react-hooks/exhaustive-deps
       window.removeEventListener('pagehide', closeSession);
+      window.removeEventListener('pageshow', reopen);
       closeSession();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -291,6 +311,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
           setTerminalLogs((prev) => [...prev, { type: 'output', text: `\n[VERIFICATION FAILED] Not solved yet:\n${failed}` }]);
         }
       } catch (error) {
+        if (sessionGone(error)) return;
         setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Check failed: ${error.message}` }]);
       } finally {
         setChecking(false);
@@ -363,6 +384,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
       const warning = result.quotaExceeded ? `\n[warning] ${result.quotaError}` : '';
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `${text}${warning}` }]);
     } catch (error) {
+      if (sessionGone(error)) return;
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] ${error.message}` }]);
     } finally {
       setBusy(false);
