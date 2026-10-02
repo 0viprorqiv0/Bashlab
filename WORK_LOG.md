@@ -334,3 +334,51 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
   * **Backend Tests**: `npm --prefix backend test` $\rightarrow$ **74/74 tests pass 100%**.
   * **E2E Playwright Suites**: `smoke.spec.js`, `landing-start-learning.spec.js`, `admin-dashboard.spec.js`, `workspace.spec.js`, `courses-and-progress.spec.js`, `account-profile.spec.js` $\rightarrow$ **23/23 tests PASS 100% (47.0s)**.
 * **Trạng thái**: Hoàn thành.
+
+---
+
+### [2026-10-02 23:20] Tích hợp Toàn diện Admin Panel Mới từ `origin/feature/admin-studio` (Content Studio & Redesigned Users Manager)
+
+* **Yêu cầu & Mục tiêu**:
+  * Tích hợp toàn bộ tính năng Admin Studio mới từ commit `5d8f4e3` (`origin/feature/admin-studio` của `LowkeyProd`) vào nhánh làm việc hiện tại (`feature/full-feature-revision`).
+  * **Bảo vệ toàn vẹn hệ thống hiện hữu (Strict Safeguard & Zero Regression)**:
+    * Giữ nguyên 100% trang Subscription (`subscription/page.js`, `subscription.module.css`) mà commit `5d8f4e3` đã lỡ xóa nhầm trên nhánh remote.
+    * Bảo toàn hệ thống biểu đồ Prometheus Cubic Spline sống động tại `/admin/activity` (`LineChart.jsx`, `Dashboard.jsx`).
+    * Bảo toàn không gian làm việc Full 100vh ChatGPT Sidebar và nút Check Solution tại `/courses/.../labs/...` (`LabWorkspace.jsx`).
+    * Duy trì cơ chế purge Service Worker / Cache Storage trong `SiteChrome.jsx`.
+
+* **Các thành phần đã triển khai & tích hợp**:
+  1. **Thanh Title Bar VSCode cho Admin (`AdminGate.jsx` & `Admin.module.css`)**:
+     * Thay thế subnav cũ bằng thanh tiêu đề phong cách Visual Studio Code full-width (cao 46px, `#0A0D14`, viền mờ), tích hợp logo BashLab, menu chuyển đổi mượt mà giữa các mục: **Content**, **Users**, **Activity**.
+     * Hỗ trợ 2 cổng cắm portal tiêu đề: `#admin-header-center` (cho Breadcrumb Command Center) và `#admin-header-right` (cho trạng thái Auto-Save và nút Save).
+     * Phân tách vùng hiển thị linh hoạt: `.shellStudio` (full-height 100% không cuộn cho Studio) và `.shellStandard` (cuộn mượt, padding căn giữa cho Users & Activity).
+  2. **Content Studio Đẳng Cấp VSCode (`ContentStudio.jsx` & `ContentStudio.module.css` - hơn 4.600 dòng code)**:
+     * Cột trái Explorer với cây thư mục Course, Chapter, Lesson trực quan, bộ lọc tìm kiếm tức thời, chỉ số trạng thái Draft / Published.
+     * Cột giữa Editor mạnh mẽ: Hỗ trợ tab Content, Objectives, Hints, chọn level (Beginner/Intermediate/Advanced), chọn status, đếm dòng/từ tự động, auto-save ngầm với cờ trạng thái "Saved".
+     * Cột phải Student Preview: Xem trước bài học với chế độ xem Interactive Lab / Terminal Output trên các viewport Desktop, Tablet, Mobile.
+     * Tích hợp trực tiếp vào `/admin/studio` và `/admin/content` (tab Studio).
+  3. **Quản trị Người dùng Thế hệ Mới (`UsersManager.jsx` & `UsersManager.module.css`)**:
+     * Bảng danh sách người dùng hiển thị avatar phối màu ngẫu nhiên hài hòa, tên, email, thẻ trạng thái Locked / Active, pill vai trò Admin / Learner.
+     * Hỗ trợ đầy đủ bộ lọc tìm kiếm (`aria-label="Search users"`), sắp xếp theo Hoạt động gần nhất / Cũ nhất / Tên A-Z / Số bài hoàn thành.
+     * Nút thao tác nhanh trên từng dòng (`Make learner` / `Make admin`, `Lock` / `Unlock`) kết hợp nút `Manage` mở Modal chi tiết tài khoản (thống kê tiến độ % hoàn thành bài lab, trạng thái email verified, ngày gia nhập).
+  4. **Bổ sung API Thao Tác Nội Dung (`writeApi.js`)**:
+     * Thêm phương thức `deleteChapter(id)` và `deleteLesson(id)`.
+  5. **Khóa Cuộn Trình Duyệt 100vh Toàn Diện cho Admin (`globals.css`, `SiteChrome.jsx`, `SiteChrome.module.css`)**:
+     * Bổ sung `.admin-locked` trên `html` và `body` loại bỏ triệt để hiện tượng tràn thanh cuộn toàn trang khi làm việc trong Admin Studio.
+     * Tự động ẩn Header Navbar toàn trang khi ở trong khu vực `/admin/*` để tối đa hóa không gian thao tác studio.
+
+* **Kiểm chứng thực tế (Real Evidence & Verification)**:
+  * **ESLint**: `npm --prefix frontend run lint` $\rightarrow$ **0 warnings, 0 errors**.
+  * **Backend Tests**: `npm --prefix backend test` $\rightarrow$ **74/74 tests pass 100%**.
+  * **Playwright E2E Suites**:
+    * `admin-dashboard.spec.js` + `admin-users.spec.js` $\rightarrow$ **7/7 tests pass 100%**.
+    * `smoke.spec.js` + `workspace.spec.js` $\rightarrow$ **10/10 tests pass 100%**.
+    * Toàn bộ test suite liên hoàn (24 tests) $\rightarrow$ **24/24 tests pass 100% (51.0s)**.
+  * **Ảnh chụp màn hình thực tế (Trải nghiệm người dùng thật với phiên Admin Authenticated)**:
+    1. **Content Studio**: [`frontend/screenshots/admin-studio-content.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/admin-studio-content.png) - Giao diện VSCode hoàn chỉnh với Explorer cây thư mục, Editor và Student Preview.
+    2. **Users Manager**: [`frontend/screenshots/admin-users-manager.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/admin-users-manager.png) - Danh sách người dùng hiện đại, căn chỉnh thẳng hàng, các nút thao tác nhanh và modal quản lý.
+    3. **Activity Overview**: [`frontend/screenshots/admin-activity-overview.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/admin-activity-overview.png) - Biểu đồ Prometheus live Monotone Cubic Spline hoạt động ổn định dưới thanh Title Bar mới.
+    4. **Subscription Page**: [`frontend/screenshots/subscription-page-intact.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/subscription-page-intact.png) - Trang bảng giá & gói thuê bao nguyên vẹn, các thẻ giá, toggle và hiệu ứng hiển thị hoàn hảo.
+    5. **Lab Workspace**: [`frontend/screenshots/workspace-intact.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/workspace-intact.png) - Không gian làm việc 100vh với ChatGPT Sidebar và nút Check Solution hoạt động trơn tru.
+* **Trạng thái**: Hoàn thành xuất sắc.
+

@@ -1,4 +1,199 @@
-.shell { --ink: #f2f2f2; --muted: #aaa; --line: #2b2b2b; --sage: #68dfa0; --panel: #131313; flex: 1; width: min(1240px, 100% - 48px); margin: 0 auto; padding: 22px 0 72px; color: var(--ink); font-family: var(--font-body); }
+.adminRoot {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #0d1117;
+  color: #f2f2f2;
+  font-family: var(--font-body);
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+.adminTitleBar {
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
+  background: #0A0D14;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  user-select: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 100vw;
+  max-width: 100vw;
+  z-index: 100;
+  margin: 0;
+}
+
+.titleBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.adminLogoLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  opacity: 0.95;
+  text-decoration: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.adminLogoLink:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.adminMenuBar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.adminMenuItem {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: #9BA3B5;
+  padding: 5px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.adminMenuItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.adminMenuItemActive {
+  background: rgba(104, 223, 160, 0.14);
+  color: #68DFA0;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.titleBarCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.titleBarRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.vscCommandCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  height: 29px;
+  padding: 0 14px;
+  max-width: 580px;
+  min-width: 280px;
+  font-size: 12.5px;
+  color: #999999;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.vscCommandCenter:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.commandCenterIcon {
+  display: flex;
+  align-items: center;
+  color: #777777;
+  flex-shrink: 0;
+}
+
+.commandCenterText {
+  color: #cccccc;
+  font-weight: 500;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.adminUserBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #aaaaaa;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.adminUserDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #68dfa0;
+}
+
+.adminMainContent {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: calc(100vh - 46px);
+  max-height: calc(100vh - 46px);
+  width: 100vw;
+  max-width: 100vw;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.shellStudio {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.shellStandard {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px 32px 48px;
+  max-width: 1360px;
+  margin: 0 auto;
+}
+
+.shell { --ink: #f2f2f2; --muted: #aaa; --line: #2b2b2b; --sage: #68dfa0; --panel: #131313; flex: 1; width: min(1240px, 100% - 48px); margin: 0 auto; padding: 18px 0 32px; color: var(--ink); font-family: var(--font-body); }
+.shellWide { width: 100% !important; max-width: 100vw !important; height: 100% !important; max-height: 100% !important; padding: 0 !important; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; margin: 0 !important; flex: 1 1 0%; min-height: 0; }
 .subnav { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 26px; overflow-x: auto; }
 .subnavLabel { font-family: var(--font-code); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #F59E0B; margin-right: 10px; }
 .subnav a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 12px 12px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
