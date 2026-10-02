@@ -1,0 +1,22 @@
+Hãy thực hiện web search nghiên cứu chuyên sâu (deep research) và phân tích các dashboard chuẩn mực dành riêng cho DOANH NGHIỆP, QUẢN LÝ LỚP HỌC (COHORT / B2B) & VẬN HÀNH KINH DOANH (Business & Platform Operations Dashboard) trên các nền tảng edtech thực hành (như A Cloud Guru for Business, Hack The Box Enterprise, Codecademy for Business, Mixpanel/Amplitude EdTech models).
+
+Bối cảnh: Hệ thống BashLab là nền tảng học thực hành Linux & Bash Shell trực tiếp qua terminal trên trình duyệt. Quản lý doanh nghiệp/trường học cần theo dõi đội nhóm, trong khi người sáng lập/chủ sản phẩm cần theo dõi doanh thu, retention và chi phí tài nguyên sandbox.
+
+Nhiệm vụ nghiên cứu:
+1. Thực hiện Web Search tìm kiếm các best practices và case studies về:
+   - "B2B edtech cohort dashboard team progress tracking"
+   - "edtech SaaS retention metrics DAU WAU MAU cohort curve"
+   - "interactive lab platform compute resource cost per user"
+   - "subscription edtech conversion churn LTV metrics dashboard"
+2. Xác định các dashboard và widget cụ thể bắt buộc phải vẽ cho B2B & Business Admin:
+   - Quản lý đội nhóm & Bảng xếp hạng Cohort (Team / Cohort Progress: Tốc độ hoàn thành của từng thành viên, ma trận kỹ năng tập thể, cảnh báo thành viên không hoạt động > 7 ngày).
+   - Chỉ số gắn kết & Tỷ lệ giữ chân người dùng (Engagement & Retention Curves: DAU/WAU/MAU, đường cong giữ chân cohort 7 ngày/30 ngày, thời lượng phiên học).
+   - Chỉ số doanh thu & Thuê bao (SaaS & Subscription Metrics: Phễu chuyển đổi từ Free sang Pro, MRR/ARR, Churn rate, LTV, tỷ lệ chuyển đổi sau trial).
+   - Tối ưu hóa chi phí điện toán Sandbox (Cloud Compute Cost & Resource Efficiency: Chi phí CPU/RAM container trên mỗi học viên, tỷ lệ thu hồi sandbox nhàn rỗi, chi phí trên mỗi lab được giải quyết).
+3. Đưa ra chi tiết:
+   - Cấu trúc bố cục (Layout Wireframe / UI Architecture: Vị trí các Card, Chart, Table).
+   - Định dạng trực quan hóa (Visualization Types: Cohort Retention Matrix Heatmap, MRR Waterfall / Stacked Area, Team Leaderboard, Resource Cost per User Bar).
+   - Danh sách chỉ số đo lường (KPIs & Metrics cụ thể kèm công thức).
+   - Cấu trúc dữ liệu yêu cầu từ backend/database (JSON schema mẫu).
+
+Yêu cầu thực hiện: Suy nghĩ và nghiên cứu sâu, phân tích kỹ lưỡng, đưa ra báo cáo chi tiết, chuyên nghiệp bằng tiếng Việt (kèm thuật ngữ chuẩn quốc tế).

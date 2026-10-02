@@ -1,0 +1,22 @@
+Hãy thực hiện web search nghiên cứu chuyên sâu (deep research) và phân tích các dashboard chuẩn mực dành riêng cho NGƯỜI HỌC (Learner / Student Dashboard) trên các nền tảng edtech thực hành kỹ thuật hàng đầu thế giới (như LeetCode, Codecademy, TryHackMe, Exercism, SadServers, Duolingo).
+
+Bối cảnh: Hệ thống BashLab là nền tảng học thực hành Linux & Bash Shell trực tiếp qua terminal trên trình duyệt (sandbox Docker / Bubblewrap). Hiện tại hệ thống chỉ mới có trang Activity giám sát hạ tầng (Prometheus CPU/RAM/API) và trang My Learning cơ bản.
+
+Nhiệm vụ nghiên cứu:
+1. Thực hiện Web Search tìm kiếm các best practices và case studies về:
+   - "edtech learner dashboard best practices"
+   - "interactive coding platform student dashboard metrics"
+   - "LeetCode vs TryHackMe user progress dashboard design"
+   - "gamification and mastery tracking in developer education"
+2. Xác định các dashboard và widget cụ thể bắt buộc phải vẽ cho Learner:
+   - Bảng tổng quan năng lực & Ma trận kỹ năng (Skill Radar / Mastery Matrix: File System, Permissions, Text Streams, Shell Scripting, Process Management, Networking).
+   - Chỉ số hiệu suất thực hành lab (Lab Efficiency: Tỷ lệ giải quyết, thời gian trung bình, số câu lệnh thử nghiệm, tỷ lệ dùng gợi ý).
+   - Cơ chế tạo động lực & Gamification (Streak ngày, biểu đồ nhiệt đóng góp kiểu GitHub, điểm XP, cấp bậc Terminal Hacker/Sysadmin, huy hiệu thành tựu).
+   - Đề xuất lộ trình tiếp theo & Luyện tập lặp lại ngắt quãng (Spaced Repetition & Next Recommended Challenge).
+3. Đưa ra chi tiết:
+   - Cấu trúc bố cục (Layout Wireframe / UI Architecture: Vị trí các Card, Chart, Table).
+   - Định dạng trực quan hóa (Visualization Types: Radar chart, Contribution Heatmap, Progress Gauge, Timeline).
+   - Danh sách chỉ số đo lường (KPIs & Metrics cụ thể kèm công thức).
+   - Cấu trúc dữ liệu yêu cầu từ backend/database (JSON schema mẫu).
+
+Yêu cầu thực hiện: Suy nghĩ và nghiên cứu sâu, phân tích kỹ lưỡng, đưa ra báo cáo chi tiết, chuyên nghiệp bằng tiếng Việt (kèm thuật ngữ chuẩn quốc tế).

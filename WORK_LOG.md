@@ -250,4 +250,46 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
   * E2E Suites: **15/15 tests pass 100%**.
 * **Trạng thái**: Hoàn thành.
 
+---
 
+### [2026-10-02 22:00] Thiết kế & Nâng cấp Hệ thống Biểu đồ Dashboard Quản trị Hiện đại (Admin Activity Overview)
+
+* **Yêu cầu & Định hướng**:
+  * Chấm dứt việc tìm kiếm đồ thị edtech chung chung, tập trung trực diện vào **kiến trúc thực tế của BashLab**, hạ tầng sandbox runner và pipeline Prometheus/Grafana.
+  * Lấy dữ liệu time-series thực tế từ Prometheus/Grafana để vẽ các đồ thị thiết yếu lên phần **Activity Overview** trong Admin Panel (`/admin/activity`).
+  * Giao diện biểu đồ phải **thân thiện, đơn giản, hiện đại và tinh tế**, không sơ sài hay đơn điệu (loại bỏ đường kẻ gấp khúc thô ráp, thêm đường cong mượt, dải màu gradient phát sáng, live badge thời gian thực).
+  * Kiểm chứng thực tế qua browser screenshot và toàn bộ E2E Playwright test suites.
+
+* **Phân tích Kiến trúc Dữ liệu Prometheus của BashLab**:
+  * Endpoint `GET /api/admin/dashboard?range=1h` truy vấn Prometheus (cổng 9090) lấy các chuỗi time series:
+    1. **Sandbox & Thực thi terminal**: `bashlab_active_sessions`, `bashlab_runner_jobs_active`, `bashlab_runner_jobs_pending`, `bashlab_commands_total`, `bashlab_command_duration_seconds`.
+    2. **Lưu lượng & Độ ổn định API**: `bashlab_http_requests_total` (2xx, 3xx, 4xx, 5xx), `bashlab_http_request_duration_seconds` (p95 latency), `rateLimited` (429 rejected).
+    3. **Tài nguyên Hệ thống & An ninh Truy cập**: `bashlab_auth_events_total` (login_ok, login_failed, refresh_ok, refresh_failed), `process_resident_memory_bytes` (RSS RAM), `process_cpu_seconds_total` (CPU usage).
+
+* **Các thay đổi đã triển khai**:
+  * [`frontend/components/admin/LineChart.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/admin/LineChart.jsx):
+    * **Thuật toán Monotone Cubic Spline (`buildSmoothPath`)**: Thay thế các đường gấp khúc SVG thẳng (`L x, y`) bằng đường cong Bezier bậc ba mượt mà với tính toán control point độc lập, giữ nguyên độ chính xác của các điểm dữ liệu.
+    * **Hiệu ứng Gradient Area Fill (`buildSmoothArea`)**: Tạo dải màu gradient trong suốt (`linearGradient` từ `opacity: 0.25` xuống `0.00`) tương ứng với từng đường dữ liệu, tạo chiều sâu thị giác hiện đại.
+    * **Live Reading Badge**: Thêm huy hiệu đo đạc trực tiếp trên góc phải header biểu đồ kèm đèn tín hiệu neon nhấp nháy (`pulsing dot`), hiển thị giá trị p95 hoặc mức tiêu thụ mới nhất.
+    * **Cyber Legends & Interactive Floating Tooltip**:
+      * Chú thích (legend) hiện đại có hiển thị số liệu tức thời của từng chuỗi (vd: `2xx 17.3 /min`, `3xx 1.33 /min`, `sessions 1`).
+      * Tooltip nổi kính mờ (`backdrop-filter: blur(12px)`), vòng tròn dữ liệu phát sáng (`glowing circle`) khi di chuột qua trục thời gian.
+    * **Trạng thái Trống (Empty State) Mỹ thuật**: Hiển thị mô hình sóng âm cyber mềm mại khi chưa có dữ liệu thời gian thực trong cửa sổ chọn, thay cho văn bản phẳng đơn điệu.
+  * [`frontend/components/admin/Dashboard.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/admin/Dashboard.jsx) & [`frontend/components/admin/Dashboard.module.css`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/admin/Dashboard.module.css):
+    * Tái cấu trúc 9 biểu đồ thành 3 phân nhóm chức năng trực quan:
+      1. **`TERMINAL & SANDBOX EXECUTION`**: Sandbox load, Commands per minute, Command time p95.
+      2. **`API TRAFFIC & RELIABILITY`**: API requests per minute, API response time p95, Requests rejected by rate limits.
+      3. **`SYSTEM RESOURCES & ACCESS SECURITY`**: Sign-in activity per minute, API memory (RSS), API CPU.
+    * Thiết lập bảng màu neon Cyber Lab: Neon Emerald (`#00e599`), Electric Cyan (`#00d8f6`), Amber Gold (`#f59e0b`), Rose Coral (`#f43f5e`), Cyber Purple (`#a855f7`).
+  * [`frontend/tests/e2e/specs/admin-dashboard.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/admin-dashboard.spec.js):
+    * Cập nhật test mock kịch bản graceful degradation khi Prometheus ngắt kết nối.
+    * Chỉnh sửa assertion kiểm tra kiểu dữ liệu `available` là boolean.
+
+* **Kiểm chứng thực tế (Real Evidence & Verification)**:
+  * **Trải nghiệm Trình duyệt Thật (Browser Verification)**:
+    * Chụp ảnh màn hình toàn cảnh trang Admin Activity với dữ liệu sống từ Prometheus: [`frontend/screenshots/admin-activity-upgraded.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/admin-activity-upgraded.png).
+    * Xác nhận trực quan: 9 đồ thị hiển thị mượt mà, đường cong spline mềm mại, gradient đổ bóng thanh thoát, live badge thời gian thực (`p95 0.91 s`, `99.8 MB`, `0.01 cores`), tooltip kính mờ hiển thị chính xác từng mốc thời gian.
+  * **ESLint**: `npm --prefix frontend run lint` $\rightarrow$ **0 warnings, 0 errors**.
+  * **Backend Tests**: `npm --prefix backend test` $\rightarrow$ **74/74 tests pass 100%**.
+  * **E2E Playwright Suites**: `smoke.spec.js`, `landing-start-learning.spec.js`, `admin-dashboard.spec.js`, `workspace.spec.js` $\rightarrow$ **19/19 tests PASS**.
+* **Trạng thái**: Hoàn thành.
