@@ -237,7 +237,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       let output;
       try {
         output = await runner.run({ command, cwd: session.cwd,
-          workspacePath: `/var/tmp/bashlab/workspaces/${session.id}` });
+          workspacePath: session.workspacePath });
         metrics.recordCommand(output.termination || 'completed', output.executionMs);
       } catch (error) {
         metrics.recordCommand('error', 0);
@@ -356,7 +356,7 @@ export async function startServer() {
     let probeCompleted = false;
     try {
       const result = await runner.run({ command: 'printf ready > .bashlab-probe; cat .bashlab-probe', cwd: probe.cwd,
-        workspacePath: `/var/tmp/bashlab/workspaces/${probe.id}` });
+        workspacePath: probe.workspacePath });
       probeCompleted = true;
       if (result.stdout !== 'ready' || result.exitCode !== 0 || !result.cwdUpdated) throw new Error('Runner readiness probe failed');
       const info = await fs.stat(`${probe.workspacePath}/home/.bashlab-probe`);

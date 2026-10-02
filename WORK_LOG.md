@@ -163,3 +163,32 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
     * Truy cập `http://localhost:3000/courses` $\rightarrow$ catalog khóa học hiển thị gọn gàng, tiêu đề không chứa link thừa, nút "Go to Lab" chuyển thẳng vào lab ([`screenshots/courses-catalog-after-delete.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/courses-catalog-after-delete.png)).
 * **Trạng thái**: Hoàn thành.
 
+---
+
+### [2026-10-02 21:30] Hoàn thành triển khai & tích hợp Strict Sandbox Lease Backend Lifecycle (từ Codex Session `01a0f532-a28f-7ee0-acd0-7753e3be5c28`)
+
+* **Yêu cầu**:
+  * Đọc lại và hoàn thành các tác vụ dở từ session Codex `01a0f532-a28f-7ee0-acd0-7753e3be5c28`.
+  * Đảm bảo nguyên tắc kiến trúc: **`1 user = 1 lease = 1 instance = 1 workspace`**, command là tiến trình ngắn hạn bên trong workspace, giới hạn cứng 100 lease đồng thời, PostgreSQL là single source of truth duy nhất.
+* **Các thay đổi thực hiện**:
+  * **Database**:
+    * Chạy migration [`backend/db/migrations/019_sandbox_leases.sql`](file:///home/light/Documents/B3/web_app/Bashlab/backend/db/migrations/019_sandbox_leases.sql) lên cơ sở dữ liệu Supabase PostgreSQL thực tế qua `psql`. Bảng `sandbox_leases` được tạo với khóa chính `user_id uuid primary key`, ràng buộc trạng thái `ALLOCATING`, `ACTIVE`, `FAILED`, `DELETING`, `REMOVED`.
+  * **Backend Code & Lifecycle**:
+    * Merge hoàn chỉnh nhánh `feature/strict-lease-backend` vào nhánh làm việc chính `feature/full-feature-revision`.
+    * Cài đặt [`backend/src/services/sandboxLeaseStore.js`](file:///home/light/Documents/B3/web_app/Bashlab/backend/src/services/sandboxLeaseStore.js): Hỗ trợ cả MemoryLeaseStore cho tests và SupabaseLeaseStore cho production.
+    * Sửa [`backend/src/services/sessionManager.js`](file:///home/light/Documents/B3/web_app/Bashlab/backend/src/services/sessionManager.js): Quản lý vòng đời workspace gắn chặt theo `lease_id` và `workspace_id`.
+    * Fix lỗi đường dẫn vật lý trong [`backend/src/server.js`](file:///home/light/Documents/B3/web_app/Bashlab/backend/src/server.js#L237-L242): Sử dụng `session.workspacePath` và `probe.workspacePath` thay vì hardcode `session.id` (vì `workspace_id` và `lease_id` là 2 UUID tách biệt).
+    * Sửa [`backend/src/services/reaperService.js`](file:///home/light/Documents/B3/web_app/Bashlab/backend/src/services/reaperService.js) để dọn dẹp lease theo đúng chu trình `beginDeletion` $\rightarrow$ `finishDeletion`.
+  * **Frontend & E2E Testing**:
+    * Sửa [`frontend/tests/e2e/specs/workspace.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/workspace.spec.js): Lọc phản hồi `PUT /api/progress/` có `status === 'done'` để đồng bộ chính xác khi nhấn nút "Check Solution".
+* **Kiểm chứng thực tế (Real-system & Browser Verification)**:
+  * Backend API Server: Khởi động lại trên cổng 3001, vượt qua startup readiness probe với runner container `bashlab-box`.
+  * Backend Test Suite: `npm --prefix backend test` $\rightarrow$ **74/74 tests pass 100%** (bao gồm test chặn user thứ 101 với 503, test song song 20 claims chỉ ra 1 lease, test failed lease giữ nguyên workspace).
+  * Frontend Linter: `npm --prefix frontend run lint` $\rightarrow$ **0 errors, 0 warnings**.
+  * Full E2E Test Suite (Playwright): `smoke.spec.js`, `courses-and-progress.spec.js`, `lab-progress.spec.js`, `landing-start-learning.spec.js`, `workspace.spec.js` $\rightarrow$ **22/22 tests pass 100%** (48.6s).
+  * Chụp ảnh thực tế terminal sandbox:
+    * Khởi động container sandbox, gõ `pwd`, `ls -la`, `cd /var/log`, `cd ~` $\rightarrow$ [`screenshots/3-commands-executed.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/3-commands-executed.png).
+    * Bấm Check Solution $\rightarrow$ `[VERIFICATION PASSED] All 4 checklist items marked complete. 🎉 Lab #1 completed.` $\rightarrow$ [`screenshots/4-solution-passed.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/4-solution-passed.png).
+  * Dọn dẹp: Đã xóa worktree tạm `/home/light/Downloads/bashlab-strict-lease` và thư mục agent tạm.
+* **Trạng thái**: Hoàn thành.
+

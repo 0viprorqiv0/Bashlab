@@ -62,8 +62,16 @@ test('Workspace: Real interactive sandbox boot, command execution, and task comp
   // Take screenshot: Commands Executed in Sandbox
   await page.screenshot({ path: '/home/light/Documents/B3/web_app/Bashlab/screenshots/3-commands-executed.png', fullPage: true });
 
-  // 9. Click Check Solution and wait for progress API call
-  const saved = page.waitForResponse((res) => res.url().includes('/api/progress/') && res.request().method() === 'PUT');
+  // 9. Click Check Solution and wait for progress API call with status: done
+  const saved = page.waitForResponse((res) => {
+    if (!res.url().includes('/api/progress/') || res.request().method() !== 'PUT') return false;
+    try {
+      const body = JSON.parse(res.request().postData() || '{}');
+      return body.status === 'done';
+    } catch {
+      return false;
+    }
+  });
   const checkBtn = page.getByRole('button', { name: 'Check Solution' });
   await checkBtn.click();
   expect((await saved).status()).toBe(204);
