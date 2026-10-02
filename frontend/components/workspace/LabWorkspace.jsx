@@ -79,7 +79,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile }) {
 
   const displayName = profile?.name || user?.email || 'Learner';
   const displayRole = profile?.role === 'admin' ? 'Administrator' : 'Learner';
-  const displayPlan = profile?.role === 'admin' ? 'Administrator' : 'Pro Learner';
+  const displayPlan = profile?.role === 'admin' ? 'Administrator' : 'Learner';
   const initials = getInitials(displayName);
   const avatarUrl = profile?.avatar_url || null;
 

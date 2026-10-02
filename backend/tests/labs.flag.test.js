@@ -158,3 +158,12 @@ test('flag guesses are rate limited per learner', async (t) => {
   assert.equal(last.status, 429);
   assert.equal((await call('POST', '/labs/lesson-1/flag', { flag: 'x' }, 'someone-else')).status, 200, 'another learner is not affected');
 });
+
+test('only WRONG flags count towards the limit: solving many labs in a row is never throttled', async (t) => {
+  const { call, close } = api(); t.after(close);
+  const flag = LABS['directory-creation-file-manipulation'].flag;
+  for (let i = 0; i < 15; i++) {
+    const right = await call('POST', '/labs/lesson-1/flag', { flag });
+    assert.deepEqual([right.status, right.body], [200, { correct: true }], `correct submission ${i + 1}`);
+  }
+});

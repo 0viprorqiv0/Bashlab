@@ -47,12 +47,13 @@ test('requireAuth rejects an invalid token', async () => {
 });
 
 test('requireAuth attaches req.user on a valid token', async () => {
-  const user = { id: 'user-1', email: 'a@b.com' };
+  const user = { id: 'user-1', email: 'a@b.com', created_at: '2026-09-01T10:00:00Z' };
   const middleware = requireAuth(mockSupabase({ user }));
   const { req, res, next, getNextArg } = mockReqRes({ authorization: 'Bearer valid-token' });
   await middleware(req, res, next);
   assert.equal(getNextArg(), undefined);
-  assert.deepEqual(req.user, { id: 'user-1', email: 'a@b.com', emailConfirmedAt: null });
+  // createdAt feeds "Member since" on the Account page (through /api/auth/me).
+  assert.deepEqual(req.user, { id: 'user-1', email: 'a@b.com', emailConfirmedAt: null, createdAt: '2026-09-01T10:00:00Z' });
   assert.equal(req.accessToken, 'valid-token');
 });
 

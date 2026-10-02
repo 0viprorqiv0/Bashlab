@@ -8,7 +8,7 @@ import ReasonDialog from './ReasonDialog';
 import Dashboard from './Dashboard';
 
 const PAGE_SIZE = 15;
-const SANDBOX_CAPACITY = 1000; // SessionManager maxSessions in backend/src/services/sessionManager.js
+const SANDBOX_CAPACITY = 100; // one sandbox per learner: SANDBOX_MAX_ACTIVE_LEASES (default 100) in backend/src/server.js
 const IDLE_MS = 15 * 60 * 1000;
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : '—');
 

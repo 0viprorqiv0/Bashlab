@@ -34,7 +34,7 @@ export function requireAuth(supabase, { ttlMs = 60_000, maxEntries = 5_000, now 
     if (data.user.banned_until && new Date(data.user.banned_until).getTime() > now()) {
       return next(new HttpError(403, 'ACCOUNT_LOCKED', 'Account is locked'));
     }
-    const user = { id: data.user.id, email: data.user.email, emailConfirmedAt: data.user.email_confirmed_at || null };
+    const user = { id: data.user.id, email: data.user.email, emailConfirmedAt: data.user.email_confirmed_at || null, createdAt: data.user.created_at || null };
     if (cache.size >= maxEntries) cache.delete(cache.keys().next().value);
     cache.set(token, { user, expires: now() + ttlMs });
     req.user = user;

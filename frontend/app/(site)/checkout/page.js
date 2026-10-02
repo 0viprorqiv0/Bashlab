@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import styles from './checkout.module.css';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const COURSE_DETAILS = {
   'shell-101': {
@@ -78,27 +78,13 @@ function CheckoutContent() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState('');
 
-  // Prefill user details if logged in
+  // Prefill user details if logged in (the session comes from the shared AuthProvider;
+  // the browser Supabase client has no auth of its own).
+  const { user: authUser, profile: authProfile } = useAuth();
   useEffect(() => {
-    async function loadUser() {
-      if (!supabase) return;
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          if (user.email) setEmail(user.email);
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', user.id)
-            .maybeSingle();
-          if (profile?.name) setFullName(profile.name);
-        }
-      } catch {
-        // Fallback silently
-      }
-    }
-    loadUser();
-  }, []);
+    if (authUser?.email) setEmail((current) => current || authUser.email);
+    if (authProfile?.name) setFullName((current) => current || authProfile.name);
+  }, [authUser, authProfile]);
 
   // Pricing calculations
   const isTeam = planType === 'team';

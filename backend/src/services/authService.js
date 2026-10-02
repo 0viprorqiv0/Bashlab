@@ -117,7 +117,7 @@ const publicUser = (user) => ({
   id: user.id,
   email: user.email,
   email_confirmed_at: user.email_confirmed_at || user.emailConfirmedAt || null,
-  created_at: user.created_at || null,
+  created_at: user.created_at || user.createdAt || null,
 });
 
 // admin: service-role client. anon: () => fresh anon-key client (see lib/supabaseAdmin.js).
