@@ -9,7 +9,7 @@ import { rateLimiter } from '../middleware/rateLimit.js';
 // body and must be mounted before the global 16kb parser.
 const wrap = (handler) => (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
 
-export function createContentRouter({ service, authenticate, isAdmin, bodyLimit = '512kb', limits = {} }) {
+export function createContentRouter({ service, dashboard, authenticate, isAdmin, bodyLimit = '512kb', limits = {} }) {
   const { perIp = 600, perUser = 300 } = limits;
   const router = express.Router();
   // Scoped to our own prefixes: this router is mounted at /api, next to the
@@ -39,6 +39,9 @@ export function createContentRouter({ service, authenticate, isAdmin, bodyLimit 
     await service.clearProgress(req.user, req.params.lessonId);
     res.sendStatus(204);
   }));
+
+  // ---- admin: dashboard (Prometheus time series + headline numbers) ----
+  if (dashboard) admin.get('/dashboard', wrap(async (req, res) => res.json(await dashboard.get(req.query.range))));
 
   // ---- admin: content --------------------------------------------------------
   admin.post('/courses', wrap(async (req, res) => res.status(201).json(await service.createCourse(req.body))));

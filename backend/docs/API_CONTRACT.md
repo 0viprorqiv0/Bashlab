@@ -67,6 +67,7 @@ Trình duyệt (anon/authenticated key) **không còn INSERT/UPDATE/DELETE** tr�
 | `POST /api/admin/chapters/:id/lessons`, `PATCH /api/admin/lessons/:id` | admin | title, slug, chapter_id, sort_order, status, test_template `{verifier}`, lesson_content, content_md, objectives. PATCH trả về dòng kèm `chapters(courses(...))`. Body tối đa 512kb. |
 | `POST /api/admin/{courses\|chapters\|lessons}/swap` `{items:[{id,sort_order},{id,sort_order}]}` | admin | Đổi chỗ 2 mục. |
 | `POST /api/admin/users/:id/role` `{role, reason}` · `POST /api/admin/users/:id/lock` `{locked, reason}` | admin | Gọi RPC `admin_set_user_role/lock` **bằng token của chính admin** → `admin_logs` ghi đúng actor. |
+| `GET /api/admin/dashboard?range=15m\|1h\|6h\|24h` | admin | Trang Activity → Overview: `{stats:{users,admins,locked,activeSessions,sessions24h,completed24h}, available, reason, metrics:{<series>:[{name,points:[[ms,value]]}]}}`. Số liệu `stats` lấy từ DB; `metrics` lấy từ Prometheus qua danh sách truy vấn cố định ở server (client không gửi PromQL). Prometheus tắt → `available:false`, vẫn trả `stats`. |
 | `POST /api/admin/sessions/:id/stop` `{reason}` | admin | RPC `admin_stop_session` + tắt luôn sandbox session phía sau. |
 | `POST /api/sessions` `{lessonId}` | learner | Backend tự ghi `practice_sessions` (active → cập nhật `last_active_at` mỗi lệnh → `stopped` khi xoá/hết hạn). FE không ghi bảng này nữa. |
 

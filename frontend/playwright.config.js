@@ -29,6 +29,6 @@ module.exports = defineConfig({
     { command: 'npm run dev', url: 'http://localhost:3000', reuseExistingServer: true, timeout: 120000 },
     { command: 'npm run start:api', cwd: '../backend', url: 'http://127.0.0.1:3001/health', reuseExistingServer: true, timeout: 60000,
       // The suite logs in far more often per minute than any real user; the per-account brute-force limit stays at its default.
-      env: { AUTH_RATE_LIMIT_GENERAL: '5000', AUTH_RATE_LIMIT_SENSITIVE: '5000' } },
+      env: { AUTH_RATE_LIMIT_GENERAL: '5000', AUTH_RATE_LIMIT_SENSITIVE: '5000', PROMETHEUS_URL: 'http://127.0.0.1:9' } }, // port 9 is closed: the suite tests the dashboard's "Prometheus is down" state deterministically
   ],
 });

@@ -1,10 +1,14 @@
 global:
-  scrape_interval: 1s
-  evaluation_interval: 1s
+  scrape_interval: 15s   # was 1s: the admin dashboard needs minute-level rates, not per-second load on the API
+  evaluation_interval: 15s
 
 scrape_configs:
   - job_name: 'bashlab-backend'
     metrics_path: '/metrics'
+    # With METRICS_TOKEN set on the API (required outside local dev), put the same value in
+    # monitoring/prometheus/metrics_token (mounted read-only by docker-compose.yml) and uncomment:
+    # authorization:
+    #   credentials_file: /etc/prometheus/metrics_token
     static_configs:
       - targets: ['host.docker.internal:3001']
         labels:
