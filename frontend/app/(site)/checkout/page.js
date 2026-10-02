@@ -9,9 +9,10 @@ import { supabase } from '@/lib/supabaseClient';
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const planParam = searchParams.get('plan') || 'pro';
+  const cycleParam = searchParams.get('cycle') || 'annual';
 
   // Selected plan and billing cycle
-  const [billingCycle, setBillingCycle] = useState('annual'); // 'annual' | 'monthly'
+  const [billingCycle, setBillingCycle] = useState(cycleParam === 'monthly' ? 'monthly' : 'annual');
   const [planType, setPlanType] = useState(planParam === 'team' ? 'team' : 'pro');
 
   // Customer form fields
@@ -104,14 +105,14 @@ function CheckoutContent() {
       setCouponApplied(true);
       setCouponDiscount(0.1);
     } else if (code) {
-      alert('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+      alert('Invalid or expired promo code.');
     }
   }
 
   function handleCreditCardSubmit(e) {
     e.preventDefault();
     if (!cardNumber.replace(/\s/g, '')) {
-      alert('Vui lòng nhập số thẻ tín dụng hợp lệ.');
+      alert('Please enter a valid credit card number.');
       return;
     }
     processSuccess('Credit Card');
@@ -161,53 +162,19 @@ function CheckoutContent() {
 
   return (
     <div className={styles.pageWrapper}>
-      {/* Top Bar Switcher */}
-      <header className={styles.topBar}>
-        <div className={styles.brandTag}>
-          <span className="material-symbols-outlined" style={{ color: '#68dfa0', fontSize: 22 }}>terminal</span>
-          BashLab Checkout
-          <span className={styles.brandBadge}>2-SECTOR MENU</span>
-        </div>
-
-        <div className={styles.demoToggles}>
-          <button
-            type="button"
-            className={`${styles.btnCycle} ${billingCycle === 'annual' ? styles.btnCycleActive : ''}`}
-            onClick={() => setBillingCycle('annual')}
-          >
-            Annual (Save 20%)
-          </button>
-          <button
-            type="button"
-            className={`${styles.btnCycle} ${billingCycle === 'monthly' ? styles.btnCycleActive : ''}`}
-            onClick={() => setBillingCycle('monthly')}
-          >
-            Monthly
-          </button>
-        </div>
-      </header>
-
       {/* Main 2-Column Grid */}
       <main className={styles.checkoutContainer}>
         {/* LEFT COLUMN: Payment form with 2 Sectors */}
         <section className={styles.formPanel}>
           <div className={styles.sectionHeader}>
-            <h1 className={styles.sectionTitle}>
-              Checkout <span style={{ color: '#68dfa0', fontSize: 16 }}>{'//'} Secure Terminal</span>
-            </h1>
-            <p className={styles.sectionSubtitle}>
-              Select your preferred payment method below to unlock instant persistent container sandboxes.
-            </p>
+            <h1 className={styles.sectionTitle}>Checkout</h1>
           </div>
 
           {/* ========================================================
-              SECTOR 1: QUICK CHECKOUT
+              QUICK CHECKOUT
               ======================================================== */}
           <div className={styles.sectorQuick}>
-            <div className={styles.sectorLabel}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#68dfa0' }}>bolt</span>
-              Sector 1: Quick Checkout (Thanh toán nhanh)
-            </div>
+            <div className={styles.sectorLabel}>Quick checkout</div>
 
             <div className={styles.quickButtonsGrid}>
               {/* Apple Pay */}
@@ -260,17 +227,14 @@ function CheckoutContent() {
 
           {/* Divider */}
           <div className={styles.orDivider}>
-            <span>Hoặc thanh toán qua thẻ tín dụng</span>
+            <span>Or pay with card</span>
           </div>
 
           {/* ========================================================
-              SECTOR 2: CREDIT CARD
+              CREDIT CARD
               ======================================================== */}
           <form className={styles.sectorCard} onSubmit={handleCreditCardSubmit}>
-            <div className={styles.sectorLabel}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#38bdf8' }}>credit_card</span>
-              Sector 2: Credit Card (Thẻ tín dụng / Ghi nợ)
-            </div>
+            <div className={styles.sectorLabel}>Credit card</div>
 
             {/* Consolidated Card Input Box */}
             <div className={styles.cardInputsContainer}>
@@ -326,28 +290,31 @@ function CheckoutContent() {
             {/* Learner Name & Country */}
             <div className={styles.formGroupGrid}>
               <div className={styles.formControl}>
-                <label className={styles.controlLabel}>Cardholder Name (Tên chủ thẻ)</label>
+                <label className={styles.controlLabel}>Cardholder name</label>
                 <input
                   type="text"
                   className={styles.controlInput}
-                  placeholder="NGUYEN VAN A"
+                  placeholder="First and last name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
                 />
               </div>
               <div className={styles.formControl}>
-                <label className={styles.controlLabel}>Country / Region</label>
+                <label className={styles.controlLabel}>Country or region</label>
                 <select
                   className={styles.controlInput}
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <option value="VN">Vietnam (Việt Nam)</option>
+                  <option value="VN">Vietnam</option>
                   <option value="US">United States</option>
                   <option value="SG">Singapore</option>
                   <option value="JP">Japan</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="DE">Germany</option>
+                  <option value="AU">Australia</option>
                 </select>
               </div>
             </div>
@@ -360,7 +327,7 @@ function CheckoutContent() {
                 onChange={(e) => setSaveCard(e.target.checked)}
               />
               <span className={styles.checkboxLabel}>
-                Lưu thông tin thẻ an toàn cho các kỳ gia hạn tiếp theo
+                Save card securely for future payments
               </span>
             </label>
 
@@ -371,12 +338,12 @@ function CheckoutContent() {
               disabled={isSubmitting}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>check_circle</span>
-              <span>{isSubmitting ? 'Đang xử lý...' : `Thanh toán $${finalTotal.toFixed(2)} USD`}</span>
+              <span>{isSubmitting ? 'Processing...' : `Pay $${finalTotal.toFixed(2)} USD`}</span>
             </button>
 
             <div className={styles.securityGuarantee}>
               <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-              Mã hóa 256-bit SSL · Tiêu chuẩn bảo mật PCI-DSS Level 1
+              256-bit SSL encryption · PCI-DSS Level 1 compliant
             </div>
           </form>
         </section>
@@ -434,31 +401,31 @@ function CheckoutContent() {
           </div>
           {couponApplied && (
             <div className={styles.couponNotice}>
-              ✓ Giảm giá 10% áp dụng thành công!
+              ✓ 10% discount applied successfully!
             </div>
           )}
 
           {/* Price Breakdown */}
           <div className={styles.breakdownList}>
             <div className={styles.breakdownRow}>
-              <span>Gói cước ({billingCycle === 'annual' ? 'Hàng năm' : 'Hàng tháng'})</span>
+              <span>Subscription ({billingCycle === 'annual' ? 'Annual' : 'Monthly'})</span>
               <span>${rawSubtotal.toFixed(2)}</span>
             </div>
             {couponApplied && (
               <div className={`${styles.breakdownRow} ${styles.breakdownRowDiscount}`}>
-                <span>Giảm giá khuyến mãi (10%)</span>
+                <span>Promo discount (10%)</span>
                 <span>-${discountAmount.toFixed(2)}</span>
               </div>
             )}
             <div className={styles.breakdownRow}>
-              <span>Thuế &amp; Phí hạ tầng sandbox</span>
+              <span>Taxes &amp; Sandbox infrastructure</span>
               <span>$0.00</span>
             </div>
           </div>
 
           {/* Final Total */}
           <div className={styles.totalRow}>
-            <span className={styles.totalLabel}>Tổng thanh toán:</span>
+            <span className={styles.totalLabel}>Total:</span>
             <div className={styles.totalValue}>
               ${finalTotal.toFixed(2)} <span>USD</span>
             </div>
@@ -466,10 +433,10 @@ function CheckoutContent() {
 
           {/* Perks list */}
           <ul className={styles.featuresMiniList}>
-            <li><span className={styles.checkIcon}>✓</span> Không giới hạn máy ảo container Linux</li>
-            <li><span className={styles.checkIcon}>✓</span> Chấm điểm tự động thời gian thực</li>
-            <li><span className={styles.checkIcon}>✓</span> Toàn quyền truy cập Shell 101, 201 &amp; Security</li>
-            <li><span className={styles.checkIcon}>✓</span> Chứng chỉ số hoàn thành khóa học</li>
+            <li><span className={styles.checkIcon}>✓</span> Unlimited Linux container sandboxes</li>
+            <li><span className={styles.checkIcon}>✓</span> Real-time automated task verification</li>
+            <li><span className={styles.checkIcon}>✓</span> Full access to Shell 101, 201 &amp; Linux Security</li>
+            <li><span className={styles.checkIcon}>✓</span> Verified digital certificate of completion</li>
           </ul>
         </aside>
       </main>
@@ -483,7 +450,7 @@ function CheckoutContent() {
             <div className={styles.modalHead}>
               <div className={styles.modalHeadTitle}>
                 <span style={{ color: '#ff60be', fontSize: 18 }}>●</span>
-                Thanh toán qua Ví MoMo
+                Pay with MoMo Wallet
               </div>
               <button
                 type="button"
@@ -530,16 +497,16 @@ function CheckoutContent() {
               </div>
 
               <div className={styles.qrInstructions}>
-                Mở ứng dụng <strong>MoMo</strong> trên điện thoại và chọn <strong>&ldquo;Quét Mã QR&rdquo;</strong> để hoàn tất thanh toán <strong>{vndAmount} VND</strong>.
+                Open the <strong>MoMo</strong> app on your phone and select <strong>&ldquo;Scan QR Code&rdquo;</strong> to complete payment of <strong>{vndAmount} VND</strong>.
               </div>
 
               <button
                 type="button"
                 className={styles.btnMomoDeeplink}
-                onClick={() => processSuccess('Ví MoMo')}
+                onClick={() => processSuccess('MoMo Wallet')}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>phone_android</span>
-                Mở ứng dụng MoMo (Mô phỏng thành công)
+                Open MoMo App (Simulate payment)
               </button>
             </div>
           </div>
@@ -586,7 +553,7 @@ function CheckoutContent() {
                 className={styles.btnSubmitPayment}
                 onClick={() => processSuccess(quickSim.provider)}
               >
-                Xác nhận vân tay / Face ID (Mô phỏng thành công)
+                Authorize with Touch ID / Face ID (Simulate payment)
               </button>
             </div>
           </div>
