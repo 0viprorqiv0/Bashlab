@@ -33,7 +33,7 @@ export default function Navbar({ isTransparent = false }) {
 
   const navLinks = [
     { href: '/courses', label: 'Courses' },
-    { href: '/subscription', label: 'Pricing' },
+    { href: '/#pricing', label: 'Pricing' },
     { href: '/blog', label: 'Blog' },
   ];
 
