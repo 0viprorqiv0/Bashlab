@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import fs from 'node:fs/promises';
+import { timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { SessionManager } from './services/sessionManager.js';
 import { SandboxRunner } from './services/sandboxRunner.js';
@@ -14,6 +15,7 @@ import { rateLimiter } from './middleware/rateLimit.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createContentRouter } from './routes/content.js';
 import { createContentService, isUuid } from './services/contentService.js';
+import { createDashboardService } from './services/dashboardService.js';
 import { createAuthService } from './services/authService.js';
 import { createSupabaseAdmin, createSupabaseAnonFactory, createSupabaseUserFactory } from './lib/supabaseAdmin.js';
 
@@ -44,16 +46,38 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     referrerPolicy: { policy: 'no-referrer' },
   }));
-  app.use(cors({ origin: origins, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
+  // credentials: the refresh-token cookie travels on cross-origin fetches from the allow-listed frontend only.
+  app.use(cors({ origin: origins, credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
+  // Every request feeds the admin dashboard (Prometheus scrapes /metrics).
+  app.use((req, res, next) => {
+    const started = process.hrtime.bigint();
+    res.on('finish', () => {
+      if (req.path === '/metrics' || req.path === '/health') return;
+      metrics.recordHttp(req.method, req.originalUrl, res.statusCode, Number(process.hrtime.bigint() - started) / 1e9);
+    });
+    next();
+  });
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
   // Prometheus and JSON metrics endpoint
   app.get('/metrics', (req, res, next) => {
-    const ip = req.socket.remoteAddress || '';
-    const isAllowed = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)
-      || process.env.METRICS_ALLOW_ALL === 'true'
-      || ip.startsWith('172.') || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('::ffff:172.');
-    if (!isAllowed) return next(new HttpError(403, 'LOCAL_ONLY', 'Local metrics only'));
+    // With METRICS_TOKEN set (production), only a caller presenting it may read
+    // metrics — no matter which network it comes from. Without a token this
+    // stays a development convenience: loopback and private networks only.
+    const token = process.env.METRICS_TOKEN;
+    if (token) {
+      const presented = Buffer.from((req.headers.authorization || '').replace(/^Bearer /, ''));
+      const expected = Buffer.from(token);
+      if (presented.length !== expected.length || !timingSafeEqual(presented, expected)) {
+        return next(new HttpError(401, 'UNAUTHENTICATED', 'Metrics require a bearer token'));
+      }
+    } else {
+      const ip = req.socket.remoteAddress || '';
+      const isAllowed = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)
+        || process.env.METRICS_ALLOW_ALL === 'true'
+        || ip.startsWith('172.') || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('::ffff:172.');
+      if (!isAllowed) return next(new HttpError(403, 'LOCAL_ONLY', 'Local metrics only'));
+    }
 
     const wantsJson = req.query.format === 'json'
       || req.headers['content-type'] === 'application/json'
@@ -77,6 +101,12 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   // share a budget with sandbox commands, so they are mounted first.
   if (authApi) app.use('/api/auth', createAuthRouter({ ...authApi, origins }));
 
+  // Progress + admin writes (own body parser, own auth, own — much higher —
+  // rate limits): before the shared limiter below, which is sized for sandbox
+  // commands and would throttle an admin editing content.
+  if (auth && content) {
+    app.use('/api', createContentRouter({ service: content.service, dashboard: content.dashboard, authenticate: auth.authenticate, isAdmin: auth.isAdmin, limits: content.limits }));
+  }
   app.use('/api', rateLimiter(rateMax));
   if (!sandbox) {
     app.use('/api/sessions', (_req, _res, next) => next(new HttpError(503, 'SANDBOX_DISABLED', 'The practice sandbox is not enabled on this server')));
@@ -110,9 +140,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     }
     next();
   };
-  // Progress + admin writes (own body parser, own auth): before the global one.
   if (auth && content) {
-    app.use('/api', createContentRouter({ service: content.service, authenticate: auth.authenticate, isAdmin: auth.isAdmin }));
     // An admin stopping a learner's session also ends the sandbox behind it.
     app.on('practice-session-stopped', (sandboxSessionId) => {
       if (!sandboxSessionId || !manager.sessions.has(sandboxSessionId)) return;
@@ -142,6 +170,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       await manager.remove(session).catch(() => {});
       throw error;
     }
+    metrics.recordSessionCreated();
     if (auth) owners.set(session.id, req.user.id);
     res.status(201).json(manager.describe(session));
   });
@@ -221,7 +250,14 @@ function servicesFromEnv() {
     const admin = createSupabaseAdmin();
     const authenticate = requireAuth(admin);
     return {
-      content: { service: createContentService({ admin, userClient: createSupabaseUserFactory() }) },
+      content: {
+        service: createContentService({ admin, userClient: createSupabaseUserFactory() }),
+        dashboard: createDashboardService({ admin, prometheusUrl: process.env.PROMETHEUS_URL || 'http://localhost:9090' }),
+        limits: {
+          ...(process.env.CONTENT_RATE_LIMIT_IP && { perIp: Number(process.env.CONTENT_RATE_LIMIT_IP) }),
+          ...(process.env.CONTENT_RATE_LIMIT_USER && { perUser: Number(process.env.CONTENT_RATE_LIMIT_USER) }),
+        },
+      },
       auth: {
         authenticate,
         isAdmin: (userId) => isActiveAdmin(admin, userId),
@@ -276,12 +312,23 @@ export async function startServer() {
   } else {
     console.warn('Sandbox disabled (SANDBOX_ENABLED=false): only the auth API is served.');
   }
+  // Keep the admin Activity numbers honest: sandbox sessions die with the
+  // process, so rows still 'active' at startup are stale; afterwards, rows idle
+  // past the sandbox's own 30-minute TTL are expired every few minutes.
+  let sweeper = null;
+  if (content) {
+    content.service.expireStalePracticeSessions({ olderThanMs: 0 })
+      .then((n) => { if (n) console.log(`Marked ${n} stale practice session(s) as expired.`); }).catch(() => {});
+    sweeper = setInterval(() => content.service.expireStalePracticeSessions().catch(() => {}), 5 * 60 * 1000);
+    sweeper.unref();
+  }
   const host = process.env.HOST || '0.0.0.0';
   const server = createApp({ manager, runner, auth, authApi, content, sandbox }).listen(Number(process.env.PORT || 3001), host, () => {
     console.log(`BashLab API listening on http://${host}:${server.address().port}`);
   });
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
     stopReaper();
+    if (sweeper) clearInterval(sweeper);
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 15000).unref();
   });

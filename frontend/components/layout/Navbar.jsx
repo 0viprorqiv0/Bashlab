@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import BrandLogo from '../shared/BrandLogo';
 import { authClient } from '@/lib/authClient';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -18,6 +18,8 @@ export default function Navbar({ isTransparent = false }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  const isActive = (href) => pathname === href || pathname.startsWith(`${href}/`);
   const dropdownRef = React.useRef(null);
   const auth = useAuth();
   const authReady = !auth.loading;
@@ -31,6 +33,7 @@ export default function Navbar({ isTransparent = false }) {
 
   const navLinks = [
     { href: '/courses', label: 'Courses' },
+    { href: '/subscription', label: 'Pricing' },
     { href: '/blog', label: 'Blog' },
   ];
 
@@ -53,12 +56,8 @@ export default function Navbar({ isTransparent = false }) {
 
   return (
     <header
-      style={{ height: '64px' }}
-      className={`fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 ${
-        isTransparent
-          ? 'border-b border-[#26313d]/60 bg-[#111720]/35 backdrop-blur-md'
-          : 'border-b border-[#26313d] bg-[#111720]/95 shadow-[0_8px_28px_rgba(0,0,0,0.3)] backdrop-blur-xl'
-      }`}
+      style={{ height: '64px', zIndex: 1000 }}
+      className="fixed top-0 left-0 w-full z-50 px-6 lg:px-8 flex items-center transition-all duration-200 border-b border-[#26313d] bg-[#111720]/95 backdrop-blur-md shadow-[0_8px_28px_rgba(0,0,0,0.3)]"
       role="banner"
     >
       <div className="w-full max-w-[1340px] mx-auto flex items-center justify-between">
@@ -72,7 +71,10 @@ export default function Navbar({ isTransparent = false }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="font-code text-xs text-on-surface-variant hover:text-white transition-colors focus-visible"
+                aria-current={isActive(link.href) ? 'page' : undefined}
+                className={`font-code text-xs transition-colors focus-visible ${
+                  isActive(link.href) ? 'text-primary' : 'text-on-surface-variant hover:text-white'
+                }`}
               >
                 {link.label}
               </Link>
@@ -138,7 +140,7 @@ export default function Navbar({ isTransparent = false }) {
           ) : (
             <>
               <Link href="/login" className="hidden sm:inline-flex text-xs font-code text-on-surface-variant hover:text-white px-3 py-1.5 transition-colors focus-visible">Log in</Link>
-              <Link href="/my-learning" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Start learning</Link>
+              <Link href="/register" className="btn-primary !py-1.5 !px-3.5 !text-xs !gap-1.5 !hidden sm:!inline-flex shadow-none">Sign up</Link>
             </>
           )}
 
@@ -157,13 +159,19 @@ export default function Navbar({ isTransparent = false }) {
       </div>
 
       {mobileOpen && (
-        <div id="mobile-menu" className="md:hidden border-t border-[#343a43]/60 bg-[#0a0d14] px-6 py-4">
+        <div
+          id="mobile-menu"
+          className="absolute top-[64px] left-0 w-full md:hidden border-b border-[#343a43]/60 bg-[#0a0d14]/98 backdrop-blur-xl px-6 py-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+        >
           <nav className="flex flex-col gap-4" aria-label="Mobile navigation">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="font-code text-sm text-on-surface-variant hover:text-white transition-colors focus-visible py-2"
+                aria-current={isActive(link.href) ? 'page' : undefined}
+                className={`font-code text-sm transition-colors focus-visible py-2 ${
+                  isActive(link.href) ? 'text-primary' : 'text-on-surface-variant hover:text-white'
+                }`}
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
@@ -194,8 +202,8 @@ export default function Navbar({ isTransparent = false }) {
               ) : (
                 <>
                   <Link href="/login" className="text-sm font-code text-on-surface-variant hover:text-white text-center py-2 focus-visible" onClick={() => setMobileOpen(false)}>Log in</Link>
-                  <Link href="/my-learning" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
-                    Start learning
+                  <Link href="/register" className="btn-primary text-center" onClick={() => setMobileOpen(false)}>
+                    Sign up
                     <span className="material-symbols-outlined text-base">arrow_forward</span>
                   </Link>
                 </>

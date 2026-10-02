@@ -1,5 +1,14 @@
+.chromeContainer {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
 .authMain {
   padding-top: 64px;
+  flex: 1 0 auto;
 }
 
 .workspaceMain {
@@ -17,13 +26,23 @@
   padding-top: 64px;
   position: relative;
   display: flex;
-  min-height: 100svh;
+  min-height: calc(100svh - 64px);
   flex-direction: column;
   box-sizing: border-box;
+  flex: 1 0 auto;
 }
 
 .defaultMain {
   padding-top: 64px;
+  position: relative;
+  box-sizing: border-box;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.landingMain {
+  padding-top: 0;
   position: relative;
   box-sizing: border-box;
 }

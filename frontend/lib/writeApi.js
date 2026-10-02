@@ -31,5 +31,6 @@ export const adminApi = {
   swap: (kind, a, b) => send(`/api/admin/${kind}/swap`, 'POST', { items: [a, b].map(({ id, sort_order }) => ({ id, sort_order })) }),
   setUserRole: (id, role, reason) => send(`/api/admin/users/${id}/role`, 'POST', { role, reason }),
   setUserLock: (id, locked, reason) => send(`/api/admin/users/${id}/lock`, 'POST', { locked, reason }),
+  dashboard: (range) => send(`/api/admin/dashboard?range=${encodeURIComponent(range)}`, 'GET'),
   stopSession: (id, reason) => send(`/api/admin/sessions/${id}/stop`, 'POST', { reason }),
 };

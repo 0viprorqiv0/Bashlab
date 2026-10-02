@@ -4,10 +4,10 @@
 // ContentManager has no delete UI by design, so the test course it creates is
 // removed with the service-role client in afterAll.
 const path = require('path');
-const { test, expect } = require('@playwright/test');
+const { test, expect, roleContext } = require('../support/session');
 const { adminClient } = require('../support/supabaseAdmin');
 
-test.use({ storageState: path.join(__dirname, '..', '.auth', 'admin.json') });
+test.use({ asRole: 'admin' });
 test.describe.configure({ mode: 'serial' });
 
 const stamp = Date.now();
@@ -168,7 +168,7 @@ test('once the course is published, learners see the admin-authored lab — same
 
   // Lab workspace: the authored content is rendered, for a course the
   // frontend has never heard of. The course-page link (slug) lands on /labs/1.
-  const learner = await browser.newContext({ storageState: path.join(__dirname, '..', '.auth', 'learner.json') });
+  const { context: learner, done: closeLearner } = await roleContext(browser, 'learner');
   const lab = await learner.newPage();
   await lab.goto(`/courses/${courseSlug}`);
   await lab.getByText('First Lesson').first().click();
@@ -183,7 +183,7 @@ test('once the course is published, learners see the admin-authored lab — same
   await lab.waitForURL(`**/courses/${courseSlug}/labs/1`);
   await lab.goto(`/courses/${courseSlug}/labs/2`);
   await expect(lab.getByText('404')).toBeVisible();
-  await learner.close();
+  await closeLearner();
 });
 
 test('unpublishing the lesson in the editor removes it from the learner course page immediately', async ({ page, browser }) => {
@@ -200,8 +200,11 @@ test('unpublishing the lesson in the editor removes it from the learner course p
   await publicPage.goto(`/courses/${courseSlug}`);
   await expect(publicPage.getByText('0 / 0 (0%)')).toBeVisible();
   await expect(publicPage.locator('tr', { hasText: 'First Lesson' })).toHaveCount(0);
-  // ...and the workspace stops serving it (404), not just the list.
-  await publicPage.goto(`/courses/${courseSlug}/labs/1`);
-  await expect(publicPage.getByText('404')).toBeVisible();
   await anon.close();
+  // ...and the workspace stops serving it (404 for a signed-in learner), not just the list.
+  const { context: learner, done: closeLearner } = await roleContext(browser, 'learner');
+  const labPage = await learner.newPage();
+  await labPage.goto(`/courses/${courseSlug}/labs/1`);
+  await expect(labPage.getByText('404')).toBeVisible();
+  await closeLearner();
 });

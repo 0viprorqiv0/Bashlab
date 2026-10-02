@@ -30,6 +30,6 @@ module.exports = defineConfig({
       env: { NEXT_PUBLIC_SANDBOX_ENABLED: 'false' } },
     { command: 'npm run start:api', cwd: '../backend', url: 'http://127.0.0.1:3001/health', reuseExistingServer: true, timeout: 60000,
       // The suite exercises many API writes from one IP; per-account brute-force limits stay at their defaults.
-      env: { RATE_LIMIT_MAX: '5000', AUTH_RATE_LIMIT_GENERAL: '5000', AUTH_RATE_LIMIT_SENSITIVE: '5000' } },
+      env: { RATE_LIMIT_MAX: '5000', AUTH_RATE_LIMIT_GENERAL: '5000', AUTH_RATE_LIMIT_SENSITIVE: '5000', PROMETHEUS_URL: 'http://127.0.0.1:9' } },
   ],
 });

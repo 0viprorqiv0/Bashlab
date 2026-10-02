@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './CourseCatalog.module.css';
 import { supabase } from '@/lib/supabaseClient';
+import { authClient } from '@/lib/authClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { PageError, PageLoading } from '@/components/shared/Loading';
 
 const filters = ['All', 'Core Tracks', 'Security'];
@@ -41,6 +44,14 @@ function toCourse(row) {
 }
 
 export default function CourseCatalog() {
+  const router = useRouter();
+  const { user } = useAuth();
+  // Guests are sent to log in first and come back to the course afterwards.
+  const startLearning = (courseId) => (event) => {
+    if (user || authClient.peekUserId()) return; // signed in: follow the link
+    event.preventDefault();
+    router.push(`/login?next=${encodeURIComponent(`/courses/${courseId}`)}`);
+  };
   const [filter, setFilter] = useState('All');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +107,7 @@ export default function CourseCatalog() {
               <div className={styles.featureMeta} aria-label="Course details">
                 <span>{course.level}</span><span>{course.chapters} chapters</span><span>{course.lessons} lessons</span><span>{course.duration}</span>
               </div>
-              <Link className={styles.primaryAction} href={`/courses/${course.id}`}>Start learning <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span></Link>
+              <Link className={styles.primaryAction} href={`/courses/${course.id}`} onClick={startLearning(course.id)}>Start learning <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span></Link>
             </div>
             <div className={styles.courseMark} aria-hidden="true"><span>shell / bash</span><strong>{course.code}</strong><span>Learn by doing.</span></div>
           </article>

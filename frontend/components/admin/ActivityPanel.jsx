@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { adminApi } from '@/lib/writeApi';
 import styles from './Admin.module.css';
 import ReasonDialog from './ReasonDialog';
+import Dashboard from './Dashboard';
 
 const PAGE_SIZE = 15;
 const SANDBOX_CAPACITY = 1000; // SessionManager maxSessions in backend/src/services/sessionManager.js
@@ -19,17 +20,18 @@ async function emailsFor(ids) {
 }
 
 export default function ActivityPanel() {
-  const [tab, setTab] = useState('sessions');
+  const [tab, setTab] = useState('overview');
   return (
     <div>
       <header className={styles.header}>
-        <div><h1>Activity<span>.</span></h1><p>Practice sessions and the admin audit log.</p></div>
+        <div><h1>Activity<span>.</span></h1><p>Live system dashboard, practice sessions and the admin audit log.</p></div>
       </header>
       <div className={styles.tabs} role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'overview'} onClick={() => setTab('overview')}>Overview</button>
         <button type="button" role="tab" aria-selected={tab === 'sessions'} onClick={() => setTab('sessions')}>Sessions</button>
         <button type="button" role="tab" aria-selected={tab === 'log'} onClick={() => setTab('log')}>Admin log</button>
       </div>
-      {tab === 'sessions' ? <SessionsTab /> : <AdminLogTab />}
+      {tab === 'overview' ? <Dashboard /> : tab === 'sessions' ? <SessionsTab /> : <AdminLogTab />}
     </div>
   );
 }

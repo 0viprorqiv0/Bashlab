@@ -1,0 +1,935 @@
+.pageWrapper {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  padding: 60px 24px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Background Media & Tint (Đồng bộ chuẩn từ trang Landing & Checkout) */
+.newBgContainer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bgMedia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.bgDimOverlay {
+  position: absolute;
+  inset: 0;
+  /* Lớp tint tối đen giúp nền đằng sau chìm sâu và làm nổi bật nội dung */
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(6, 8, 14, 0.86) 0%,
+    rgba(3, 4, 8, 0.94) 100%
+  );
+  backdrop-filter: blur(2px);
+}
+
+/* 1. Header Section */
+.headerSection {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.title {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 800;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.025em;
+  color: #fff;
+  line-height: 1.15;
+}
+
+.titleAccent {
+  color: #68dfa0;
+  text-shadow: 0 0 30px rgba(104, 223, 160, 0.35);
+}
+
+.subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.12rem;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 680px;
+  margin: 0 auto 32px auto;
+  line-height: 1.6;
+}
+
+/* SWITCHER: Monthly vs Annually */
+.switchWrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.cycleSwitch {
+  display: inline-flex;
+  background: rgba(20, 26, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.cycleBtn {
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cycleBtn:hover {
+  color: #fff;
+}
+
+.cycleBtnActive {
+  background: #68dfa0;
+  color: #061014 !important;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(104, 223, 160, 0.35);
+}
+
+.saveBadge {
+  background: #ffb800;
+  color: #061014;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+}
+
+/* 2. Grid 3 Pricing Plans */
+.pricingGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(280px, 380px));
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 72px;
+  align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .pricingGrid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .pricingGrid {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+  }
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 34px 28px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.cardPopular {
+  background: linear-gradient(180deg, rgba(16, 38, 30, 0.9) 0%, rgba(10, 20, 28, 0.92) 100%);
+  border: 1px solid #68dfa0;
+  box-shadow: 0 0 35px rgba(104, 223, 160, 0.2), 0 12px 36px rgba(0, 0, 0, 0.4);
+}
+
+.cardPopular:hover {
+  border-color: #68dfa0;
+  box-shadow: 0 0 45px rgba(104, 223, 160, 0.3), 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.popularBadge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #68dfa0;
+  color: #061014;
+  font-weight: 800;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 4px 16px;
+  border-radius: 999px;
+  letter-spacing: 0.08em;
+  box-shadow: 0 2px 12px rgba(104, 223, 160, 0.45);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cardName {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.standardBadge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.cardDesc {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.62);
+  margin: 0 0 20px 0;
+  min-height: 48px;
+  line-height: 1.5;
+}
+
+/* ANIMATED ROLLING NUMBER (TryHackMe Reel Effect) */
+.priceBlock {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.priceGroup {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.currencySymbol {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #8c9ba8;
+}
+
+.numberRollerSlot {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  height: 3.5rem;
+  line-height: 3.5rem;
+  padding: 0 2px;
+}
+
+.animatedPriceValue {
+  display: inline-block;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 2.9rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 3.5rem;
+  animation: rollDigit 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes rollDigit {
+  0% {
+    transform: translateY(65%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.priceCustom {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.pricePeriod {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.savingsNotice {
+  font-size: 0.74rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #68dfa0;
+  font-weight: 600;
+}
+
+.featuresBlock {
+  flex-grow: 1;
+  margin-bottom: 28px;
+}
+
+.featuresLabel {
+  font-size: 0.74rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+  color: #78cbd4;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.featuresList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.checkIcon {
+  color: #68dfa0;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.crossIcon {
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.featureItemDisabled {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ctaBtn {
+  width: 100%;
+  padding: 13px 18px;
+  border-radius: 10px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transition: all 0.2s ease;
+  margin-top: auto;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.ctaBtn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ctaBtnPopular {
+  border: none;
+  background: #68dfa0;
+  color: #061014;
+  box-shadow: 0 0 24px rgba(104, 223, 160, 0.35);
+}
+
+.ctaBtnPopular:hover {
+  background: #78cbd4;
+  box-shadow: 0 0 28px rgba(120, 203, 212, 0.45);
+  transform: translateY(-1px);
+}
+
+.ctaArrow {
+  transition: transform 0.2s ease;
+}
+
+.ctaBtn:hover .ctaArrow {
+  transform: translateX(3px);
+}
+
+/* 3. Trusted By Organizers */
+.trustedSection {
+  position: relative;
+  z-index: 1;
+  background: rgba(14, 20, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 40px 32px;
+  margin-bottom: 84px;
+  text-align: center;
+}
+
+.trustedTitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  color: #7b8893;
+  margin: 0 0 24px 0;
+  text-transform: uppercase;
+}
+
+.logoMarquee {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 24px;
+  margin-bottom: 36px;
+}
+
+.logoBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.04em;
+  transition: all 0.2s ease;
+}
+
+.logoBadge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(104, 223, 160, 0.3);
+}
+
+.logoIcon {
+  font-size: 1rem;
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 28px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statValue {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #68dfa0;
+}
+
+.statLabel {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* 4. Full Plan Comparison Matrix */
+.comparisonSection {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 84px;
+}
+
+.sectionHeaderWrap {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.sectionTag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: #68dfa0;
+  margin-bottom: 8px;
+}
+
+.sectionHeading {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 12px 0;
+}
+
+.sectionSub {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.tableScrollWrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(14, 20, 30, 0.7);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.comparisonTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  min-width: 720px;
+}
+
+.featureColHead {
+  width: 40%;
+  padding: 20px 24px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+.planColHead {
+  width: 20%;
+  padding: 20px 16px;
+  text-align: center;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+.planColPopular {
+  width: 20%;
+  background: rgba(104, 223, 160, 0.06);
+  border-left: 1px solid rgba(104, 223, 160, 0.25);
+  border-right: 1px solid rgba(104, 223, 160, 0.25);
+  position: relative;
+}
+
+.popularTableBadge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: #68dfa0;
+  color: #061014;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 4px;
+}
+
+.categoryRow {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.categoryTitle {
+  padding: 14px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #78cbd4;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.catTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.featureRow {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s ease;
+}
+
+.featureRow:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.featureNameCell {
+  padding: 14px 24px;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.valueCell {
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.valueCellPopular {
+  background: rgba(104, 223, 160, 0.03);
+  border-left: 1px solid rgba(104, 223, 160, 0.18);
+  border-right: 1px solid rgba(104, 223, 160, 0.18);
+  color: #fff;
+}
+
+.boldCell {
+  color: #68dfa0;
+  font-weight: 600;
+}
+
+/* 5. Learner Testimonials / Reviews */
+.testimonialsSection {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 84px;
+}
+
+.testimonialGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.testimonialCard {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.testimonialCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(104, 223, 160, 0.3);
+}
+
+.starsRow {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.star {
+  color: #ffb800;
+  font-size: 1rem;
+}
+
+.testimonialQuote {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.55;
+  margin: 0 0 20px 0;
+  font-style: italic;
+}
+
+.authorRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.authorAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(104, 223, 160, 0.15);
+  border: 1px solid #68dfa0;
+  color: #68dfa0;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.authorName {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.authorRole {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.authorCompany {
+  color: #78cbd4;
+}
+
+/* 6. FAQ Section */
+.faqSection {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 84px;
+}
+
+.faqAccordion {
+  max-width: 820px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.faqItem {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.faqItem:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.faqItemOpen {
+  border-color: rgba(104, 223, 160, 0.35);
+  background: rgba(16, 28, 40, 0.8);
+}
+
+.faqQuestionBtn {
+  width: 100%;
+  padding: 18px 22px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+  gap: 16px;
+}
+
+.faqQuestionText {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.faqChevron {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #68dfa0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.faqAnswer {
+  padding: 0 22px 20px 22px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.6;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 14px;
+}
+
+.faqAnswer p {
+  margin: 0;
+}
+
+/* 7. Bottom CTA Banner */
+.bottomCtaBanner {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(135deg, rgba(16, 38, 30, 0.9) 0%, rgba(10, 24, 34, 0.95) 100%);
+  border: 1px solid rgba(104, 223, 160, 0.4);
+  border-radius: 20px;
+  padding: 56px 32px;
+  text-align: center;
+  box-shadow: 0 0 50px rgba(104, 223, 160, 0.15);
+}
+
+.ctaBannerInner {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.ctaBannerTitle {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: clamp(1.8rem, 3.2vw, 2.5rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 14px 0;
+  letter-spacing: -0.02em;
+}
+
+.ctaBannerDesc {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.6;
+  margin: 0 0 28px 0;
+}
+
+.ctaBannerBtns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.bannerPrimaryBtn {
+  background: #68dfa0;
+  color: #061014;
+  padding: 13px 26px;
+  border-radius: 9px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(104, 223, 160, 0.4);
+  transition: all 0.2s ease;
+}
+
+.bannerPrimaryBtn:hover {
+  background: #78cbd4;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(120, 203, 212, 0.5);
+}
+
+.bannerSecondaryBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  padding: 13px 22px;
+  border-radius: 9px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.bannerSecondaryBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ctaGuaranteeNote {
+  font-size: 0.76rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #78cbd4;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .pricingGrid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .statsRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .pageWrapper {
+    padding: 100px 16px 60px;
+  }
+
+  .viewSegmentBox {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .viewTabBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ctaBannerBtns {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .bannerPrimaryBtn,
+  .bannerSecondaryBtn {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}

@@ -267,6 +267,20 @@ export function createContentService({ admin, userClient }) {
         .eq('id', recordId).eq('status', 'active');
     },
 
+    // practice_sessions rows are closed by the API when a sandbox session ends,
+    // but a crash/restart or a reaped idle session leaves them 'active'. Rows
+    // idle for longer than `olderThanMs` (0 = all, used at startup because
+    // sandbox sessions do not survive a restart) become 'expired'.
+    async expireStalePracticeSessions({ olderThanMs = 30 * 60 * 1000, now = () => Date.now() } = {}) {
+      const { data, error } = await admin.from('practice_sessions')
+        .update({ status: 'expired' })
+        .eq('status', 'active')
+        .lt('last_active_at', new Date(now() - olderThanMs + (olderThanMs === 0 ? 1 : 0)).toISOString())
+        .select('id');
+      if (error) { console.error('expire stale sessions failed:', error.message); return 0; }
+      return data?.length || 0;
+    },
+
     async closePracticeRecord(recordId) {
       await admin.from('practice_sessions').update({ status: 'stopped', last_active_at: new Date().toISOString() })
         .eq('id', recordId).eq('status', 'active');

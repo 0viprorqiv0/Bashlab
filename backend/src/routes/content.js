@@ -1,5 +1,6 @@
 import express from 'express';
 import { HttpError } from '../errors.js';
+import { rateLimiter } from '../middleware/rateLimit.js';
 
 // Write API for everything that used to be a direct browser -> Supabase write.
 //   PUT/DELETE /api/progress/:lessonId        learner, own rows only
@@ -8,11 +9,18 @@ import { HttpError } from '../errors.js';
 // body and must be mounted before the global 16kb parser.
 const wrap = (handler) => (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
 
-export function createContentRouter({ service, authenticate, isAdmin, bodyLimit = '512kb' }) {
+export function createContentRouter({ service, dashboard, authenticate, isAdmin, bodyLimit = '512kb', limits = {} }) {
+  const { perIp = 600, perUser = 300 } = limits;
   const router = express.Router();
   // Scoped to our own prefixes: this router is mounted at /api, next to the
   // sandbox routes, which keep their own (smaller) body limit.
-  router.use(['/progress', '/admin'], authenticate, express.json({ limit: bodyLimit, strict: true }));
+  // Per-IP first (cheap, stops token-guessing floods before they cost a
+  // Supabase lookup), then per-user (one noisy account can't starve the rest).
+  router.use(['/progress', '/admin'],
+    rateLimiter(perIp),
+    authenticate,
+    rateLimiter(perUser, 60000, { key: (req) => req.user.id, message: 'Too many requests, slow down' }),
+    express.json({ limit: bodyLimit, strict: true }));
 
   const requireAdmin = wrap(async (req, _res) => {
     if (!(await isAdmin(req.user.id))) throw new HttpError(403, 'FORBIDDEN', 'Admin role required');
@@ -31,6 +39,9 @@ export function createContentRouter({ service, authenticate, isAdmin, bodyLimit 
     await service.clearProgress(req.user, req.params.lessonId);
     res.sendStatus(204);
   }));
+
+  // ---- admin: dashboard (Prometheus time series + headline numbers) ----
+  if (dashboard) admin.get('/dashboard', wrap(async (req, res) => res.json(await dashboard.get(req.query.range))));
 
   // ---- admin: content --------------------------------------------------------
   admin.post('/courses', wrap(async (req, res) => res.status(201).json(await service.createCourse(req.body))));

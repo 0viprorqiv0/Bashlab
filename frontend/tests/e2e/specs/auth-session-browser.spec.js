@@ -6,7 +6,8 @@ const { test, expect } = require('@playwright/test');
 const { adminClient, createTestUser, deleteTestUserSafe, emailLink } = require('../support/supabaseAdmin');
 const { env } = require('../support/env');
 
-const SESSION_KEY = 'bashlab.session';
+const SESSION_KEY = 'bashlab.session'; // older builds kept the tokens here; nothing may be stored under it now
+const API_ORIGIN = 'http://localhost:3001';
 const main = (page) => page.locator('main');
 
 async function uiLogin(page, user) {
@@ -24,7 +25,7 @@ test('the browser never calls Supabase Auth: login, profile edit, password-reset
   page.on('request', (request) => {
     const url = request.url();
     if (url.startsWith(`${env.SUPABASE_URL}/auth/`)) authCalls.push(`${request.method()} ${url}`);
-    if (url.startsWith('http://127.0.0.1:3001/api/auth/')) apiCalls.push(`${request.method()} ${new URL(url).pathname}`);
+    if (url.startsWith(`${API_ORIGIN}/api/auth/`)) apiCalls.push(`${request.method()} ${new URL(url).pathname}`);
   });
   try {
     await uiLogin(page, user);
@@ -63,7 +64,38 @@ test('the session survives a reload, and the token is not left in the URL', asyn
   }
 });
 
-test('an expired access token is silently refreshed through the API, not by Supabase', async ({ page }) => {
+test('no token is ever in web storage; the refresh token is an HttpOnly cookie scripts cannot read', async ({ page, context }) => {
+  const user = await createTestUser({ prefix: 'nostorage' });
+  try {
+    await uiLogin(page, user);
+    await page.goto('/my-learning');
+    await expect(page.getByRole('heading', { name: 'My Learning' })).toBeVisible();
+
+    const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
+    expect(stored).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}\./); // no JWT anywhere
+    expect(stored).not.toContain('refresh_token');
+    expect(stored).not.toContain('access_token');
+    expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY)).toBeNull();
+    expect(await page.evaluate(() => document.cookie)).not.toContain('bashlab_rt');
+
+    const cookie = (await context.cookies()).find((c) => c.name === 'bashlab_rt');
+    expect(cookie, 'refresh cookie').toBeTruthy();
+    expect(cookie.httpOnly).toBe(true);
+    expect(cookie.sameSite).toBe('Lax');
+    expect(cookie.path).toBe('/api/auth');
+  } finally {
+    await deleteTestUserSafe(user);
+  }
+});
+
+test('tokens an older build left in localStorage are wiped on load', async ({ page }) => {
+  await page.goto('/login');
+  await page.evaluate((key) => localStorage.setItem(key, JSON.stringify({ access_token: 'old', refresh_token: 'old' })), SESSION_KEY);
+  await page.reload();
+  expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY)).toBeNull();
+});
+
+test('after a reload the access token is re-issued from the cookie through the API, not by Supabase', async ({ page }) => {
   const user = await createTestUser({ prefix: 'refresh' });
   const refreshCalls = [];
   const directAuth = [];
@@ -73,56 +105,68 @@ test('an expired access token is silently refreshed through the API, not by Supa
   });
   try {
     await uiLogin(page, user);
-    const before = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), SESSION_KEY);
-    await page.evaluate((key) => {
-      const session = JSON.parse(localStorage.getItem(key));
-      session.expires_at = Math.floor(Date.now() / 1000) - 10; // already expired
-      localStorage.setItem(key, JSON.stringify(session));
-    }, SESSION_KEY);
-
-    await page.goto('/my-learning');
+    expect(refreshCalls).toEqual([]); // login itself returned an access token
+    await page.goto('/my-learning'); // full page load: the in-memory token is gone
     await expect(page.getByRole('heading', { name: 'My Learning' })).toBeVisible();
-    const after = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), SESSION_KEY);
     expect(refreshCalls.length).toBeGreaterThan(0);
-    expect(after.access_token).not.toBe(before.access_token);
-    expect(after.expires_at).toBeGreaterThan(Math.floor(Date.now() / 1000));
     expect(directAuth).toEqual([]);
   } finally {
     await deleteTestUserSafe(user);
   }
 });
 
-test('a dead refresh token ends the session cleanly (no loop, sent to /login)', async ({ page }) => {
+test('a dead refresh cookie ends the session cleanly (no loop, sent to /login, cookie cleared)', async ({ page, context }) => {
   const user = await createTestUser({ prefix: 'deadrefresh' });
   try {
     await uiLogin(page, user);
-    await page.evaluate((key) => {
-      const session = JSON.parse(localStorage.getItem(key));
-      session.expires_at = Math.floor(Date.now() / 1000) - 10;
-      session.refresh_token = 'revoked-or-forged';
-      localStorage.setItem(key, JSON.stringify(session));
-    }, SESSION_KEY);
+    await context.addCookies([{ name: 'bashlab_rt', value: 'revoked-or-forged', domain: 'localhost', path: '/api/auth', httpOnly: true, sameSite: 'Lax' }]);
     await page.goto('/my-learning');
     await page.waitForURL('**/login**');
-    expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY)).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('bashlab.uid'))).toBeNull();
+    expect((await context.cookies()).find((c) => c.name === 'bashlab_rt')).toBeUndefined();
   } finally {
     await deleteTestUserSafe(user);
   }
 });
 
-test('logging out ends the session on the server too: its refresh token stops working', async ({ page, request }) => {
+test('logging out ends the session on the server too: the cookie is gone and a copy of it stops working', async ({ page, context, request }) => {
   const user = await createTestUser({ prefix: 'logoutserver' });
   try {
     await uiLogin(page, user);
-    const stolen = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), SESSION_KEY);
+    const stolen = (await context.cookies()).find((c) => c.name === 'bashlab_rt');
+    expect(stolen).toBeTruthy();
     await page.getByRole('button', { name: 'User menu' }).click();
     await page.getByRole('button', { name: 'Log out' }).click();
     await page.waitForURL('**/login');
-    expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY)).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('bashlab.uid'))).toBeNull();
+    expect((await context.cookies()).find((c) => c.name === 'bashlab_rt')).toBeUndefined();
 
-    const replay = await request.post('http://127.0.0.1:3001/api/auth/refresh', { data: { refresh_token: stolen.refresh_token } });
+    const replay = await request.post(`${API_ORIGIN}/api/auth/refresh`, {
+      headers: { Origin: 'http://localhost:3000', Cookie: `bashlab_rt=${stolen.value}` },
+    });
     expect(replay.status()).toBe(401);
   } finally {
+    await deleteTestUserSafe(user);
+  }
+});
+
+test('logging out in one tab signs the other tab out too', async ({ browser }) => {
+  const user = await createTestUser({ prefix: 'twotabs' });
+  const context = await browser.newContext();
+  try {
+    const first = await context.newPage();
+    await uiLogin(first, user);
+    const second = await context.newPage();
+    await second.goto('/my-learning');
+    await expect(second.getByRole('heading', { name: 'My Learning' })).toBeVisible();
+
+    await first.getByRole('button', { name: 'User menu' }).click();
+    await first.getByRole('button', { name: 'Log out' }).click();
+    await first.waitForURL('**/login');
+
+    await second.waitForURL('**/login**');
+  } finally {
+    await context.close();
     await deleteTestUserSafe(user);
   }
 });
@@ -139,7 +183,7 @@ test('an admin locking an account signs the user out on their next request', asy
 
     await page.reload();
     await page.waitForURL('**/login**');
-    expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY)).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('bashlab.uid'))).toBeNull();
   } finally {
     await deleteTestUserSafe(user);
   }
@@ -176,7 +220,7 @@ test('the verification link from the email verifies the account and signs the le
 test('a garbage or tampered verification token is rejected instead of trusted', async ({ page }) => {
   await page.goto('/verify-email?email=someone@bashlab-e2e.test#access_token=not.a.real.jwt&refresh_token=x&type=signup&expires_in=3600');
   await expect(page.getByRole('heading', { name: 'Link expired' })).toBeVisible();
-  expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY)).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('bashlab.uid'))).toBeNull();
   await page.goto('/my-learning');
   await page.waitForURL('**/login**');
 });

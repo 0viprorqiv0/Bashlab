@@ -1,0 +1,26 @@
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.barRight { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ranges { display: inline-flex; border: 1px solid #303030; border-radius: 8px; overflow: hidden; }
+.ranges button { padding: 7px 14px; font-size: 13px; font-family: var(--font-code); color: #aaa; background: transparent; }
+.ranges button + button { border-left: 1px solid #303030; }
+.ranges button[aria-pressed='true'] { color: #092116; background: #68dfa0; font-weight: 600; }
+.ranges button:hover:not([aria-pressed='true']) { color: #f2f2f2; background: #202020; }
+
+.banner { border: 1px solid #6b5220; background: #2a2212; color: #f5c46b; border-radius: 10px; padding: 12px 16px; font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
+.banner code { font-family: var(--font-code); font-size: 12px; background: #3a2e14; padding: 1px 5px; border-radius: 4px; }
+.hint { display: block; margin-top: 2px; font-size: 11px; color: #8a8a8a; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 14px; }
+.chart { position: relative; margin: 0; border: 1px solid #2b2b2b; border-radius: 12px; background: #131313; padding: 14px 16px 12px; min-width: 0; }
+.chart figcaption { font-size: 13px; color: #f2f2f2; margin-bottom: 6px; font-weight: 500; }
+.chart figcaption span { color: #8a8a8a; font-weight: 400; }
+.chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chartEmpty { color: #8a8a8a; font-size: 13px; padding: 36px 0; text-align: center; }
+.gridline { stroke: #262626; stroke-width: 1; }
+.axis { fill: #8a8a8a; font-size: 10px; font-family: var(--font-code); }
+.cursor { stroke: #555; stroke-width: 1; stroke-dasharray: 3 3; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: #b5b5b5; }
+.legend span, .tooltip span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i, .tooltip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.tooltip { position: absolute; top: 34px; right: 16px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #e5e5e5; background: #0b0b0bee; border: 1px solid #3a3a3a; border-radius: 8px; padding: 8px 10px; pointer-events: none; }
+.tooltip strong { font-family: var(--font-code); font-size: 11px; color: #aaa; font-weight: 500; }
