@@ -1,7 +1,13 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: clamp(14px, 2vh, 22px);
+  width: 100%;
+}
+
+.reviewsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.2vh, 12px);
   width: 100%;
 }
 
@@ -10,13 +16,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(10px, 1.4vh, 14px);
-  margin-top: clamp(14px, 2.2vh, 26px);
+  gap: clamp(8px, 1.2vh, 12px);
+  margin-top: clamp(36px, 5.2vh, 64px);
 }
 
 .sponsorsLabel {
   font-family: var(--font-mono, monospace);
-  font-size: clamp(11px, 0.85vw, 12.5px);
+  font-size: clamp(10.5px, 0.8vw, 12px);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -28,8 +34,8 @@
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: clamp(20px, 3.5vw, 44px);
-  padding: clamp(10px, 1.5vh, 14px) clamp(28px, 3vw, 44px);
+  gap: clamp(16px, 2.8vw, 36px);
+  padding: clamp(7px, 1vh, 10px) clamp(22px, 2.5vw, 36px);
   background: rgba(20, 24, 32, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
@@ -40,11 +46,11 @@
 .sponsorItem {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #9ba8b5;
   text-decoration: none;
   font-family: var(--font-display, sans-serif);
-  font-size: clamp(14px, 1.05vw, 16px);
+  font-size: clamp(12.5px, 0.95vw, 14.5px);
   font-weight: 600;
   letter-spacing: 0.02em;
   transition: color 200ms ease, transform 200ms ease;
@@ -58,8 +64,8 @@
 }
 
 .sponsorIcon {
-  width: clamp(20px, 1.4vw, 24px);
-  height: clamp(20px, 1.4vw, 24px);
+  width: clamp(17px, 1.2vw, 20px);
+  height: clamp(17px, 1.2vw, 20px);
   fill: currentColor;
   opacity: 0.85;
   transition: opacity 200ms ease, filter 200ms ease, transform 200ms ease;
@@ -74,7 +80,7 @@
 .reviewsGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: clamp(16px, 2vw, 24px);
+  gap: clamp(12px, 1.6vw, 20px);
   align-items: stretch;
 }
 
@@ -82,11 +88,11 @@
   background: rgba(20, 24, 32, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: clamp(16px, 2.2vh, 22px);
+  padding: clamp(12px, 1.6vh, 16px) clamp(14px, 1.6vw, 18px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: clamp(10px, 1.6vh, 16px);
+  gap: clamp(8px, 1.2vh, 12px);
   transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
   position: relative;
   overflow: hidden;
@@ -125,17 +131,17 @@
   align-items: center;
   gap: 2px;
   color: #68dfa0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
 }
 
 .badge {
   font-family: var(--font-mono, monospace);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -144,8 +150,8 @@
 
 .quote {
   font-family: var(--font-body, sans-serif);
-  font-size: clamp(0.85rem, 0.96vw, 0.94rem);
-  line-height: 1.55;
+  font-size: clamp(0.8rem, 0.88vw, 0.88rem);
+  line-height: 1.45;
   color: #cfd5e1;
   margin: 0;
   flex: 1;
@@ -154,22 +160,22 @@
 .authorRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-top: 12px;
+  gap: 10px;
+  padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--card-accent, #68dfa0);
   flex-shrink: 0;
@@ -183,7 +189,7 @@
 
 .authorName {
   font-family: var(--font-display, sans-serif);
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -193,7 +199,7 @@
 
 .authorRole {
   font-family: var(--font-mono, monospace);
-  font-size: 10.5px;
+  font-size: 10px;
   color: #8c9ba8;
   white-space: nowrap;
   overflow: hidden;
@@ -205,7 +211,7 @@
   align-items: center;
   justify-content: space-between;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: 9.5px;
   color: #637180;
   letter-spacing: 0.04em;
 }
@@ -214,11 +220,79 @@
   color: #849581;
 }
 
+/* ===== Sleek Star Rating (Frameless & Compact) ===== */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: clamp(2px, 0.6vh, 6px);
+  padding: 0;
+}
+
+.ratingStarsGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ratingStars {
+  font-size: 15px;
+  line-height: 1;
+  color: #ffb800;
+  letter-spacing: 2px;
+  filter: drop-shadow(0 0 8px rgba(255, 184, 0, 0.45));
+}
+
+.ratingScore {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffc83b;
+  letter-spacing: 0.02em;
+}
+
+.ratingDot {
+  color: rgba(255, 255, 255, 0.25);
+  font-weight: 700;
+  user-select: none;
+}
+
+.ratingText {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ratingHeading {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(12.5px, 0.92vw, 14px);
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.ratingNote {
+  font-family: var(--font-body, sans-serif);
+  font-size: clamp(11.5px, 0.82vw, 12.5px);
+  color: #8c9ba8;
+}
+
 /* ===== Responsive Mobile ===== */
 @media (max-width: 900px) {
   .reviewsGrid {
     grid-template-columns: 1fr;
     gap: 16px;
+  }
+  .ratingRow {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+  .ratingDot {
+    display: none;
   }
   .sponsorsTrack {
     border-radius: 12px;
