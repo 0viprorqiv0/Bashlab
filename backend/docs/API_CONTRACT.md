@@ -200,3 +200,13 @@ Backend cần chạy cùng lúc: `cd backend && npm run start:api` (Windows/khô
 Docker: đặt `SANDBOX_ENABLED=false` trong `backend/.env` — chỉ phục vụ
 `/api/auth/*`, các endpoint sandbox trả 503 và bài lab chuyển sang hoàn thành thủ
 công). Backend cần `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`.
+
+
+## Sandbox lease contract
+
+`POST /api/sessions` is lease-backed. A learner has one active sandbox lease at a time.
+
+- Same learner and lesson: existing session/workspace is reused.
+- Different lesson: existing lease identity is reused while the sandbox lifecycle is rebound.
+- Capacity exhaustion returns `503` (`LEASE_CAPACITY`).
+- The server, not the client lesson identifier, owns workspace allocation and verifier binding.
