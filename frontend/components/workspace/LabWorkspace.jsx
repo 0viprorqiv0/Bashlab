@@ -3,7 +3,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { initialLabs, getLabById } from '@/data/labsData';
+import BrandLogo from '../shared/BrandLogo';
+import { supabase } from '@/lib/supabaseClient';
 import styles from './LabWorkspace.module.css';
+
+const MOCK_USER = {
+  name: 'Dương Nguyễn Duy',
+  email: 'duy@bashlab.io',
+  initials: 'DD',
+  role: 'Learner',
+  plan: 'Free',
+  avatarUrl: null,
+};
+
+function getInitials(nameOrEmail) {
+  if (!nameOrEmail) return 'U';
+  const parts = nameOrEmail.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
   const currentLab = getLabById(labId);
@@ -11,8 +29,30 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
 
   // Active tab on left pane
   const [activeTab, setActiveTab] = useState('instructions');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(50);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const saved = localStorage.getItem('shell101.sidebar');
+      if (saved) return saved === 'collapsed';
+      return window.matchMedia('(max-width: 600px)').matches;
+    } catch {
+      return false;
+    }
+  });
+  const [user, setUser] = useState(MOCK_USER);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+  const [panelWidth, setPanelWidth] = useState(() => {
+    if (typeof window === 'undefined') return 40;
+    try {
+      const saved = localStorage.getItem('shell101.panel');
+      if (saved !== null) {
+        const num = Number(saved);
+        if (num >= 25 && num <= 75 && num !== 50) return num;
+      }
+    } catch {}
+    return 40;
+  });
   const [mobileView, setMobileView] = useState('lesson');
   const splitRef = useRef(null);
   const contentRef = useRef(null);
@@ -22,11 +62,93 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
   useEffect(() => {
     try {
       const savedSidebar = localStorage.getItem('shell101.sidebar');
-      setSidebarCollapsed(savedSidebar ? savedSidebar === 'collapsed' : window.matchMedia('(max-width: 600px)').matches);
-      const savedWidth = Number(localStorage.getItem('shell101.panel'));
-      if (savedWidth >= 36 && savedWidth <= 64) setPanelWidth(savedWidth);
+      if (savedSidebar) {
+        setSidebarCollapsed(savedSidebar === 'collapsed');
+      } else if (window.matchMedia('(max-width: 600px)').matches) {
+        setSidebarCollapsed(true);
+      }
+      const savedWidth = localStorage.getItem('shell101.panel');
+      if (savedWidth !== null) {
+        const num = Number(savedWidth);
+        // If old default 50% was stored, upgrade to the requested 40%
+        if (num === 50) {
+          setPanelWidth(40);
+          try { localStorage.setItem('shell101.panel', '40'); } catch {}
+        } else if (num >= 25 && num <= 75) {
+          setPanelWidth(num);
+        }
+      } else {
+        setPanelWidth(40);
+      }
     } catch { /* The workspace also works without browser storage. */ }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadUser(session) {
+      if (!session?.user) {
+        if (!cancelled) setUser(MOCK_USER);
+        return;
+      }
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, role, is_locked, avatar_url')
+          .eq('id', session.user.id)
+          .single();
+        if (cancelled) return;
+        if (profile?.is_locked) {
+          await supabase.auth.signOut();
+          setUser(MOCK_USER);
+          return;
+        }
+        const displayName = profile?.name || session.user.email;
+        setUser({
+          name: displayName,
+          email: session.user.email,
+          initials: getInitials(displayName),
+          role: profile?.role === 'admin' ? 'Admin' : 'Learner',
+          plan: profile?.role === 'admin' ? 'Administrator' : 'Pro Learner',
+          avatarUrl: profile?.avatar_url || null,
+        });
+      } catch {
+        if (!cancelled) {
+          setUser({
+            name: session.user.email || MOCK_USER.name,
+            email: session.user.email || MOCK_USER.email,
+            initials: getInitials(session.user.email || MOCK_USER.name),
+            role: 'Learner',
+            plan: 'Pro Learner',
+            avatarUrl: null,
+          });
+        }
+      }
+    }
+    supabase.auth.getSession().then(({ data }) => loadUser(data.session));
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => loadUser(session));
+    return () => {
+      cancelled = true;
+      subscription.subscription?.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
+        setAccountMenuOpen(false);
+      }
+    }
+    if (accountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [accountMenuOpen]);
+
+  async function handleLogout() {
+    setAccountMenuOpen(false);
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  }
 
   useEffect(() => () => clearTimeout(copyTimerRef.current), []);
 
@@ -46,8 +168,23 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
     try { localStorage.setItem('shell101.sidebar', collapsed ? 'collapsed' : 'expanded'); } catch {}
   }
 
+  useEffect(() => {
+    function handleShortcut(e) {
+      if ((e.metaKey || e.ctrlKey) && ((e.shiftKey && e.key.toLowerCase() === 's') || e.key.toLowerCase() === 'b')) {
+        e.preventDefault();
+        setSidebarCollapsed((prev) => {
+          const next = !prev;
+          try { localStorage.setItem('shell101.sidebar', next ? 'collapsed' : 'expanded'); } catch {}
+          return next;
+        });
+      }
+    }
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
+
   function resizePanel(value) {
-    const width = Math.min(64, Math.max(36, value));
+    const width = Math.min(75, Math.max(25, value));
     setPanelWidth(width);
     try { localStorage.setItem('shell101.panel', String(width)); } catch {}
   }
@@ -403,23 +540,71 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
     }
   }
 
-  // Fill terminal input with quick chip command
-  function handleQuickCommand(cmdText) {
-    setTerminalInput(cmdText);
-    inputRef.current?.focus();
-  }
 
   const prevLabId = currentLab.id > 1 ? currentLab.id - 1 : null;
   const nextLabId = currentLab.id < totalLabs ? currentLab.id + 1 : null;
 
   return (
-    <div className={`${styles.workspacePage} ${styles.unified} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`} data-lenis-prevent="true">
+    <div
+      className={`${styles.workspacePage} ${styles.unified} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}
+      data-lenis-prevent="true"
+      suppressHydrationWarning
+    >
         <aside className={styles.workspaceSidebar} aria-label="Course workspace">
-          <Link href="/" className={styles.sidebarItem} aria-label="Home" data-tooltip="Home">
-            <span className="material-symbols-outlined" aria-hidden="true">home</span>
-            <span className={styles.sidebarLabel}>Home</span>
-          </Link>
+          {/* Top Brand Logo: Fades smoothly between expanded brand & collapsed logo toggle */}
+          <div className={styles.sidebarBrandContainer}>
+            <div className={styles.sidebarBrandExpanded}>
+              <Link
+                href="/"
+                className={styles.sidebarBrandLink}
+                aria-label="BashLab home"
+                title="BashLab Home"
+                tabIndex={sidebarCollapsed ? -1 : 0}
+              >
+                <BrandLogo iconOnly={false} />
+              </Link>
+
+              <button
+                type="button"
+                className={styles.chatgptSidebarToggleBtn}
+                onClick={toggleSidebar}
+                aria-label="Close sidebar"
+                data-tooltip="Close sidebar"
+                title="Close sidebar (⌘+Shift+S)"
+                tabIndex={sidebarCollapsed ? -1 : 0}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                  <path d="M9 3v18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className={styles.sidebarBrandCollapsed}>
+              <button
+                type="button"
+                className={styles.collapsedBrandToggleBtn}
+                onClick={toggleSidebar}
+                aria-label="Expand sidebar"
+                data-tooltip="Expand sidebar"
+                title="Expand sidebar (⌘+Shift+S)"
+                tabIndex={sidebarCollapsed ? 0 : -1}
+              >
+                <span className={styles.logoDefault}>
+                  <BrandLogo iconOnly={true} />
+                </span>
+                <span className={styles.logoHoverIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                    <path d="M9 3v18" />
+                  </svg>
+                </span>
+              </button>
+            </div>
+          </div>
+
           <div className={styles.sidebarRule} />
+
           <nav aria-label="Learning panels">
             {[
               ['lessons', 'format_list_bulleted', 'Lessons'],
@@ -434,17 +619,140 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
               </button>
             ))}
           </nav>
-          <a href="https://github.com/0viprorqiv0/Bashlab/issues/new" target="_blank" rel="noopener noreferrer"
-            className={`${styles.sidebarItem} ${styles.sidebarReport}`} aria-label="Report a bug (opens in a new tab)" data-tooltip="Report a bug">
-            <span className="material-symbols-outlined" aria-hidden="true">bug_report</span>
-            <span className={styles.sidebarLabel}>Report a bug</span>
-          </a>
-          <button type="button" className={`${styles.sidebarItem} ${styles.sidebarToggle}`} onClick={toggleSidebar}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!sidebarCollapsed}
-            data-tooltip={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            <span className="material-symbols-outlined" aria-hidden="true">{sidebarCollapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}</span>
-            <span className={styles.sidebarLabel}>Collapse sidebar</span>
-          </button>
+
+          {/* Bottom Account Area (ChatGPT Style) */}
+          <div ref={accountMenuRef} className={`${styles.sidebarAccountWrap} ${sidebarCollapsed ? styles.accountCollapsed : ''}`}>
+            {user ? (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.chatgptAccountBtn} ${sidebarCollapsed ? styles.chatgptAccountCollapsed : ''}`}
+                  onClick={() => setAccountMenuOpen((prev) => !prev)}
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="true"
+                  aria-label="User account menu"
+                  title={sidebarCollapsed ? `${user.name} (${user.role})` : undefined}
+                >
+                  <div className={styles.chatgptAvatarWrap}>
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className={styles.chatgptAvatarImg} />
+                    ) : (
+                      <span className={styles.chatgptAvatar}>{user.initials}</span>
+                    )}
+                  </div>
+
+                  <div className={styles.chatgptAccountMeta}>
+                    <span className={styles.chatgptAccountName}>{user.name}</span>
+                    <span className={styles.chatgptAccountPlan}>{user.plan || user.role || 'Free'}</span>
+                  </div>
+                </button>
+
+                {accountMenuOpen && (
+                  <div
+                    className={`${styles.chatgptPopover} ${
+                      sidebarCollapsed ? styles.popoverCollapsed : styles.popoverExpanded
+                    }`}
+                    role="menu"
+                  >
+                    <div className={styles.popoverUserRow}>
+                      <div className={styles.chatgptAvatarWrap}>
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={user.name} className={styles.chatgptAvatarImg} />
+                        ) : (
+                          <span className={styles.chatgptAvatar}>{user.initials}</span>
+                        )}
+                      </div>
+                      <div className={styles.chatgptAccountMeta}>
+                        <span className={styles.chatgptAccountName}>{user.name}</span>
+                        <span className={styles.chatgptAccountPlan}>{user.plan || user.role || 'Free'}</span>
+                      </div>
+                      <span className={`material-symbols-outlined ${styles.popoverChevron}`}>chevron_right</span>
+                    </div>
+
+                    <div className={styles.popoverDivider} />
+
+                    <Link
+                      href="/account"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">settings</span>
+                      Settings
+                    </Link>
+
+                    <Link
+                      href="/my-learning"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">school</span>
+                      My Learning
+                    </Link>
+
+                    <Link
+                      href="/courses"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">explore</span>
+                      Browse Courses
+                    </Link>
+
+                    <div className={styles.popoverDivider} />
+
+                    <a
+                      href="https://github.com/0viprorqiv0/Bashlab/issues"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">help</span>
+                      <span>Help</span>
+                      <span className={`material-symbols-outlined ${styles.popoverChevronRight}`}>chevron_right</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className={`${styles.popoverItem} ${styles.popoverLogout}`}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">logout</span>
+                      Log out
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              sidebarCollapsed ? (
+                <Link
+                  href="/login"
+                  className={styles.chatgptAccountBtn}
+                  style={{ width: '40px', height: '40px', padding: 0, justifyContent: 'center' }}
+                  title="Log in to BashLab"
+                  aria-label="Log in to BashLab"
+                >
+                  <div className={styles.chatgptAvatar}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>person</span>
+                  </div>
+                </Link>
+              ) : (
+                <div className={styles.guestExpanded}>
+                  <Link href="/login" className={styles.workspaceLoginBtn}>
+                    <span className="material-symbols-outlined text-sm">login</span>
+                    Log in
+                  </Link>
+                  <Link href="/register" className={styles.workspaceSignupBtn}>
+                    Sign up
+                  </Link>
+                </div>
+              )
+            )}
+          </div>
         </aside>
       {/* Top Workspace Header Bar */}
       <header className={styles.topBar}>
@@ -507,17 +815,6 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
               Completed
             </span>
           )}
-
-          <button
-            type="button"
-            className={styles.checkSolutionBtn}
-            onClick={handleCheckSolution}
-            aria-label="Check solution"
-            title="Validate completed tasks and check solution"
-          >
-            <span className="material-symbols-outlined">verified</span>
-            <span>Check Solution</span>
-          </button>
         </div>
       </header>
 
@@ -748,15 +1045,15 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
         </section>
 
         <div className={styles.splitHandle} role="separator" aria-label="Resize learning panel" aria-orientation="vertical"
-          aria-valuemin={36} aria-valuemax={64} aria-valuenow={Math.round(panelWidth)} aria-valuetext={`${Math.round(panelWidth)} percent`} tabIndex={0}
+          aria-valuemin={25} aria-valuemax={75} aria-valuenow={Math.round(panelWidth)} aria-valuetext={`${Math.round(panelWidth)} percent`} tabIndex={0}
           onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId); } }}
           onPointerMove={handleDividerMove}
           onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
-          onDoubleClick={() => resizePanel(50)}
+          onDoubleClick={() => resizePanel(40)}
           onKeyDown={(event) => {
             if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(event.key)) {
               event.preventDefault();
-              resizePanel(event.key === 'Home' ? 36 : event.key === 'End' ? 64 : event.key === 'Enter' ? 50 : panelWidth + (event.key === 'ArrowRight' ? 2 : -2));
+              resizePanel(event.key === 'Home' ? 25 : event.key === 'End' ? 75 : event.key === 'Enter' ? 40 : panelWidth + (event.key === 'ArrowRight' ? 2 : -2));
             }
           }} />
 
@@ -821,20 +1118,13 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
             </div>
 
             <div className={styles.termCenter}>
-              <span className={styles.termHost}>
-                {isMaximized ? 'bashlab-sandbox: bash (full screen)' : 'bashlab-sandbox: bash (80x24)'}
-              </span>
-              {instanceStatus === 'running' ? (
-                <span className={styles.termStatusPill}>
-                  <span className={styles.termStatusDot} />
-                  Preview
-                </span>
-              ) : instanceStatus === 'restarting' ? (
+              {instanceStatus === 'restarting' && (
                 <span className={styles.termStatusPillRestarting}>
                   <span className={styles.termStatusDotRestarting} />
                   Restarting...
                 </span>
-              ) : (
+              )}
+              {instanceStatus === 'stopped' && (
                 <span className={styles.termStatusPillStopped}>
                   <span className={styles.termStatusDotStopped} />
                   Stopped
@@ -854,26 +1144,6 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
                   <span>Restore</span>
                 </button>
               )}
-
-              <button
-                type="button"
-                className={styles.termActionBtn}
-                onClick={handleRestartInstance}
-                title="Restart Sandbox environment"
-              >
-                <span className="material-symbols-outlined">restart_alt</span>
-                <span>Reset</span>
-              </button>
-
-              <button
-                type="button"
-                className={styles.termActionBtn}
-                onClick={() => setTerminalLogs([])}
-                title="Clear screen (Ctrl+L)"
-              >
-                <span className="material-symbols-outlined">mop</span>
-                <span>Clear</span>
-              </button>
             </div>
           </div>
 
@@ -934,26 +1204,22 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = 1 }) {
 
           {/* Terminal Bottom Toolbar */}
           <div className={styles.termFooter}>
-            <div className={styles.quickChips}>
-              <span className={styles.quickLabel}>Quick Run:</span>
-              {currentLab.commands.map((cmd) => (
-                <button
-                  key={cmd}
-                  type="button"
-                  className={styles.chipBtn}
-                  onClick={() => handleQuickCommand(cmd)}
-                  title={`Run command: ${cmd}`}
-                >
-                  {cmd}
-                </button>
-              ))}
-            </div>
-
             <div className={styles.termShortcuts}>
               <span><kbd className={styles.shortcutTag}>Enter</kbd> execute</span>
               <span><kbd className={styles.shortcutTag}>Ctrl+L</kbd> clear</span>
               <span><kbd className={styles.shortcutTag}>↑ / ↓</kbd> history</span>
             </div>
+
+            <a
+              href="https://github.com/0viprorqiv0/Bashlab/issues/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.termReportBugBtn}
+              title="Report an issue or bug (opens in a new tab)"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">bug_report</span>
+              <span>Found a bug?</span>
+            </a>
           </div>
         </section>
       </div>

@@ -2385,11 +2385,9 @@ export default function Lookbook() {
             <div className={styles.heroCtas}>
               <a href={firstIncompleteLab ? `/courses/shell-101/labs/${firstIncompleteLab.id}` : '/courses/shell-101'} className={styles.btnPrimary}>
                 <span>Start learning</span>
-                <span aria-hidden="true">→</span>
               </a>
               <button type="button" className={styles.btnSecondary} onClick={() => goTo(1)}>
                 <span>Try your first command</span>
-                <span aria-hidden="true">↓</span>
               </button>
             </div>
             <p className={styles.heroPwd}>
