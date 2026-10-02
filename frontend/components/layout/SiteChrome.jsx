@@ -13,11 +13,12 @@ export default function SiteChrome({ children }) {
   const isAppPage = ['/account', '/my-learning', '/courses', '/learn', '/admin']
     .some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const isWorkspace = pathname?.includes('/labs/');
+  const isLanding = pathname === '/';
 
   return (
     <AuthProvider>
       {!isWorkspace && <SmoothScroll wheelMultiplier={pathname === '/' ? 2 : 1} />}
-      <Navbar isTransparent={pathname === '/'} />
+      <Navbar />
       <main
         className={
           isWorkspace
@@ -26,12 +27,14 @@ export default function SiteChrome({ children }) {
             ? styles.authMain
             : isAppPage
             ? styles.standardMain
+            : isLanding
+            ? styles.landingMain
             : styles.defaultMain
         }
       >
         {children}
       </main>
-      {!isWorkspace && <Footer />}
+      {!isWorkspace && !isLanding && <Footer />}
     </AuthProvider>
   );
 }

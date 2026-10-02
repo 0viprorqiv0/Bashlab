@@ -33,11 +33,59 @@
   --lb-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --lb-rail-w: 28px;
 
-  margin-top: -4rem;
+  margin-top: 0;
   background: var(--lb-paper);
   color: var(--lb-ink);
   font-family: var(--font-body);
   overflow-x: clip;
+}
+
+/* ===== New Background from Folder Background ===== */
+.newBgContainer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bgMedia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.bgDimOverlay {
+  position: absolute;
+  inset: 0;
+  /* Lớp tint tối đen giúp nền đằng sau chìm sâu và làm nổi bật nội dung */
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(6, 8, 14, 0.86) 0%,
+    rgba(3, 4, 8, 0.94) 100%
+  );
+  backdrop-filter: blur(2px);
+}
+
+.customBgActive {
+  background: transparent !important;
+}
+
+.customBgActive .sHero,
+.customBgActive .sTry,
+.customBgActive .sLearn,
+.customBgActive .sCourse,
+.customBgActive .sFaq {
+  background: transparent !important;
+}
+
+.customBgActive .section {
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 .lookbook ::selection {
@@ -45,17 +93,19 @@
   color: #06110a;
 }
 
-/* ---------- Khung section tự động scale theo màn hình ---------- */
+/* ---------- Khung section tự động scale theo màn hình: 1 khung vừa khít 1 màn hình ---------- */
 .section {
   position: relative;
+  height: 100vh;
+  height: 100svh;
   min-height: 100vh;
   min-height: 100svh;
-  height: auto;
+  box-sizing: border-box;
   overflow: visible;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(75px, 8vh, 105px) clamp(20px, 4vw, 56px) clamp(30px, 4vh, 50px);
+  padding: clamp(64px, 8vh, 90px) clamp(20px, 4vw, 56px) clamp(20px, 3vh, 36px);
   padding-right: calc(clamp(20px, 4vw, 56px) + var(--lb-rail-w));
   border-top: 1px solid var(--lb-line);
   isolation: isolate;
@@ -84,8 +134,52 @@
   transform: none !important;
 }
 .sLearn { background: var(--lb-paper); }
-.sCourse { background: var(--lb-course); height: auto; min-height: 100svh; overflow: visible; padding-top: 94px; padding-bottom: 60px; }
-.sFaq { background: var(--lb-paper); }
+.sCourse {
+  background: var(--lb-course);
+  height: 100vh;
+  height: 100svh;
+  min-height: 100vh;
+  min-height: 100svh;
+  box-sizing: border-box;
+  overflow: visible;
+  padding-top: clamp(64px, 8vh, 85px);
+  padding-bottom: clamp(20px, 3vh, 40px);
+}
+.sFaq {
+  background: var(--lb-paper);
+  height: 100vh;
+  height: 100svh;
+  min-height: 100vh;
+  min-height: 100svh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding-left: clamp(20px, 4vw, 56px);
+  padding-right: clamp(20px, 4vw, 56px);
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.sFaq .wrap {
+  margin: 0 auto;
+  width: 100%;
+  max-width: min(1280px, 88vw);
+}
+
+.faqFooter {
+  position: absolute;
+  bottom: clamp(10px, 1.8vh, 18px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  padding-left: clamp(20px, 4vw, 56px);
+  padding-right: clamp(20px, 4vw, 56px);
+  box-sizing: border-box;
+  margin-top: 0 !important;
+}
 
 .tick {
   position: absolute;
@@ -307,6 +401,7 @@
 .term {
   position: relative;
   width: 100%;
+  height: 390px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   overflow: hidden;
@@ -425,6 +520,7 @@
 
 /* Thu nhỏ terminal: gập êm, ẩn nhẹ nội dung, tiêu đề chuyển thành thanh compact */
 .termMin {
+  height: auto !important;
   box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.5);
   border-color: rgba(255, 255, 255, 0.14);
   cursor: pointer;
@@ -454,6 +550,7 @@
   right: calc(clamp(20px, 2.5vw, 36px) + var(--lb-rail-w));
   bottom: clamp(20px, 2.5vh, 32px);
   width: auto;
+  height: auto !important;
   z-index: 35;
   max-width: none;
   margin: 0;
@@ -508,6 +605,7 @@
 /* Placeholder giữ đúng kích thước trong cột grid khi phóng to để layout không bị giật */
 .termPlaceholder {
   width: 100%;
+  height: 390px;
   border-radius: 12px;
   border: 1px solid transparent;
   background: transparent;
@@ -695,8 +793,9 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   flex: 1;
-  min-height: 130px;
-  max-height: 225px;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
@@ -1217,8 +1316,25 @@
   }
 }
 
-/* ---------- 04 COURSE BENTO GRID ---------- */
+/* ---------- 04 REVIEWS & SPONSORS ---------- */
 .courseHead { margin-bottom: clamp(10px, 1.4vh, 16px); }
+
+.reviewsHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: clamp(12px, 1.8vh, 18px);
+}
+
+.reviewsHead .h2 {
+  text-align: center;
+  margin: 0;
+}
+
+.reviewsHead .philosophyTag {
+  margin-bottom: 8px;
+}
 
 .courseHeadRow {
   display: flex;
@@ -1261,7 +1377,7 @@
   display: grid;
   grid-template-columns: 5fr 7fr;
   gap: clamp(24px, 3.5vw, 48px);
-  align-items: start;
+  align-items: center;
 }
 
 .faqList {
@@ -1355,35 +1471,6 @@
   gap: 7px;
   pointer-events: auto;
 }
-.snapToggle {
-  width: 22px;
-  height: 12px;
-  margin-top: 2px;
-  padding: 1px;
-  border: 1px solid var(--lb-line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  cursor: pointer;
-  pointer-events: auto;
-  transition: background 180ms var(--lb-ease), border-color 180ms var(--lb-ease);
-}
-.snapToggle span {
-  display: block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--lb-muted);
-  transition: transform 180ms var(--lb-ease), background 180ms var(--lb-ease);
-}
-.snapToggle[aria-pressed="true"] {
-  border-color: rgba(104, 223, 160, 0.45);
-  background: rgba(104, 223, 160, 0.2);
-}
-.snapToggle[aria-pressed="true"] span {
-  transform: translateX(9px);
-  background: var(--lb-accent);
-  box-shadow: 0 0 7px rgba(104, 223, 160, 0.5);
-}
 .dotWrap {
   position: relative;
   width: var(--lb-rail-w);
@@ -1469,6 +1556,23 @@
     padding-top: clamp(84px, 11vw, 100px);
     scroll-margin-top: 70px;
   }
+  .sFaq {
+    padding-bottom: 24px;
+    padding-top: 72px;
+    padding-left: 20px;
+    padding-right: 20px;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+  .sFaq .wrap {
+    margin: 0 0 2rem;
+  }
+  .faqFooter {
+    position: static;
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 1.5rem !important;
+  }
   .faqGrid { grid-template-columns: 1fr; }
   .tryGrid { grid-template-columns: 1fr; gap: 18px; text-align: left; }
   .tryIntro { max-width: none; }
@@ -1476,7 +1580,9 @@
   .learnSteps, .learnSide { width: 100%; }
   .philosophyTag { display: none; }
   .term, .termClosed { max-width: none; margin: 0; }
-  .termLog { max-height: 240px; }
+  .term { height: 360px; }
+  .termPlaceholder { height: 360px; }
+  .termLog { max-height: none; }
   /* Mở rộng trên mobile: chiếm vùng khả dụng, chừa safe-area */
   .termMax {
     top: clamp(78px, 10vh, 92px);
