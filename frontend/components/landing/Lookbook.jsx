@@ -507,17 +507,18 @@ export default function Lookbook() {
   const [currentDir, setCurrentDir] = useState('');
   const [isPandoraUnlocked, setIsPandoraUnlocked] = useState(false);
   const [isPandoraModalOpen, setIsPandoraModalOpen] = useState(false);
-  const pandoraVideoRef = useRef(null);
+  const pandoraAudioRef = useRef(null);
 
   useEffect(() => {
-    if (isPandoraModalOpen && pandoraVideoRef.current) {
-      pandoraVideoRef.current.currentTime = 0;
-      const p = pandoraVideoRef.current.play();
+    if (isPandoraModalOpen && pandoraAudioRef.current) {
+      pandoraAudioRef.current.currentTime = 0;
+      const p = pandoraAudioRef.current.play();
       if (p !== undefined) {
         p.catch(() => {});
       }
-    } else if (pandoraVideoRef.current) {
-      pandoraVideoRef.current.pause();
+    } else if (pandoraAudioRef.current) {
+      pandoraAudioRef.current.pause();
+      pandoraAudioRef.current.currentTime = 0;
     }
   }, [isPandoraModalOpen]);
 
@@ -2786,7 +2787,7 @@ export default function Lookbook() {
         </div>
       </nav>
 
-      {/* notPandora.exe Video Modal (Cửa sổ nhỏ phát video Never Gonna Give You Up) */}
+      {/* notPandora.exe Modal (Cửa sổ phát gif Rickroll và bài Never Gonna Give You Up) */}
       {isPandoraModalOpen && (
         <div className={styles.pandoraModalOverlay} onClick={() => setIsPandoraModalOpen(false)}>
           <div className={styles.pandoraWindow} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="notPandora.exe payload">
@@ -2808,10 +2809,10 @@ export default function Lookbook() {
                   className={styles.pandoraPopoutBtn}
                   onClick={() => {
                     if (typeof window !== 'undefined') {
-                      window.open('/never-gonna-give-you-up.mp4', 'notPandoraWindow', 'width=640,height=400,resizable=yes');
+                      window.open('/rickroll.gif', 'notPandoraWindow', 'width=640,height=400,resizable=yes');
                     }
                   }}
-                  title="Mở trong cửa sổ trình duyệt riêng"
+                  title="Mở ảnh trong cửa sổ trình duyệt riêng"
                 >
                   ⧉ Pop out
                 </button>
@@ -2826,13 +2827,17 @@ export default function Lookbook() {
               </div>
             </div>
             <div className={styles.pandoraVideoBody}>
-              <video
-                ref={pandoraVideoRef}
-                src="/never-gonna-give-you-up.mp4"
+              <img
+                src="/rickroll.gif"
+                alt="Rick Astley Rickroll"
+                className={styles.pandoraGif}
+              />
+              <audio
+                ref={pandoraAudioRef}
+                src="/never-gonna-give-you-up.mp3"
                 autoPlay
-                controls
+                loop
                 playsInline
-                className={styles.pandoraVideo}
               />
             </div>
             <div className={styles.pandoraFooter}>
