@@ -199,33 +199,6 @@ function CheckoutContent() {
         <div className={styles.bgDimOverlay} />
       </div>
 
-      {/* Top Bar with Brand Badge & Billing Switcher */}
-      <div className={styles.topBar}>
-        <div className={styles.brandTag}>
-          <span>BashLab Checkout</span>
-          <span className={styles.brandBadge}>
-            {selectedCourse ? 'COURSE ENROLLMENT' : (isTeam ? 'TEAM & UNIVERSITY' : 'INDIVIDUAL ACCESS')}
-          </span>
-        </div>
-        {!selectedCourse && (
-          <div className={styles.demoToggles}>
-            <button
-              type="button"
-              className={`${styles.btnCycle} ${billingCycle === 'annual' ? styles.btnCycleActive : ''}`}
-              onClick={() => setBillingCycle('annual')}
-            >
-              Annual (Save 25%)
-            </button>
-            <button
-              type="button"
-              className={`${styles.btnCycle} ${billingCycle === 'monthly' ? styles.btnCycleActive : ''}`}
-              onClick={() => setBillingCycle('monthly')}
-            >
-              Monthly
-            </button>
-          </div>
-        )}
-      </div>
 
       {/* Main 2-Column Grid */}
       <main className={styles.checkoutContainer}>
@@ -432,7 +405,7 @@ function CheckoutContent() {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
-              <span>Guaranteed safe checkout powered by</span>
+              <span>Secure transactions with</span>
               <img src="/stripe-logo.svg" alt="Stripe" className={styles.stripeLogoImg} />
             </div>
           </form>
@@ -442,6 +415,24 @@ function CheckoutContent() {
         <aside className={styles.orderSummaryPanel}>
           <div className={styles.summaryTitle}>
             <span>Order Summary</span>
+            {!selectedCourse && (
+              <div className={styles.demoToggles}>
+                <button
+                  type="button"
+                  className={`${styles.btnCycle} ${billingCycle === 'annual' ? styles.btnCycleActive : ''}`}
+                  onClick={() => setBillingCycle('annual')}
+                >
+                  Annual
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.btnCycle} ${billingCycle === 'monthly' ? styles.btnCycleActive : ''}`}
+                  onClick={() => setBillingCycle('monthly')}
+                >
+                  Monthly
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Plan Info Card */}
