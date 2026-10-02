@@ -150,16 +150,10 @@ export default function SubscriptionTeaser() {
               {/* iOS Style Switch under the price for Individual & Team */}
               {p.hasToggle ? (
                 <div className={styles.switchWrapper}>
-                  <span
-                    className={`${styles.switchMode} ${!isAnnual ? styles.switchModeActive : ''}`}
-                    onClick={() => isAnnual && toggleCycle(p.id)}
-                  >
-                    Monthly
-                  </span>
                   <button
                     type="button"
                     role="switch"
-                    aria-label={`Toggle monthly or annual billing for ${p.name}`}
+                    aria-label={`Toggle annual billing for ${p.name}`}
                     aria-checked={isAnnual}
                     className={`${styles.iosSwitch} ${isAnnual ? styles.iosSwitchActive : ''}`}
                     onClick={() => toggleCycle(p.id)}
@@ -168,7 +162,7 @@ export default function SubscriptionTeaser() {
                   </button>
                   <span
                     className={`${styles.switchMode} ${isAnnual ? styles.switchModeActive : ''}`}
-                    onClick={() => !isAnnual && toggleCycle(p.id)}
+                    onClick={() => toggleCycle(p.id)}
                   >
                     Yearly
                     <span className={styles.discountTag}>{p.discountTag}</span>
