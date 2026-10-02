@@ -45,7 +45,7 @@ test.describe('admin UI guard (admin allowed)', () => {
   test.use({ asRole: 'admin' });
   test('an admin reaches /admin/content and does not see the 403 page', async ({ page }) => {
     await page.goto('/admin/content');
-    await expect(page.getByRole('heading', { name: 'Content' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Admin sections' })).toBeVisible();
     await expect(page.getByText('You do not have permission')).toHaveCount(0);
   });
 });

@@ -13,12 +13,15 @@ test.use({ asRole: 'admin' });
 let users;
 test.beforeAll(() => { users = loadUsers(); });
 
-async function searchFor(page, email) {
+// Finds the disposable target learner in the list and opens its "Manage User" dialog.
+async function openManage(page, email) {
   await page.goto('/admin/users');
-  await page.getByLabel('Search users').fill(email);
-  const row = page.getByRole('row').filter({ hasText: email });
-  await expect(row).toBeVisible();
-  return row;
+  await page.getByLabel('Search learners').fill(email);
+  await expect(page.getByRole('button', { name: 'Manage' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Manage' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Manage User' });
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
 
 test.afterAll(async () => {
@@ -29,48 +32,47 @@ test.afterAll(async () => {
 });
 
 test('a reason is required before a role/lock change is applied', async ({ page }) => {
-  const row = await searchFor(page, users.target.email);
-  await row.getByRole('button', { name: 'Make admin' }).click();
-  await page.getByRole('button', { name: 'Make admin' }).last().click(); // confirm button in the dialog shares the label
+  const manage = await openManage(page, users.target.email);
+  await manage.getByTitle('Click to toggle role').click();
+  await page.getByRole('button', { name: 'Make admin' }).last().click(); // confirm button in the reason dialog
   await expect(page.getByText('A reason is required.')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
 });
 
 test('promote to admin, then demote back to learner, each recorded with its reason', async ({ page }) => {
-  let row = await searchFor(page, users.target.email);
-  await row.getByRole('button', { name: 'Make admin' }).click();
+  const manage = await openManage(page, users.target.email);
+  await manage.getByTitle('Click to toggle role').click();
   await page.getByRole('textbox', { name: /Reason/ }).fill('e2e: promoting for admin-users.spec coverage');
   await page.getByRole('button', { name: 'Make admin' }).last().click();
   await expect(page.getByText(`Role of ${users.target.email} changed to admin.`)).toBeVisible();
+  await expect(manage.getByTitle('Click to toggle role')).toHaveText('Admin');
 
-  row = page.getByRole('row').filter({ hasText: users.target.email });
-  await expect(row.getByText('admin', { exact: true })).toBeVisible();
-
-  await row.getByRole('button', { name: 'Make learner' }).click();
+  await manage.getByTitle('Click to toggle role').click();
   await page.getByRole('textbox', { name: /Reason/ }).fill('e2e: demoting back to baseline');
   await page.getByRole('button', { name: 'Make learner' }).last().click();
   await expect(page.getByText(`Role of ${users.target.email} changed to learner.`)).toBeVisible();
+  await expect(manage.getByTitle('Click to toggle role')).toHaveText('Learner');
 
   const { data: profile } = await adminClient.from('profiles').select('role').eq('id', users.target.id).single();
   expect(profile.role).toBe('learner');
+  const { data: log } = await adminClient.from('admin_logs').select('action, reason').eq('target_id', users.target.id).order('created_at', { ascending: false }).limit(2);
+  expect(log.map((row) => row.reason)).toEqual(['e2e: demoting back to baseline', 'e2e: promoting for admin-users.spec coverage']);
 });
 
-test('lock blocks the account, unlock restores it, both visible in the Status column', async ({ page }) => {
-  let row = await searchFor(page, users.target.email);
-  await row.getByRole('button', { name: 'Lock' }).click();
+test('lock blocks the account, unlock restores it, both visible in the Status row', async ({ page }) => {
+  const manage = await openManage(page, users.target.email);
+  await manage.getByRole('button', { name: /Lock Account/ }).click();
   await page.getByRole('textbox', { name: /Reason/ }).fill('e2e: locking for admin-users.spec coverage');
-  await page.getByRole('button', { name: 'Lock account' }).click();
+  await page.getByRole('button', { name: 'Lock account', exact: true }).click();
   await expect(page.getByText(`${users.target.email} locked.`)).toBeVisible();
-
-  row = page.getByRole('row').filter({ hasText: users.target.email });
-  await expect(row.getByText('Locked')).toBeVisible();
+  await expect(manage.getByText('Locked', { exact: true })).toBeVisible();
 
   // The lock is real, not just a UI flag: the target can no longer log in.
   await expect(signIn(users.target.email, users.target.password)).rejects.toThrow(/banned|locked/i);
 
-  await row.getByRole('button', { name: 'Unlock' }).click();
+  await manage.getByRole('button', { name: /Unlock Account/ }).click();
   await page.getByRole('textbox', { name: /Reason/ }).fill('e2e: unlocking to restore baseline');
-  await page.getByRole('button', { name: 'Unlock account' }).click();
+  await page.getByRole('button', { name: 'Unlock account', exact: true }).click();
   await expect(page.getByText(`${users.target.email} unlocked.`)).toBeVisible();
 
   const { data: profile } = await adminClient.from('profiles').select('is_locked').eq('id', users.target.id).single();

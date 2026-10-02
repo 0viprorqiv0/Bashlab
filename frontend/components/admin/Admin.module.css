@@ -242,7 +242,7 @@
 .pager { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .pager div { display: flex; gap: 6px; }
 
-.backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(0, 0, 0, .72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.backdrop { position: fixed; inset: 0; z-index: 2000; /* above the Manage User modal (1000), which opens the reason dialog */ background: rgba(0, 0, 0, .72); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .dialog { width: min(460px, 100%); background: #141414; border: 1px solid #353535; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 12px; color: var(--ink); }
 .dialog h2 { font-family: var(--font-headline); font-size: 20px; font-weight: 500; }
 .dialog > p { color: var(--muted); font-size: 14px; line-height: 1.5; }

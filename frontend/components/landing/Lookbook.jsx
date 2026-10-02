@@ -11,7 +11,6 @@ import CuriosityWord from './animations/CuriosityWord';
 import ReviewsSponsors from './ReviewsSponsors';
 import SubscriptionTeaser from './SubscriptionTeaser';
 import { getTabCompletions, findCommonPrefix } from './terminalTabCompletion';
-import { getFirstIncompleteLab } from '@/data/labsData';
 import Footer from '../layout/Footer';
 
 /* Cyber backdrop loads independently from main content */
@@ -433,12 +432,11 @@ function renderQuoteContent(quote, charCount, isIdle) {
 export default function Lookbook() {
   const router = useRouter();
   const { user } = useAuth();
-  const firstIncompleteLab = getFirstIncompleteLab();
   // Decided at click time (not render time) so server and client markup match.
   const startLearning = (event) => {
     if (user || authClient.peekUserId()) return; // signed in: follow the link
     event.preventDefault();
-    router.push(`/login?next=${encodeURIComponent(firstIncompleteLab ? `/courses/shell-101/labs/${firstIncompleteLab.id}` : '/courses/shell-101')}`);
+    router.push(`/login?next=${encodeURIComponent('/courses/shell-101')}`);
   };
   const sectionRefs = useRef([]);
   const scrollTimer = useRef(null);
@@ -2406,7 +2404,7 @@ export default function Lookbook() {
             </p>
             <div className={styles.heroCtas}>
               <a
-                href={firstIncompleteLab ? `/courses/shell-101/labs/${firstIncompleteLab.id}` : '/courses/shell-101'}
+                href="/courses/shell-101" // the course page sends the learner to the first lab they have not solved
                 className={styles.btnPrimary}
                 onClick={startLearning}
               >
