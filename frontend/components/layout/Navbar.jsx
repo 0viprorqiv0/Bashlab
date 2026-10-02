@@ -135,6 +135,12 @@ export default function Navbar({ isTransparent = false }) {
                     <span className="material-symbols-outlined text-base text-secondary">school</span>
                     My Learning
                   </Link>
+                  {user.role === 'Admin' && (
+                    <Link href="/admin/activity" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors">
+                      <span className="material-symbols-outlined text-base text-teal-400">monitoring</span>
+                      System Dashboard
+                    </Link>
+                  )}
                   <div className="border-t border-divider-border/60 my-1" />
                   <button type="button" onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
                     <span className="material-symbols-outlined text-base">logout</span>
@@ -209,10 +215,16 @@ export default function Navbar({ isTransparent = false }) {
                     Account &amp; Security
                   </Link>
                   {user.role === 'Admin' && (
-                    <Link href="/admin/content" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
-                      <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
-                      Admin
-                    </Link>
+                    <>
+                      <Link href="/admin/activity" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
+                        <span className="material-symbols-outlined text-base text-teal-400">monitoring</span>
+                        System Dashboard
+                      </Link>
+                      <Link href="/admin/content" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
+                        <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
+                        Admin
+                      </Link>
+                    </>
                   )}
                   <button type="button" onClick={handleLogout} className="text-sm font-code text-red-400 hover:text-red-300 flex items-center gap-2 py-2 focus-visible text-left">
                     <span className="material-symbols-outlined text-base">logout</span>

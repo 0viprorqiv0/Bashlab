@@ -224,3 +224,30 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
   * **Automated Backend Tests**: `npm --prefix backend test` $\rightarrow$ **74/74 tests PASS**.
 * **Trạng thái**: Hoàn thành kiểm thử và báo cáo.
 
+---
+
+### [2026-10-02 21:48] Sửa lỗi & Kích hoạt toàn diện hệ thống Dashboard (Admin Activity & Learner My Learning)
+
+* **Hiện tượng & Phân tích nguyên nhân**:
+  1. **Container Prometheus chưa chạy**: Trước đó container `bashlab-prometheus` trong `monitoring/docker-compose.yml` chưa được bật. Khi truy cập Dashboard Quản trị (`/admin/activity`), backend trả về `"available": false, "reason": "Prometheus is not reachable."`, giao diện hiện thông báo *"Prometheus is not connected."*, toàn bộ chỉ số thời gian thực (`Commands / min`, `API requests / min`, `API error rate`, v.v.) hiện dấu gạch ngang `"—"` và các biểu đồ time series bị trống.
+  2. **Đường dẫn `/dashboard` trả về HTTP 404**: Người dùng khi gõ trực tiếp `http://localhost:3000/dashboard` trên thanh địa chỉ trình duyệt bị lỗi 404 Not Found do Next.js chưa có route `/dashboard`.
+  3. **Thiếu liên kết Dashboard trực tiếp trên thanh điều hướng**: Menu dropdown người dùng chỉ có "My Learning" và "Account & Security", chưa có link dẫn trực tiếp đến "System Dashboard" cho quyền Admin.
+* **Các thay đổi đã triển khai**:
+  * **Hạ tầng Monitoring**: Khởi chạy cụm container giám sát `bashlab-prometheus` (cổng 9090) và `bashlab-grafana` (cổng 3002) qua `docker compose -f monitoring/docker-compose.yml up -d`. Prometheus đã kết nối cào dữ liệu (`scrape_interval: 15s`) thành công từ `http://host.docker.internal:3001/metrics` với trạng thái `health: up`.
+  * **Tạo Route Điều Hướng Thông Minh [`frontend/app/(site)/dashboard/page.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/app/(site)/dashboard/page.js)**:
+    * Người dùng chưa đăng nhập $\rightarrow$ Điều hướng về `/login?next=/dashboard`.
+    * Học viên (Learner) $\rightarrow$ Tự động điều hướng về `/my-learning` (Learning Dashboard: tiến độ, streak ngày, số giờ thực hành).
+    * Quản trị viên (Admin) $\rightarrow$ Tự động điều hướng về `/admin/activity` (System Dashboard: tải sandbox, lệnh thực thi, CPU, RAM, lỗi API).
+  * **Bổ sung Liên kết trên Navbar [`frontend/components/layout/Navbar.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/layout/Navbar.jsx)**: Thêm mục "System Dashboard" (icon `monitoring`) vào menu avatar dropdown và mobile menu cho tài khoản có quyền Admin.
+* **Kiểm chứng thực tế (Real-browser Verification)**:
+  * Kiểm tra API: `GET /api/admin/dashboard?range=1h` $\rightarrow$ Trả về HTTP 200, `available: true`, đầy đủ chuỗi dữ liệu Prometheus (`sessions`, `jobsActive`, `commands`, `http`, `memoryMb`, `cpu`).
+  * Kiểm tra trình duyệt thực tế qua Playwright:
+    * `/dashboard` chưa đăng nhập $\rightarrow$ Chuyển hướng về `/login?next=/dashboard`.
+    * `/dashboard` với Learner $\rightarrow$ Mở trang `/my-learning` ([`frontend/screenshots/dashboard-learner-redirect.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/dashboard-learner-redirect.png)).
+    * `/dashboard` với Admin $\rightarrow$ Mở trang `/admin/activity` ([`frontend/screenshots/dashboard-admin-redirect.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/dashboard-admin-redirect.png)) với đầy đủ 8 biểu đồ thời gian thực trực quan.
+    * Menu dropdown hiển thị "System Dashboard" trực quan ([`frontend/screenshots/admin-dropdown-with-dashboard.png`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/screenshots/admin-dropdown-with-dashboard.png)).
+  * ESLint: `npm --prefix frontend run lint` $\rightarrow$ **0 warnings, 0 errors**.
+  * E2E Suites: **15/15 tests pass 100%**.
+* **Trạng thái**: Hoàn thành.
+
+
