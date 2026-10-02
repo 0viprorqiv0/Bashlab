@@ -28,6 +28,8 @@ test.afterAll(async () => {
 
 test('Sessions tab lists the active session and Stop records a reason + updates status', async ({ page }) => {
   await page.goto('/admin/activity');
+  await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Sessions' }).click();
   await expect(page.getByRole('tab', { name: 'Sessions' })).toHaveAttribute('aria-selected', 'true');
 
   const row = page.getByRole('row').filter({ hasText: users.target.email });

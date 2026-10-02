@@ -39,7 +39,8 @@ npm start
 
 ### Bước 3: Mở Dashboard trên Trình Duyệt
 Truy cập: **[http://localhost:3002](http://localhost:3002)**
-- **Đăng nhập:** Đã cấu hình Anonymous Admin (vào thẳng Dashboard không cần gõ mật khẩu).
+- **Đăng nhập:** khách ẩn danh chỉ xem được (Viewer); muốn sửa dashboard đăng nhập `admin` với mật khẩu `GRAFANA_ADMIN_PASSWORD` (mặc định `admin` — đổi khi không phải máy dev). Prometheus/Grafana chỉ mở trên `127.0.0.1`.
+- **Trang Activity trong web admin** cũng vẽ biểu đồ từ Prometheus này (API đọc server-side qua `PROMETHEUS_URL`), không cần mở Grafana; đặt `NEXT_PUBLIC_GRAFANA_URL` để thêm nút "Open Grafana". Ngoài môi trường dev, đặt `METRICS_TOKEN` cho API và bật `authorization.credentials_file` trong `prometheus.yml`.
 - **Dashboard:** Tự động mở sẵn giao diện **`BashLab — Operations & Sandbox Monitor`**.
 
 ---

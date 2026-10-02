@@ -82,10 +82,12 @@ export class SessionManager {
   }
 
   // All execute/check/reset/delete/reaper paths share this synchronous lock.
-  acquire(id) {
+  acquire(id, { allowQuarantined = false } = {}) {
     const session = this.get(id);
     if (session.busy) throw new HttpError(409, 'SESSION_BUSY', 'Another operation is using this session');
-    if (session.quarantined) throw new HttpError(503, 'SESSION_QUARANTINED', 'Runner completion is unknown; restart runner and API before recovery');
+    if (session.quarantined && !allowQuarantined) {
+      throw new HttpError(503, 'SESSION_QUARANTINED', 'Runner completion is unknown; restart runner and API before recovery');
+    }
     session.busy = true;
     session.lastActiveAt = Date.now();
     let released = false;
@@ -97,8 +99,8 @@ export class SessionManager {
     };
   }
 
-  async withSession(id, operation) {
-    const release = this.acquire(id);
+  async withSession(id, operation, options = {}) {
+    const release = this.acquire(id, options);
     try { return await operation(this.get(id)); } finally { release(); }
   }
 

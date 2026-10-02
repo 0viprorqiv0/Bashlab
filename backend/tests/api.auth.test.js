@@ -92,3 +92,48 @@ test('one learner cannot exhaust the sandbox: open sessions are capped per user'
   assert.equal((await call('alice', 'DELETE', `/api/sessions/${first.sessionId}`)).status, 204);
   assert.equal((await call('alice', 'POST', '/api/sessions', {})).status, 201);
 });
+
+test('session lifecycle: same-lab start is idempotent, active session lookup works, switching labs replaces old session', async (t) => {
+  const { call } = await startApp(t, fakeAuth());
+  const lab1 = '11111111-1111-4111-8111-111111111111';
+  const lab2 = '22222222-2222-4222-8222-222222222222';
+
+  // Initially no active session
+  const initialActive = await (await call('alice', 'GET', '/api/sessions/active')).json();
+  assert.equal(initialActive.active, false);
+
+  // Start Lab 1
+  const start1 = await call('alice', 'POST', '/api/sessions', { lessonId: lab1 });
+  assert.equal(start1.status, 201);
+  const data1 = await start1.json();
+  assert.ok(data1.sessionId);
+
+  // Active session returns Lab 1 session
+  const activeRes = await (await call('alice', 'GET', '/api/sessions/active')).json();
+  assert.equal(activeRes.active, true);
+  assert.equal(activeRes.session.sessionId, data1.sessionId);
+  assert.equal(activeRes.session.lessonId, lab1);
+
+  // Re-starting Lab 1 returns existing session (status 200, reused: true)
+  const restart1 = await call('alice', 'POST', '/api/sessions', { lessonId: lab1 });
+  assert.equal(restart1.status, 200);
+  const restartData = await restart1.json();
+  assert.equal(restartData.sessionId, data1.sessionId);
+  assert.equal(restartData.reused, true);
+
+  // Starting Lab 2 automatically cleans up Lab 1 and opens a new session
+  const start2 = await call('alice', 'POST', '/api/sessions', { lessonId: lab2 });
+  assert.equal(start2.status, 201);
+  const data2 = await start2.json();
+  assert.notEqual(data2.sessionId, data1.sessionId);
+
+  // Lab 1 session is now gone (404)
+  assert.equal((await call('alice', 'GET', `/api/sessions/${data1.sessionId}`)).status, 404);
+
+  // Active session is now Lab 2
+  const active2 = await (await call('alice', 'GET', '/api/sessions/active')).json();
+  assert.equal(active2.active, true);
+  assert.equal(active2.session.sessionId, data2.sessionId);
+  assert.equal(active2.session.lessonId, lab2);
+});
+

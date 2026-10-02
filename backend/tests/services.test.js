@@ -26,6 +26,13 @@ test('session lock excludes execution, reset and reaping until release', async t
   assert.equal(await reapOnce(manager, Date.now()), 1);
   assert.throws(() => manager.get(session.id), { status: 404 });
 });
+test('reaper cleans up expired quarantined sessions', async t => {
+  const { manager, session } = await setup(t);
+  session.quarantined = true;
+  session.lastActiveAt = 0;
+  assert.equal(await reapOnce(manager, Date.now()), 1);
+  assert.throws(() => manager.get(session.id), { status: 404 });
+});
 test('quota counts home and tmp, ignores symlink targets, reset restores session', async t => {
   const { manager, session } = await setup(t);
   await fs.symlink('/usr', path.join(session.workspacePath, 'home/link'));

@@ -1,8 +1,8 @@
 export async function reapOnce(manager, now = Date.now(), ttlMs = 30 * 60 * 1000) {
   let count = 0;
   for (const session of manager.sessions.values()) {
-    if (session.busy || session.quarantined || now - session.lastActiveAt <= ttlMs) continue;
-    const release = manager.acquire(session.id);
+    if (session.busy || now - session.lastActiveAt <= ttlMs) continue;
+    const release = manager.acquire(session.id, { allowQuarantined: true });
     try { await manager.remove(session); count++; } finally { release(); }
   }
   for (const session of manager.orphans.values()) {

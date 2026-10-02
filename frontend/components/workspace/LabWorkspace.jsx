@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, notFound } from 'next/navigation';
 import { useCourseLabs } from '@/lib/courseLabs';
 import { PageError, PageLoading } from '@/components/shared/Loading';
-import { checkSolution, createSession, endSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
+import { checkSolution, createSession, endSession, getActiveSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { authClient } from '@/lib/authClient';
 import styles from './LabWorkspace.module.css';
@@ -112,7 +112,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [instanceStatus, setInstanceStatus] = useState(sandboxEnabled ? 'restarting' : 'stopped'); // 'running' | 'stopped' | 'restarting'
+  const [instanceStatus, setInstanceStatus] = useState('stopped'); // 'running' | 'stopped' | 'restarting'
   const [isMaximized, setIsMaximized] = useState(false);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -122,7 +122,39 @@ function Workspace({ courseId, labId, labs, markDone }) {
     setShowHint(false);
   }, [labId]);
 
-  // Start instance: opens a real sandbox session via the backend API.
+  // Check if an active session already exists for this lesson on load or lab change
+  useEffect(() => {
+    if (!sandboxEnabled) {
+      setInstanceStatus('stopped');
+      return;
+    }
+    let cancelled = false;
+    getActiveSession()
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.active && res.session && res.session.lessonId === currentLab?.lessonId) {
+          sessionIdRef.current = res.session.sessionId;
+          setCwd(res.session.cwd || HOME);
+          setInstanceStatus('running');
+          setTerminalLogs((prev) => [
+            ...prev,
+            { type: 'output', text: `BashLab Cloud Shell (Reconnected).\nWorkspace: ${res.session.cwd || HOME}\nFocus commands for this lab: ${(currentLab?.commands || []).join(', ')}` }
+          ]);
+        } else {
+          sessionIdRef.current = null;
+          setInstanceStatus('stopped');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setInstanceStatus('stopped');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLab?.lessonId]);
+
+  // Start instance: opens or attaches a real sandbox session via the backend API.
   async function handleStartInstance() {
     if (!sandboxEnabled) {
       setInstanceStatus('stopped');
@@ -137,7 +169,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
       setInstanceStatus('running');
       setTerminalLogs((prev) => [
         ...prev,
-        { type: 'output', text: `BashLab Cloud Shell (Ready).\nWorkspace: ${session.cwd}\nFocus commands for this lab: ${currentLab.commands.join(', ')}` }
+        { type: 'output', text: `BashLab Cloud Shell (${session.reused ? 'Reconnected' : 'Ready'}).\nWorkspace: ${session.cwd}\nFocus commands for this lab: ${currentLab.commands.join(', ')}` }
       ]);
       inputRef.current?.focus();
     } catch (error) {
@@ -180,14 +212,6 @@ function Workspace({ courseId, labId, labs, markDone }) {
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Restart failed: ${error.message}` }]);
     }
   }
-
-  // Open a sandbox session as soon as the lab loads; close it on the way out
-  // (lab change or navigating away) so containers do not leak.
-  useEffect(() => {
-    handleStartInstance();
-    return () => { if (sessionIdRef.current) endSession(sessionIdRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Green button: Maximize / Minimize
   function handleToggleMaximize() {

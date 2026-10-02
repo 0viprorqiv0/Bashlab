@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import fs from 'node:fs/promises';
+import { timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { SessionManager } from './services/sessionManager.js';
 import { SandboxRunner } from './services/sandboxRunner.js';
@@ -14,6 +15,7 @@ import { rateLimiter } from './middleware/rateLimit.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createContentRouter } from './routes/content.js';
 import { createContentService, isUuid } from './services/contentService.js';
+import { createDashboardService } from './services/dashboardService.js';
 import { createAuthService } from './services/authService.js';
 import { createSupabaseAdmin, createSupabaseAnonFactory, createSupabaseUserFactory } from './lib/supabaseAdmin.js';
 
@@ -46,15 +48,36 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   }));
   // credentials: the refresh-token cookie travels on cross-origin fetches from the allow-listed frontend only.
   app.use(cors({ origin: origins, credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
+  // Every request feeds the admin dashboard (Prometheus scrapes /metrics).
+  app.use((req, res, next) => {
+    const started = process.hrtime.bigint();
+    res.on('finish', () => {
+      if (req.path === '/metrics' || req.path === '/health') return;
+      metrics.recordHttp(req.method, req.originalUrl, res.statusCode, Number(process.hrtime.bigint() - started) / 1e9);
+    });
+    next();
+  });
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
   // Prometheus and JSON metrics endpoint
   app.get('/metrics', (req, res, next) => {
-    const ip = req.socket.remoteAddress || '';
-    const isAllowed = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)
-      || process.env.METRICS_ALLOW_ALL === 'true'
-      || ip.startsWith('172.') || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('::ffff:172.');
-    if (!isAllowed) return next(new HttpError(403, 'LOCAL_ONLY', 'Local metrics only'));
+    // With METRICS_TOKEN set (production), only a caller presenting it may read
+    // metrics — no matter which network it comes from. Without a token this
+    // stays a development convenience: loopback and private networks only.
+    const token = process.env.METRICS_TOKEN;
+    if (token) {
+      const presented = Buffer.from((req.headers.authorization || '').replace(/^Bearer /, ''));
+      const expected = Buffer.from(token);
+      if (presented.length !== expected.length || !timingSafeEqual(presented, expected)) {
+        return next(new HttpError(401, 'UNAUTHENTICATED', 'Metrics require a bearer token'));
+      }
+    } else {
+      const ip = req.socket.remoteAddress || '';
+      const isAllowed = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)
+        || process.env.METRICS_ALLOW_ALL === 'true'
+        || ip.startsWith('172.') || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('::ffff:172.');
+      if (!isAllowed) return next(new HttpError(403, 'LOCAL_ONLY', 'Local metrics only'));
+    }
 
     const wantsJson = req.query.format === 'json'
       || req.headers['content-type'] === 'application/json'
@@ -82,7 +105,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   // rate limits): before the shared limiter below, which is sized for sandbox
   // commands and would throttle an admin editing content.
   if (auth && content) {
-    app.use('/api', createContentRouter({ service: content.service, authenticate: auth.authenticate, isAdmin: auth.isAdmin, limits: content.limits }));
+    app.use('/api', createContentRouter({ service: content.service, dashboard: content.dashboard, authenticate: auth.authenticate, isAdmin: auth.isAdmin, limits: content.limits }));
   }
   app.use('/api', rateLimiter(rateMax));
   if (!sandbox) {
@@ -92,6 +115,8 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   // sessionId -> userId. Kept here (not in SessionManager) so ownership is an
   // API concern layered on top of the sandbox services.
   const owners = new Map();
+  // sessionId -> lessonId
+  const sessionLessons = new Map();
   // sandbox session id -> practice_sessions row, so the admin Activity page
   // reflects reality without the browser writing those rows itself.
   const records = new Map();
@@ -101,13 +126,25 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     records.delete(sessionId);
     content.service.closePracticeRecord(recordId).catch(() => {});
   };
+  const cleanupStaleSession = (sessionId) => {
+    owners.delete(sessionId);
+    sessionLessons.delete(sessionId);
+    closeRecord(sessionId);
+  };
   const liveSessionsOf = (userId) => {
     let count = 0;
     for (const [id, owner] of owners) {
-      if (!manager.sessions.has(id)) { owners.delete(id); closeRecord(id); } // expired/reaped
+      if (!manager.sessions.has(id)) cleanupStaleSession(id); // expired/reaped
       else if (owner === userId) count++;
     }
     return count;
+  };
+  const activeSessionOf = (userId) => {
+    for (const [id, owner] of owners) {
+      if (!manager.sessions.has(id)) cleanupStaleSession(id);
+      else if (owner === userId) return manager.get(id);
+    }
+    return null;
   };
   // Another user's session answers exactly like a missing one, so session
   // ids can't be probed for existence.
@@ -121,29 +158,69 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     // An admin stopping a learner's session also ends the sandbox behind it.
     app.on('practice-session-stopped', (sandboxSessionId) => {
       if (!sandboxSessionId || !manager.sessions.has(sandboxSessionId)) return;
-      manager.withSession(sandboxSessionId, (session) => manager.remove(session)).catch(() => {});
-      owners.delete(sandboxSessionId);
-      records.delete(sandboxSessionId);
+      manager.withSession(sandboxSessionId, (session) => manager.remove(session), { allowQuarantined: true }).catch(() => {});
+      cleanupStaleSession(sandboxSessionId);
     });
   }
   if (auth) app.use('/api', auth.authenticate);
 
   app.use(express.json({ limit: '16kb', strict: true }));
+  app.get('/api/sessions/active', (req, res) => {
+    if (!auth) throw new HttpError(503, 'SANDBOX_DISABLED', 'Authentication required for active session lookup');
+    const active = activeSessionOf(req.user.id);
+    if (!active) return res.json({ active: false, session: null });
+    res.json({
+      active: true,
+      session: {
+        ...manager.describe(active),
+        lessonId: sessionLessons.get(active.id) || null,
+      },
+    });
+  });
   app.post('/api/sessions', async (req, res) => {
-    if (auth && liveSessionsOf(req.user.id) >= (auth.maxSessionsPerUser ?? 3)) {
-      throw new HttpError(429, 'SESSION_LIMIT', 'Too many open sandbox sessions — close another lab tab first');
-    }
     const lessonId = req.body?.lessonId;
     if (lessonId !== undefined && lessonId !== null && !isUuid(lessonId)) {
       throw new HttpError(400, 'INVALID_INPUT', 'lessonId must be a valid id');
     }
+
+    if (auth) {
+      const active = activeSessionOf(req.user.id);
+      if (active) {
+        const boundLesson = sessionLessons.get(active.id);
+        // If starting the SAME lesson: idempotent return, workspace preserved
+        if (lessonId && boundLesson === lessonId) {
+          return res.status(200).json({
+            ...manager.describe(active),
+            lessonId,
+            reused: true,
+          });
+        }
+        // If switching lessons: stop/clean previous session and workspace down to 0
+        if (lessonId && boundLesson && boundLesson !== lessonId) {
+          await manager.withSession(active.id, (s) => manager.remove(s), { allowQuarantined: true });
+          cleanupStaleSession(active.id);
+        }
+      }
+
+      if (liveSessionsOf(req.user.id) >= (auth.maxSessionsPerUser ?? 3)) {
+        throw new HttpError(429, 'SESSION_LIMIT', 'Too many open sandbox sessions — close another lab tab first');
+      }
+    }
+
     const session = await manager.create();
-    if (auth) owners.set(session.id, req.user.id);
+    metrics.recordSessionCreated();
+    if (auth) {
+      owners.set(session.id, req.user.id);
+      if (lessonId) sessionLessons.set(session.id, lessonId);
+    }
     if (auth && content) {
       const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
       if (recordId) records.set(session.id, recordId);
     }
-    res.status(201).json(manager.describe(session));
+    res.status(201).json({
+      ...manager.describe(session),
+      ...(lessonId && { lessonId }),
+    });
   });
   app.get('/api/sessions/:id', ownSession, (req, res) => res.json(manager.describe(manager.get(req.params.id))));
   app.post('/api/sessions/:id/execute', ownSession, async (req, res) => {
@@ -182,9 +259,11 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     res.json(result);
   });
   app.post('/api/sessions/:id/check', ownSession, async (req, res) => {
+    const boundLesson = sessionLessons.get(req.params.id);
+    const lessonToCheck = boundLesson || req.body?.lessonId;
     res.json(await manager.withSession(req.params.id, async session => {
       await manager.checkQuota(session);
-      return verifyTask(session, req.body?.lessonId);
+      return verifyTask(session, lessonToCheck);
     }));
   });
   app.post('/api/sessions/:id/reset', ownSession, async (req, res) => {
@@ -198,9 +277,8 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     if (auth && owners.get(req.params.id) !== req.user.id && !(await auth.isAdmin(req.user.id))) {
       throw new HttpError(404, 'SESSION_NOT_FOUND', 'Session not found');
     }
-    await manager.withSession(req.params.id, session => manager.remove(session));
-    owners.delete(req.params.id);
-    closeRecord(req.params.id);
+    await manager.withSession(req.params.id, session => manager.remove(session), { allowQuarantined: true });
+    cleanupStaleSession(req.params.id);
     res.sendStatus(204);
   });
   app.use((_req, _res, next) => next(new HttpError(404, 'NOT_FOUND', 'Endpoint not found')));
@@ -223,6 +301,7 @@ function servicesFromEnv() {
     return {
       content: {
         service: createContentService({ admin, userClient: createSupabaseUserFactory() }),
+        dashboard: createDashboardService({ admin, prometheusUrl: process.env.PROMETHEUS_URL || 'http://localhost:9090' }),
         limits: {
           ...(process.env.CONTENT_RATE_LIMIT_IP && { perIp: Number(process.env.CONTENT_RATE_LIMIT_IP) }),
           ...(process.env.CONTENT_RATE_LIMIT_USER && { perUser: Number(process.env.CONTENT_RATE_LIMIT_USER) }),
@@ -282,12 +361,23 @@ export async function startServer() {
   } else {
     console.warn('Sandbox disabled (SANDBOX_ENABLED=false): only the auth API is served.');
   }
+  // Keep the admin Activity numbers honest: sandbox sessions die with the
+  // process, so rows still 'active' at startup are stale; afterwards, rows idle
+  // past the sandbox's own 30-minute TTL are expired every few minutes.
+  let sweeper = null;
+  if (content) {
+    content.service.expireStalePracticeSessions({ olderThanMs: 0 })
+      .then((n) => { if (n) console.log(`Marked ${n} stale practice session(s) as expired.`); }).catch(() => {});
+    sweeper = setInterval(() => content.service.expireStalePracticeSessions().catch(() => {}), 5 * 60 * 1000);
+    sweeper.unref();
+  }
   const host = process.env.HOST || '0.0.0.0';
   const server = createApp({ manager, runner, auth, authApi, content, sandbox }).listen(Number(process.env.PORT || 3001), host, () => {
     console.log(`BashLab API listening on http://${host}:${server.address().port}`);
   });
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
     stopReaper();
+    if (sweeper) clearInterval(sweeper);
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 15000).unref();
   });
