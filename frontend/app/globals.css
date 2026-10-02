@@ -38,6 +38,11 @@ html {
 }
 
 /* Khóa cố định thanh cuộn, ngăn Lenis (overflow: clip) hoặc modal làm ẩn scrollbar gây giật layout ngang */
+html.lenis,
+html.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
 html.lenis.lenis-stopped,
 html.lenis-stopped,
 .lenis:not(.lenis-autoToggle).lenis-stopped,

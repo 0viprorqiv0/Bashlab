@@ -19,22 +19,24 @@ export default function SiteChrome({ children }) {
     <AuthProvider>
       {!isWorkspace && <SmoothScroll wheelMultiplier={pathname === '/' ? 2 : 1} />}
       <Navbar />
-      <main
-        className={
-          isWorkspace
-            ? styles.workspaceMain
-            : isAuthPage
-            ? styles.authMain
-            : isAppPage
-            ? styles.standardMain
-            : isLanding
-            ? styles.landingMain
-            : styles.defaultMain
-        }
-      >
-        {children}
-      </main>
-      {!isWorkspace && !isLanding && <Footer />}
+      <div className={styles.chromeContainer}>
+        <main
+          className={
+            isWorkspace
+              ? styles.workspaceMain
+              : isAuthPage
+              ? styles.authMain
+              : isAppPage
+              ? styles.standardMain
+              : isLanding
+              ? styles.landingMain
+              : styles.defaultMain
+          }
+        >
+          {children}
+        </main>
+        {!isWorkspace && !isLanding && <Footer isLanding />}
+      </div>
     </AuthProvider>
   );
 }

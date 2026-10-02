@@ -49,6 +49,9 @@
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  contain: strict;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .bgMedia {
@@ -58,6 +61,7 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
+  transform: translateZ(0);
 }
 
 .bgDimOverlay {
@@ -134,6 +138,7 @@
   transform: none !important;
 }
 .sLearn { background: var(--lb-paper); }
+.sReviews { background: var(--lb-paper); }
 .sCourse {
   background: var(--lb-course);
   height: 100vh;
@@ -1319,21 +1324,28 @@
 /* ---------- 04 REVIEWS & SPONSORS ---------- */
 .courseHead { margin-bottom: clamp(10px, 1.4vh, 16px); }
 
+.reviewHeader,
 .reviewsHead {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: clamp(12px, 1.8vh, 18px);
+  margin-bottom: clamp(8px, 1.4vh, 16px);
 }
 
+.reviewHeader .h2,
 .reviewsHead .h2 {
   text-align: center;
   margin: 0;
+  font-size: clamp(1.85rem, 3.2vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
 }
 
+.reviewHeader .philosophyTag,
 .reviewsHead .philosophyTag {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .courseHeadRow {
