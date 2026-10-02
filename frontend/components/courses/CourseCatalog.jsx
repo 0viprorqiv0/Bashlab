@@ -185,7 +185,7 @@ export default function CourseCatalog() {
             <article id={`course-${course.id}`} className={styles.featured} key={course.id}>
               <div className={styles.featureCopy}>
                 <div className={styles.featureTopline}><span className={styles.availableDot} /> Available now <span className={styles.toplineDivider} /> {course.category}</div>
-                <h2><Link href={`/courses/${course.id}`}>{course.title}</Link></h2>
+                <h2>{course.title}</h2>
                 <p className={styles.featureDescription}>{course.description}</p>
                 <div className={styles.featureMeta} aria-label="Course details">
                   <span>{course.level}</span><span>{course.chapters} chapters</span><span>{course.lessons} lessons</span><span>{course.duration}</span>

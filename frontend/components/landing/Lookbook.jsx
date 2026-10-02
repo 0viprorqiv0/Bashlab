@@ -31,7 +31,7 @@ const PAGES = [
 const RESPONSES = {
   'cat about.txt': { out: 'BashLab provides short guided lessons, real browser practice, and requirement feedback.', desc: 'Displaying text file contents with cat.' },
   'cat getting-started.txt': { out: 'Browse courses -> open a course -> choose a lesson -> start practicing.', desc: 'Getting started guide loaded.' },
-  courses: { out: 'Shell 101 — Bash Basics [Available now at /courses/shell-101]', desc: 'Explore the full course syllabus in the course section below.' },
+  courses: { out: 'Shell 101 — Bash Basics [Available now at /courses]', desc: 'Explore courses in the catalog.' },
 };
 
 function preparePingPlan(cmd) {

@@ -133,3 +133,33 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
   * Visual Browser Verification: Script thực tế Playwright click vào nút "Start learning" từ `http://localhost:3000/` $\rightarrow$ URL chuyển sang `http://localhost:3000/courses` thành công và hiển thị đầy đủ danh sách khóa học.
 * **Trạng thái**: Hoàn thành.
 
+---
+
+### [2026-10-02 21:10] Xóa trang syllabus / chi tiết khóa học `/courses/shell-101`
+
+* **Yêu cầu**:
+  * "trnag này k cần nx http://localhost:3000/courses/shell-101, xóa đi": Xóa bỏ hoàn toàn trang `http://localhost:3000/courses/shell-101` vì luồng ứng dụng học trực tiếp qua "Go to Lab" thẳng vào không gian thực hành `/courses/shell-101/labs/[labId]`, không cần trang trung gian syllabus.
+* **Các thay đổi thực hiện**:
+  * [`frontend/app/(site)/courses/[slug]/page.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/app/(site)/courses/[slug]/page.js):
+    * Đã xóa file route `[slug]/page.js` $\rightarrow$ truy cập `/courses/shell-101` trả về mã trạng thái chuẩn **404: Page Not Found**. Các lab con `/courses/shell-101/labs/[labId]` vẫn hoạt động hoàn hảo.
+  * [`frontend/components/courses/CourseDetail.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/courses/CourseDetail.jsx) & [`frontend/components/courses/CourseDetail.module.css`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/courses/CourseDetail.module.css):
+    * Đã xóa component và file style không còn sử dụng để giữ codebase gọn gàng, sạch sẽ, không có code thừa.
+  * [`frontend/components/courses/CourseCatalog.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/courses/CourseCatalog.jsx) & [`frontend/components/courses/CourseCatalog.module.css`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/courses/CourseCatalog.module.css):
+    * Xóa thẻ `<Link>` bọc quanh tiêu đề `<h2>` của thẻ khóa học, chuyển thành text tĩnh chuẩn mực để tránh người dùng click vào trang đã xóa.
+  * [`frontend/components/learning/LearningDashboard.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/learning/LearningDashboard.jsx):
+    * Cập nhật fallback URL `startHref` khi khóa học đã hoàn thành để quay lại lab 1 thay vì trang chi tiết cũ.
+  * [`frontend/components/landing/Lookbook.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/landing/Lookbook.jsx):
+    * Cập nhật phản hồi terminal mẫu `courses` trỏ về `/courses`.
+  * Cập nhật các bộ E2E specs tương ứng:
+    * [`frontend/tests/e2e/specs/landing-start-learning.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/landing-start-learning.spec.js): Kiểm chứng tiêu đề thẻ catalog không có link và `/courses/shell-101` trả về 404.
+    * [`frontend/tests/e2e/specs/smoke.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/smoke.spec.js): Kiểm tra catalog hiển thị đúng các khóa học và `/courses/shell-101` trả về 404.
+    * [`frontend/tests/e2e/specs/courses-and-progress.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/courses-and-progress.spec.js) & [`frontend/tests/e2e/specs/lab-progress.spec.js`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/tests/e2e/specs/lab-progress.spec.js): Bỏ phụ thuộc vào bảng labs cũ của `/courses/shell-101`, kiểm chứng tiến độ trực tiếp qua không gian lab workspace và My Learning.
+* **Kiểm chứng thực tế**:
+  * Frontend Linter: `npm --prefix frontend run lint` $\rightarrow$ **0 errors, 0 warnings**.
+  * Backend test suite: `npm --prefix backend test` $\rightarrow$ **70/70 tests pass 100%**.
+  * Frontend E2E suites: `smoke`, `courses-and-progress`, `lab-progress`, `landing-start-learning` $\rightarrow$ **21/21 tests pass 100%**.
+  * Visual Browser Verification:
+    * Truy cập `http://localhost:3000/courses/shell-101` $\rightarrow$ trả về HTTP 404 ([`screenshots/courses-shell-101-deleted-404.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/courses-shell-101-deleted-404.png)).
+    * Truy cập `http://localhost:3000/courses` $\rightarrow$ catalog khóa học hiển thị gọn gàng, tiêu đề không chứa link thừa, nút "Go to Lab" chuyển thẳng vào lab ([`screenshots/courses-catalog-after-delete.png`](file:///home/light/Documents/B3/web_app/Bashlab/screenshots/courses-catalog-after-delete.png)).
+* **Trạng thái**: Hoàn thành.
+

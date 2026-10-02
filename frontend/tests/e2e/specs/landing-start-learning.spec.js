@@ -78,10 +78,13 @@ test.describe('signed-in learner', () => {
     await expect(page.getByRole('heading', { name: /Inspecting Files/i }).first()).toBeVisible();
   });
 
-  test('Course title link on catalog card navigates to course detail page', async ({ page }) => {
+  test('Course title on catalog card has no link and /courses/shell-101 returns 404', async ({ page }) => {
     await page.goto('/courses');
-    await page.getByRole('heading', { name: 'Shell 101 — Bash Basics' }).getByRole('link').click();
-    await page.waitForURL('**/courses/shell-101');
-    await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
+    const title = page.getByRole('heading', { name: 'Shell 101 — Bash Basics' });
+    await expect(title).toBeVisible();
+    await expect(title.getByRole('link')).toHaveCount(0);
+
+    const res = await page.goto('/courses/shell-101');
+    expect(res.status()).toBe(404);
   });
 });

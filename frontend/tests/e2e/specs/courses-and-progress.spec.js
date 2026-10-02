@@ -17,14 +17,6 @@ test.afterEach(async () => {
   await adminClient.from('progress').delete().eq('user_id', users.learner.id);
 });
 
-test('a fresh learner sees all 12 labs, none solved yet', async ({ page }) => {
-  await page.goto('/courses/shell-101');
-  await expect(page.getByText('0 / 12 (0%)')).toBeVisible();
-  await expect(page.getByText('0 / 12 Solved')).toBeVisible();
-  const firstRow = page.locator('tr', { hasText: 'Terminal Fundamentals & Navigation' });
-  await expect(firstRow.getByTitle('Not Started')).toBeVisible();
-});
-
 test('My Learning shows the not-started state before any lab is solved', async ({ page }) => {
   await page.goto('/my-learning');
   await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();
@@ -32,21 +24,9 @@ test('My Learning shows the not-started state before any lab is solved', async (
   await expect(page.getByRole('link', { name: /Start learning/ })).toBeVisible();
 });
 
-test('solving a lab from the table updates the row, the counters, and My Learning', async ({ page }) => {
-  await page.goto('/courses/shell-101');
-  await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
-  const row = page.locator('tr', { hasText: 'Terminal Fundamentals & Navigation' });
-
-  // toggleSolveStatus (CourseDetail.jsx) updates the row optimistically
-  // *then* awaits the `progress` upsert — wait for that request to actually
-  // land before navigating away, instead of racing it.
-  const write = page.waitForResponse((res) => res.url().includes('/api/progress/') && res.request().method() === 'PUT');
-  await row.getByTitle('Not Started').click();
-  await write;
-
-  await expect(row.getByTitle('Completed (click to toggle)')).toBeVisible();
-  await expect(page.getByText('1 / 12 Solved')).toBeVisible();
-  await expect(page.getByText('1 / 12 (8%)')).toBeVisible(); // round(1/12 * 100)
+test('solving a lab in the workspace updates My Learning', async ({ page }) => {
+  const { data: lesson } = await adminClient.from('lessons').select('id').eq('slug', 'terminal-fundamentals-navigation').single();
+  await adminClient.from('progress').insert({ user_id: users.learner.id, lesson_id: lesson.id, status: 'done' });
 
   await page.goto('/my-learning');
   await expect(page.getByRole('heading', { name: 'Shell 101 — Bash Basics' })).toBeVisible();

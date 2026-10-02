@@ -16,7 +16,15 @@ test('Check Solution saves progress and survives a reload; other pages agree', a
   await page.goto('/courses/shell-101/labs/1');
   await expect(page.getByRole('button', { name: 'Check Solution' })).toBeVisible();
 
-  const saved = page.waitForResponse((res) => res.url().includes('/api/progress/') && res.request().method() === 'PUT');
+  const saved = page.waitForResponse((res) => {
+    if (!res.url().includes('/api/progress/') || res.request().method() !== 'PUT') return false;
+    try {
+      const body = JSON.parse(res.request().postData() || '{}');
+      return body.status === 'done';
+    } catch {
+      return false;
+    }
+  });
   await page.getByRole('button', { name: 'Check Solution' }).click();
   expect((await saved).status()).toBe(204);
 
@@ -28,8 +36,8 @@ test('Check Solution saves progress and survives a reload; other pages agree', a
   await page.reload();
   await expect(page.getByText('Objective Tasks (4 of 4 completed)')).toBeVisible();
 
-  await page.goto('/courses/shell-101');
-  await expect(page.getByText('1 / 12 Solved')).toBeVisible();
+  await page.goto('/my-learning');
+  await expect(page.getByText('1 of 12 lessons completed')).toBeVisible();
 });
 
 test('a lab that was never solved shows as not completed, even where the built-in data says otherwise', async ({ page }) => {
@@ -38,23 +46,19 @@ test('a lab that was never solved shows as not completed, even where the built-i
   await expect(page.getByText(/^Objective Tasks \(0 of \d+ completed\)$/)).toBeVisible();
 });
 
-test('progress made on the course page is what the workspace shows', async ({ page }) => {
+test('progress made in database is what the workspace shows', async ({ page }) => {
   const { data: lesson } = await adminClient.from('lessons').select('id').eq('slug', 'terminal-fundamentals-navigation').single();
   await adminClient.from('progress').insert({ user_id: users.learner.id, lesson_id: lesson.id, status: 'done' });
   await page.goto('/courses/shell-101/labs/1');
   await expect(page.getByText('Objective Tasks (4 of 4 completed)')).toBeVisible();
 });
 
-test('the workspace lists the same labs as the course page, in the same order', async ({ page }) => {
-  await page.goto('/courses/shell-101');
-  await expect(page.locator('tbody tr').first()).toBeVisible();
-  const rows = await page.locator('tbody tr').count();
-  expect(rows).toBeGreaterThan(0);
+test('the workspace lists all published labs in chapter/lesson order in its drawer', async ({ page }) => {
   await page.goto('/courses/shell-101/labs/1');
-  await expect(page.getByText(`1 / ${rows}`)).toBeVisible();
+  await expect(page.getByText('1 / 12')).toBeVisible();
   await page.getByRole('button', { name: 'Lessons' }).click();
   await expect(page.getByRole('link', { name: /Terminal Fundamentals/ }).first()).toBeVisible();
-  await expect(page.locator('ol > li')).toHaveCount(rows);
-  await page.goto(`/courses/shell-101/labs/${rows + 1}`);
+  await expect(page.locator('ol > li')).toHaveCount(12);
+  await page.goto('/courses/shell-101/labs/13');
   await expect(page.getByText('404')).toBeVisible();
 });
