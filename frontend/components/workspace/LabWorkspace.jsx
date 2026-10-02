@@ -123,7 +123,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
   }, [labId]);
 
   // Start instance: opens a real sandbox session via the backend API.
-  async function handleStartInstance() {
+  async function handleStartInstance(isStale = () => false) {
     if (!sandboxEnabled) {
       setInstanceStatus('stopped');
       return;
@@ -132,6 +132,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
     setTerminalLogs([{ type: 'output', text: 'Booting container instance...' }]);
     try {
       const session = await createSession(currentLab.lessonId);
+      if (isStale()) { endSession(session.sessionId); return; } // page left (or StrictMode remount) while creating
       sessionIdRef.current = session.sessionId;
       setCwd(session.cwd);
       setInstanceStatus('running');
@@ -141,6 +142,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
       ]);
       inputRef.current?.focus();
     } catch (error) {
+      if (isStale()) return;
       setInstanceStatus('stopped');
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Could not start the sandbox: ${error.message}` }]);
     }
@@ -184,8 +186,19 @@ function Workspace({ courseId, labId, labs, markDone }) {
   // Open a sandbox session as soon as the lab loads; close it on the way out
   // (lab change or navigating away) so containers do not leak.
   useEffect(() => {
-    handleStartInstance();
-    return () => { if (sessionIdRef.current) endSession(sessionIdRef.current); };
+    let stale = false;
+    const closeSession = () => {
+      if (!sessionIdRef.current) return;
+      endSession(sessionIdRef.current);
+      sessionIdRef.current = null;
+    };
+    handleStartInstance(() => stale);
+    window.addEventListener('pagehide', closeSession); // tab closed / reloaded: unmount cleanup never runs
+    return () => {
+      stale = true;
+      window.removeEventListener('pagehide', closeSession);
+      closeSession();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

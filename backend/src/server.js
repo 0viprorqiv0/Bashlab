@@ -152,10 +152,26 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   if (auth) app.use('/api', auth.authenticate);
 
   app.use(express.json({ limit: '16kb', strict: true }));
+  const creating = new Map(); // userId -> creates in flight, so parallel POSTs can't slip past the limit
   app.post('/api/sessions', async (req, res) => {
-    if (auth && liveSessionsOf(req.user.id) >= (auth.maxSessionsPerUser ?? 3)) {
-      throw new HttpError(429, 'SESSION_LIMIT', 'Too many open sandbox sessions — close another lab tab first');
+    const userId = auth ? req.user.id : null;
+    if (auth) {
+      const inFlight = creating.get(userId) || 0;
+      if (liveSessionsOf(userId) + inFlight >= (auth.maxSessionsPerUser ?? 3)) {
+        throw new HttpError(429, 'SESSION_LIMIT', 'Too many open sandbox sessions — close another lab tab first');
+      }
+      creating.set(userId, inFlight + 1);
     }
+    try {
+      await createSessionFor(req, res);
+    } finally {
+      if (auth) {
+        const left = (creating.get(userId) || 1) - 1;
+        if (left > 0) creating.set(userId, left); else creating.delete(userId);
+      }
+    }
+  });
+  const createSessionFor = async (req, res) => {
     const lessonId = req.body?.lessonId;
     if (lessonId !== undefined && lessonId !== null && !isUuid(lessonId)) {
       throw new HttpError(400, 'INVALID_INPUT', 'lessonId must be a valid id');
@@ -168,7 +184,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       if (recordId) records.set(session.id, recordId);
     }
     res.status(201).json(manager.describe(session));
-  });
+  };
   app.get('/api/sessions/:id', ownSession, (req, res) => res.json(manager.describe(manager.get(req.params.id))));
   app.post('/api/sessions/:id/execute', ownSession, async (req, res) => {
     const command = req.body?.command;
