@@ -120,6 +120,9 @@ export default function SubscriptionTeaser() {
           const isAnnual = billingCycles[p.id] === 'annual';
           const priceValue = p.hasToggle ? (isAnnual ? p.annualPrice : p.monthlyPrice) : p.monthlyPrice;
           const periodText = p.hasToggle ? (isAnnual ? p.annualPeriod : p.monthlyPeriod) : p.period;
+          const targetHref = p.id === 'free'
+            ? '/courses'
+            : `/checkout?plan=${p.id === 'team' ? 'team' : 'individual'}&cycle=${isAnnual ? 'annual' : 'monthly'}`;
 
           return (
             <div
@@ -187,7 +190,7 @@ export default function SubscriptionTeaser() {
               </ul>
 
               <Link
-                href={p.ctaHref}
+                href={targetHref}
                 className={`${styles.cardBtn} ${p.isPopular ? styles.cardBtnPopular : ''}`}
               >
                 {p.ctaText}
