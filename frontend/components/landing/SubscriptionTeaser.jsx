@@ -30,10 +30,10 @@ export default function SubscriptionTeaser() {
     },
     {
       id: 'pro',
-      name: 'Pro Hacker',
+      name: 'Individual',
       price: '$9',
       period: '/ month',
-      desc: 'All-access pass for developers, DevOps engineers, and security analysts.',
+      desc: 'All-access pass for individual learners, developers, and aspiring engineers.',
       features: [
         'All current & upcoming tracks (Shell 201, Linux Sec)',
         'Unlimited persistent sandbox containers',
@@ -41,7 +41,7 @@ export default function SubscriptionTeaser() {
         'Verified certificate of mastery',
         'Priority runner queue & zero wait',
       ],
-      ctaText: 'Unlock Pro Access',
+      ctaText: 'Unlock Individual Access',
       isPopular: true,
       color: '#68dfa0',
       icon: (
@@ -80,11 +80,11 @@ export default function SubscriptionTeaser() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.h2}>
-          Fuel your Linux journey.<br />
-          <span style={{ color: 'var(--lb-accent, #68dfa0)' }}>Choose your plan.</span>
+          Start free.<br />
+          <span style={{ color: 'var(--lb-accent, #68dfa0)' }}>Level up when you’re ready.</span>
         </h2>
         <p className={styles.sub}>
-          Zero hidden costs. Upgrade to unlock persistent containers, advanced security tracks, and verified certificates.
+          Zero hidden costs. Master terminal fundamentals forever, or upgrade for persistent sandboxes and verified certificates.
         </p>
       </div>
 
@@ -118,7 +118,7 @@ export default function SubscriptionTeaser() {
             </ul>
 
             <Link
-              href={p.id === 'pro' ? '/checkout?plan=pro' : '/subscription'}
+              href="/subscription"
               className={`${styles.cardBtn} ${p.isPopular ? styles.cardBtnPopular : ''}`}
             >
               {p.ctaText}

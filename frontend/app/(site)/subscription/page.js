@@ -33,7 +33,7 @@ export default function SubscriptionPage() {
       href: '/subscription',
     },
     {
-      name: 'Pro Hacker',
+      name: 'Individual',
       badge: 'RECOMMENDED',
       price: '$9',
       period: 'per month, billed annually ($89/yr)',
@@ -47,9 +47,9 @@ export default function SubscriptionPage() {
         'Exclusive Discord Pro badge & office hours',
       ],
       notIncluded: [],
-      cta: 'Upgrade to Pro Access',
+      cta: 'Upgrade to Individual',
       isPopular: true,
-      href: '/checkout?plan=pro',
+      href: '/checkout?plan=individual',
     },
     {
       name: 'Team & University',
@@ -58,7 +58,7 @@ export default function SubscriptionPage() {
       period: 'per seat / month (min 5 seats)',
       desc: 'Centralized environment for engineering teams, university labs & bootcamps.',
       features: [
-        'Everything in Pro for all team members',
+        'Everything in Individual for all team members',
         'Centralized dashboard & cohort analytics',
         'Custom interactive challenge creator',
         'Dedicated isolated Docker runner nodes',
