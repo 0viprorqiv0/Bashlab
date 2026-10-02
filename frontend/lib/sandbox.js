@@ -34,9 +34,6 @@ export const createSession = (lessonId) => call('/api/sessions', { method: 'POST
 export const runCommand = (sessionId, command) =>
   call(`/api/sessions/${sessionId}/execute`, { method: 'POST', body: JSON.stringify({ command }) });
 
-export const checkSolution = (sessionId, lessonId) =>
-  call(`/api/sessions/${sessionId}/check`, { method: 'POST', body: JSON.stringify({ lessonId }) });
-
 export const resetSession = (sessionId) => call(`/api/sessions/${sessionId}/reset`, { method: 'POST' });
 
 // Fire-and-forget (also used while the page unloads, hence keepalive).

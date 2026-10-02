@@ -7,7 +7,8 @@
 // whatever an admin adds, edits, reorders or unpublishes shows up here.
 import { useCallback, useEffect, useState } from 'react';
 import { authClient } from './authClient';
-import { fetchCourseWithLessons, fetchProgressMap, markLessonDone, toDisplayLab } from './learning';
+import { fetchCourseWithLessons, fetchProgressMap, toDisplayLab } from './learning';
+import { labApi } from './writeApi';
 
 export function labsOf(course, progressMap) {
   return (course?.lessons || []).map((lesson, index) => ({
@@ -36,10 +37,12 @@ export function useCourseLabs(courseSlug) {
     return () => { active = false; };
   }, [courseSlug, attempt]);
 
-  // Saves through the API, then mirrors it locally so the sidebar updates.
-  const markDone = useCallback(async (lab) => {
-    const { error } = await markLessonDone(null, lab.lessonId);
-    if (!error) {
+  // The server checks the flag and, when it is right, saves the lab as done;
+  // the result is then mirrored locally so the sidebar updates.
+  const submitFlag = useCallback(async (lab, flag) => {
+    const { data, error } = await labApi.submitFlag(lab.lessonId, flag);
+    if (error) return { error };
+    if (data?.correct) {
       setState((prev) => {
         if (!prev.progress) return prev;
         const progress = new Map(prev.progress);
@@ -47,7 +50,7 @@ export function useCourseLabs(courseSlug) {
         return { ...prev, progress };
       });
     }
-    return { error };
+    return { correct: Boolean(data?.correct) };
   }, []);
 
   const labs = state.course ? labsOf(state.course, state.progress) : [];
@@ -56,7 +59,7 @@ export function useCourseLabs(courseSlug) {
     missing: Boolean(state.missing),
     error: state.error || '',
     labs,
-    markDone,
+    submitFlag,
     retry: () => setAttempt((n) => n + 1),
   };
 }

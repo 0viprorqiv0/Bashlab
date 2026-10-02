@@ -1817,3 +1817,64 @@
 @media (prefers-reduced-motion: reduce) {
   .unified, .unified * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Flag submission bar, under the terminal */
+.flagBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #0d1117;
+  border-top: 1px solid var(--line);
+}
+.flagIcon {
+  font-size: 18px;
+  color: #d29922;
+}
+.flagInput {
+  flex: 1 1 220px;
+  min-width: 0;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6edf3;
+  font-family: var(--font-code);
+  font-size: 13px;
+  padding: 7px 10px;
+  outline: none;
+}
+.flagInput:focus {
+  border-color: #58a6ff;
+}
+.flagInput:disabled {
+  color: #68dfa0;
+  opacity: 0.9;
+}
+.flagSubmit {
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: #176b49;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.flagSubmit:hover:not(:disabled) {
+  background: #1d8459;
+}
+.flagSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.flagOk {
+  color: #68dfa0;
+  font-size: 12px;
+}
+.flagError {
+  color: #f85149;
+  font-size: 12px;
+}

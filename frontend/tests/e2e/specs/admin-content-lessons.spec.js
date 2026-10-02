@@ -170,15 +170,14 @@ test('once the course is published, learners see the admin-authored lab — same
   // frontend has never heard of. The course-page link (slug) lands on /labs/1.
   const { context: learner, done: closeLearner } = await roleContext(browser, 'learner');
   const lab = await learner.newPage();
-  await lab.goto(`/courses/${courseSlug}`);
-  await lab.getByText('First Lesson').first().click();
+  await lab.goto(`/courses/${courseSlug}`); // the course page sends a signed-in learner to the first unsolved lab
   await lab.waitForURL(`**/courses/${courseSlug}/labs/1`);
   await expect(lab.getByText('Mission Scenario')).toBeVisible();
   await expect(lab.getByText('You just logged in to a')).toBeVisible();
   await expect(lab.getByText('Objective Tasks (0 of 2 completed)')).toBeVisible();
   await expect(lab.getByText('Print working directory')).toBeVisible();
   await expect(lab.getByText('Where am I?', { exact: true })).toBeVisible();
-  await expect(lab.getByRole('button', { name: 'Check Solution' })).toBeVisible();
+  await expect(lab.getByRole('button', { name: 'Submit flag' })).toBeVisible();
   await lab.goto(`/courses/${courseSlug}/labs/first-lesson`); // a slug also works and normalises to the number
   await lab.waitForURL(`**/courses/${courseSlug}/labs/1`);
   await lab.goto(`/courses/${courseSlug}/labs/2`);

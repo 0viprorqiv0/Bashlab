@@ -29,7 +29,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
   const nextParam = encodeURIComponent(`/courses/${courseId}/labs/${labId}`);
-  const { loading, missing, error, labs, markDone, retry } = useCourseLabs(courseId);
+  const { loading, missing, error, labs, submitFlag, retry } = useCourseLabs(courseId);
   const lab = labs.find((item) => String(item.id) === String(labId) || item.slug === labId);
 
   // Guests must log in before opening a lab — the instant local check avoids
@@ -52,10 +52,10 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   if (error) return <PageError message={`Could not load this lab: ${error}`} onRetry={retry} />;
   if (missing || !lab) notFound();
   if (String(lab.id) !== String(labId)) return <PageLoading label="Loading lab…" />;
-  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} user={user} profile={profile} />;
+  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} submitFlag={submitFlag} user={user} profile={profile} />;
 }
 
-function Workspace({ courseId, labId, labs, markDone, user, profile }) {
+function Workspace({ courseId, labId, labs, submitFlag, user, profile }) {
   const router = useRouter();
   const initialLabs = labs;
   const currentLab = initialLabs.find((item) => item.id === labId);
@@ -178,6 +178,9 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
   const [instanceStatus, setInstanceStatus] = useState(sandboxEnabled ? 'restarting' : 'stopped');
   const [isMaximized, setIsMaximized] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [flagInput, setFlagInput] = useState('');
+  const [flagBusy, setFlagBusy] = useState(false);
+  const [flagNote, setFlagNote] = useState({ kind: '', text: '' });
   const sessionIdRef = useRef(null);
   // Bumped whenever the instance is stopped/unmounted so a create still in flight is discarded, not adopted.
   const generationRef = useRef(0);
@@ -195,7 +198,7 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
     const generation = ++generationRef.current;
     const isStale = () => generationRef.current !== generation;
     setInstanceStatus('restarting');
-    setTerminalLogs([{ type: 'output', text: 'Booting container instance...' }]);
+    setTerminalLogs([]);
     try {
       const session = await createSession(currentLab.lessonId);
       // The API keeps one session per learner and hands the same one back to every open, so an
@@ -204,10 +207,6 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
       sessionIdRef.current = session.sessionId;
       setCwd(session.cwd);
       setInstanceStatus('running');
-      setTerminalLogs((prev) => [
-        ...prev,
-        { type: 'output', text: `BashLab Cloud Shell (Ready).\nWorkspace: ${session.cwd}\nFocus commands for this lab: ${currentLab.commands.join(', ')}` }
-      ]);
       inputRef.current?.focus();
     } catch (error) {
       if (isStale()) return;
@@ -332,7 +331,7 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
 
   // Auto-scroll terminal to bottom
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    terminalEndRef.current?.scrollIntoView({ block: 'end' }); // no smooth scrolling: it made the screen jump after every command
   }, [terminalLogs]);
 
   // Focus input on click anywhere in terminal
@@ -340,14 +339,25 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
     inputRef.current?.focus();
   }
 
-  // Confirms the lab as done in progress. Nothing calls it right now: the upcoming flag
-  // submission is the only way to complete a lab.
-  function celebrate(allIds) {
-    if (allIds) setCompletedSteps(allIds);
-    setIsLabSolved(true);
-    markDone(currentLab).then(({ error }) => {
-      if (error) setTerminalLogs((prev) => [...prev, { type: 'output', text: `[warning] Your progress could not be saved: ${error.message}` }]);
-    });
+  // Flag submission: the server checks the flag and, when it is right, saves the lab as done.
+  async function handleSubmitFlag(event) {
+    event.preventDefault();
+    const value = flagInput.trim();
+    if (!value || flagBusy || isLabSolved) return;
+    setFlagBusy(true);
+    setFlagNote({ kind: '', text: '' });
+    const result = await submitFlag(currentLab, value);
+    setFlagBusy(false);
+    if (result.error) {
+      setFlagNote({ kind: 'error', text: result.error.code === 'NO_FLAG' ? 'This lab has no flag yet.' : result.error.message || 'Could not check the flag. Try again.' });
+    } else if (result.correct) {
+      setIsLabSolved(true);
+      setCompletedSteps((currentLab.steps || []).map((step) => step.id));
+      setFlagInput('');
+      setFlagNote({ kind: 'ok', text: 'Correct flag. Lab completed!' });
+    } else {
+      setFlagNote({ kind: 'error', text: 'Wrong flag. Check it and try again.' });
+    }
   }
 
   // Toggle step completion manually (a visual checklist only: ticking steps never completes the lab)
@@ -1106,8 +1116,8 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
                   value={terminalInput}
                   onChange={(e) => setTerminalInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={instanceStatus === 'restarting' ? 'Instance booting...' : busy ? 'running…' : 'type a bash command...'}
-                  disabled={instanceStatus === 'restarting' || busy}
+                  readOnly={busy}
+                  disabled={instanceStatus === 'restarting'}
                   aria-label="Terminal command"
                   autoComplete="off"
                   spellCheck={false}
@@ -1137,6 +1147,27 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
               <span>Found a bug?</span>
             </a>
           </div>
+
+          <form className={styles.flagBar} onSubmit={handleSubmitFlag}>
+            <span className={`material-symbols-outlined ${styles.flagIcon}`} aria-hidden="true">flag</span>
+            <input
+              type="text"
+              className={styles.flagInput}
+              value={isLabSolved ? 'Lab solved' : flagInput}
+              onChange={(event) => setFlagInput(event.target.value)}
+              disabled={isLabSolved || flagBusy}
+              maxLength={256}
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Flag"
+            />
+            <button type="submit" className={styles.flagSubmit} disabled={isLabSolved || flagBusy || !flagInput.trim()}>
+              {flagBusy ? 'Checking…' : 'Submit flag'}
+            </button>
+            {flagNote.text && (
+              <span className={flagNote.kind === 'ok' ? styles.flagOk : styles.flagError} role="status">{flagNote.text}</span>
+            )}
+          </form>
         </section>
       </div>
     </div>
