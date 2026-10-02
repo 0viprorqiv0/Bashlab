@@ -22,9 +22,9 @@
 
 .sponsorsLabel {
   font-family: var(--font-mono, monospace);
-  font-size: clamp(10.5px, 0.8vw, 12px);
+  font-size: clamp(13px, 1.05vw, 15px);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--lb-faint, #849581);
 }

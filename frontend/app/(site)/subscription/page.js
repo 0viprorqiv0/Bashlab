@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { SponsorsBar } from '@/components/landing/ReviewsSponsors';
 import styles from './subscription.module.css';
 
 // Animated Rolling Number Component (TryHackMe Style Reel Transition)
@@ -25,19 +26,12 @@ function SubscriptionContent() {
   
   // Billing: 'annual' | 'monthly'
   const [billingCycle, setBillingCycle] = useState(initialCycle);
-  
-  // FAQ accordion
-  const [openFaq, setOpenFaq] = useState(0);
-
-  const toggleFaq = (index) => {
-    setOpenFaq(openFaq === index ? -1 : index);
-  };
 
   // --- PLANS DATA (Cá nhân & Miễn phí) ---
   const plans = [
     {
       name: 'Community',
-      badge: 'FREE FOREVER',
+      badge: null,
       price: '0',
       period: 'forever',
       desc: 'Everything you need to learn terminal fundamentals and syntax basics.',
@@ -81,7 +75,7 @@ function SubscriptionContent() {
     },
     {
       name: 'Team & University',
-      badge: 'FOR TEAMS',
+      badge: null,
       price: billingCycle === 'annual' ? '24' : '29',
       period: 'per seat / month (min 5 seats)',
       savings: 'Volume team pricing',
@@ -233,33 +227,7 @@ function SubscriptionContent() {
     },
   ];
 
-  // --- FAQ ITEMS ---
-  const faqs = [
-    {
-      q: 'Can I cancel or change my subscription at any time?',
-      a: 'Yes, you can cancel your subscription with a single click at any time from your Account settings. You will retain full access to all Individual features until the end of your paid billing period with zero unexpected renewal charges.',
-    },
-    {
-      q: 'Do I need to install Linux, Docker, or a Virtual Machine on my computer?',
-      a: 'Not at all! Every lab runs completely inside your modern web browser via WebSockets connected to our high-performance isolated container cluster. You only need Google Chrome, Edge, Safari, or Firefox.',
-    },
-    {
-      q: 'How does the 30-day money-back guarantee work?',
-      a: 'We want you to be completely confident in your learning. If you try BashLab Individual and feel it is not the right fit for your learning goals, contact us within 30 days and we will process a 100% full refund, no questions asked.',
-    },
-    {
-      q: 'Do you offer student or academic discounts?',
-      a: 'Yes! We believe practical cybersecurity education should be accessible to all students. If you have an active school email or student ID, you can use promo code STUDENT at checkout for an instant 20% discount on all individual plans.',
-    },
-    {
-      q: 'How do the verified certificates of mastery work?',
-      a: 'Upon completing a curriculum track and passing the hands-on practical exam, you receive a cryptographically signed Certificate of Mastery with a unique verification URL that you can attach directly to LinkedIn, GitHub, or your resume.',
-    },
-    {
-      q: 'What payment methods are supported?',
-      a: 'We support all major Credit & Debit cards (Visa, Mastercard, American Express), Apple Pay, Google Pay, PayPal, and instant bank transfers via VietQR.',
-    },
-  ];
+
 
   return (
     <div className={styles.pageWrapper}>
@@ -300,8 +268,7 @@ function SubscriptionContent() {
               className={`${styles.cycleBtn} ${billingCycle === 'annual' ? styles.cycleBtnActive : ''}`}
               onClick={() => setBillingCycle('annual')}
             >
-              <span>Billed Annually</span>
-              <span className={styles.saveBadge}>SAVE 25%</span>
+              Billed Annually
             </button>
           </div>
         </div>
@@ -322,7 +289,7 @@ function SubscriptionContent() {
 
             <div className={styles.cardHeader}>
               <div className={styles.cardName}>{p.name}</div>
-              {!p.isPopular && <span className={styles.standardBadge}>{p.badge}</span>}
+              {!p.isPopular && p.badge && <span className={styles.standardBadge}>{p.badge}</span>}
             </div>
 
             <p className={styles.cardDesc}>{p.desc}</p>
@@ -369,67 +336,9 @@ function SubscriptionContent() {
         ))}
       </section>
 
-      {/* 3. Social Proof: Trusted by Security Organizers & Developers */}
-      <section className={styles.trustedSection}>
-        <h2 className={styles.trustedTitle}>
-          TRUSTED BY CTF ORGANIZERS, SECURITY CLUBS &amp; DEVELOPERS WORLDWIDE
-        </h2>
-
-        {/* Logo / Badge Marquee */}
-        <div className={styles.logoMarquee}>
-          <div className={styles.logoBadge}>
-            <span className={styles.logoIcon}>🛡️</span>
-            <span>DEF CON GROUPS</span>
-          </div>
-          <div className={styles.logoBadge}>
-            <span className={styles.logoIcon}>🌐</span>
-            <span>OWASP CHAPTERS</span>
-          </div>
-          <div className={styles.logoBadge}>
-            <span className={styles.logoIcon}>⚡</span>
-            <span>BSIDES SECURITY</span>
-          </div>
-          <div className={styles.logoBadge}>
-            <span className={styles.logoIcon}>🎓</span>
-            <span>CYBER LABS &amp; UNIS</span>
-          </div>
-          <div className={styles.logoBadge}>
-            <span className={styles.logoIcon}>💻</span>
-            <span>HACKTHEBOX MEETUPS</span>
-          </div>
-          <div className={styles.logoBadge}>
-            <span className={styles.logoIcon}>🔍</span>
-            <span>MITRE ATT&amp;CK REPO</span>
-          </div>
-        </div>
-
-        {/* Stats counter */}
-        <div className={styles.statsRow}>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>15,000+</div>
-            <div className={styles.statLabel}>Active Learners</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>120,000+</div>
-            <div className={styles.statLabel}>Sandboxes Launched</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>99.98%</div>
-            <div className={styles.statLabel}>Container Uptime</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>4.9 / 5.0</div>
-            <div className={styles.statLabel}>Community Rating</div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Full Plan Comparison Matrix */}
+      {/* 3. Full Plan Comparison Matrix */}
       <section className={styles.comparisonSection}>
         <div className={styles.sectionHeaderWrap}>
-          <div className={styles.sectionTag}>
-            ACCESS MATRIX
-          </div>
           <h2 className={styles.sectionHeading}>
             Detailed Plan Comparison
           </h2>
@@ -443,7 +352,7 @@ function SubscriptionContent() {
             <thead>
               <tr>
                 <th className={styles.featureColHead}>Capabilities &amp; Features</th>
-                <th className={styles.planColHead}>Community (Free)</th>
+                <th className={styles.planColHead}>Community</th>
                 <th className={`${styles.planColHead} ${styles.planColPopular}`}>
                   <div className={styles.popularTableBadge}>RECOMMENDED</div>
                   Individual Access
@@ -502,11 +411,37 @@ function SubscriptionContent() {
         </div>
       </section>
 
+      {/* 4. Social Proof: Trusted by Security Organizers & Developers */}
+      <section className={styles.trustedSection}>
+        <h2 className={styles.trustedTitle}>
+          TRUSTED BY CTF ORGANIZERS, SECURITY CLUBS &amp; DEVELOPERS WORLDWIDE
+        </h2>
+
+        {/* Stats counter */}
+        <div className={styles.statsRow}>
+          <div className={styles.statItem}>
+            <div className={styles.statValue}>15,000+</div>
+            <div className={styles.statLabel}>Active Learners</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statValue}>120,000+</div>
+            <div className={styles.statLabel}>Sandboxes Launched</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statValue}>99.98%</div>
+            <div className={styles.statLabel}>Container Uptime</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statValue}>4.9 / 5.0</div>
+            <div className={styles.statLabel}>Community Rating</div>
+          </div>
+        </div>
+      </section>
+
       {/* 5. Learner Testimonials */}
       <section className={styles.testimonialsSection}>
         <div className={styles.sectionHeaderWrap}>
-          <div className={styles.sectionTag}>COMMUNITY PROOF</div>
-          <h2 className={styles.sectionHeading}>Loved by Developers &amp; Security Researchers</h2>
+          <h2 className={styles.sectionHeading}>Loved by learners worldwide</h2>
           <p className={styles.sectionSub}>
             Hear how hands-on Linux terminal practice with real root sandboxes transformed careers and study paths.
           </p>
@@ -531,46 +466,12 @@ function SubscriptionContent() {
             </div>
           ))}
         </div>
+
+        {/* Trusted by developers from teams at (From Landing) */}
+        <SponsorsBar className={styles.sponsorsSection} />
       </section>
 
-      {/* 6. FAQ Section */}
-      <section className={styles.faqSection}>
-        <div className={styles.sectionHeaderWrap}>
-          <div className={styles.sectionTag}>FAQ // QUESTIONS</div>
-          <h2 className={styles.sectionHeading}>Frequently Asked Questions</h2>
-          <p className={styles.sectionSub}>
-            Everything you need to know about billing, sandboxes, and verified certificates.
-          </p>
-        </div>
-
-        <div className={styles.faqAccordion}>
-          {faqs.map((faq, idx) => (
-            <div
-              key={idx}
-              className={`${styles.faqItem} ${openFaq === idx ? styles.faqItemOpen : ''}`}
-            >
-              <button
-                type="button"
-                className={styles.faqQuestionBtn}
-                onClick={() => toggleFaq(idx)}
-                aria-expanded={openFaq === idx}
-              >
-                <span className={styles.faqQuestionText}>{faq.q}</span>
-                <span className={styles.faqChevron}>
-                  {openFaq === idx ? '−' : '+'}
-                </span>
-              </button>
-              {openFaq === idx && (
-                <div className={styles.faqAnswer}>
-                  <p>{faq.a}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 7. Bottom High-Impact CTA Banner */}
+      {/* 6. Bottom High-Impact CTA Banner */}
       <section className={styles.bottomCtaBanner}>
         <div className={styles.ctaBannerInner}>
           <h2 className={styles.ctaBannerTitle}>
@@ -580,13 +481,15 @@ function SubscriptionContent() {
             Join over 15,000 engineers and security researchers. Start free or jump straight into root sandboxes with Individual Access.
           </p>
           <div className={styles.ctaBannerBtns}>
-            <Link href={`/checkout?plan=individual&cycle=${billingCycle}`} className={styles.bannerPrimaryBtn}>
-              <span>Upgrade to Individual ({billingCycle === 'annual' ? '$9/mo' : '$12/mo'})</span>
-              <span>→</span>
-            </Link>
-            <Link href="/courses" className={styles.bannerSecondaryBtn}>
-              Explore Free Courses
-            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={styles.bannerPrimaryBtn}
+            >
+              <span>Upgrade now</span>
+            </button>
           </div>
           <div className={styles.ctaGuaranteeNote}>
             🔒 30-Day Money-Back Guarantee • Cancel anytime with 1 click

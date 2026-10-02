@@ -35,7 +35,7 @@ export default function SiteChrome({ children }) {
         >
           {children}
         </main>
-        {!isWorkspace && !isLanding && <Footer isLanding />}
+        {!isWorkspace && !isLanding && <Footer />}
       </div>
     </AuthProvider>
   );
