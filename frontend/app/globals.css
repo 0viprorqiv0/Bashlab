@@ -51,6 +51,18 @@ html.lenis-stopped,
   overflow-x: hidden !important;
 }
 
+/* Admin full-screen 100vh lock: eliminates window scrolling completely */
+html.admin-locked,
+body.admin-locked {
+  overflow: hidden !important;
+  height: 100vh !important;
+  height: 100svh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100svh !important;
+  max-height: 100dvh !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

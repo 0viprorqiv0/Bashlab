@@ -85,15 +85,6 @@ export default function Navbar({ isTransparent = false }) {
         <div className="flex items-center gap-3">
           {!authReady ? null : user ? (
             <div className="relative hidden sm:flex items-center gap-2" ref={dropdownRef}>
-              {user.role === 'Admin' && (
-                <Link
-                  href="/admin/content"
-                  aria-label="Open admin content settings"
-                  className="font-code text-xs text-on-surface-variant hover:text-white transition-colors focus-visible"
-                >
-                  Admin
-                </Link>
-              )}
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-white/5 transition-colors focus-visible border border-transparent hover:border-white/10"
@@ -125,10 +116,17 @@ export default function Navbar({ isTransparent = false }) {
                     <span className="material-symbols-outlined text-base text-primary">manage_accounts</span>
                     Account &amp; Security
                   </Link>
-                  <Link href="/my-learning" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors">
-                    <span className="material-symbols-outlined text-base text-secondary">school</span>
-                    My Learning
-                  </Link>
+                  {user.role === 'Admin' ? (
+                    <Link href="/admin/content" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors">
+                      <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
+                      Admin panel
+                    </Link>
+                  ) : (
+                    <Link href="/my-learning" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors">
+                      <span className="material-symbols-outlined text-base text-secondary">school</span>
+                      My Learning
+                    </Link>
+                  )}
                   <div className="border-t border-divider-border/60 my-1" />
                   <button type="button" onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-code text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
                     <span className="material-symbols-outlined text-base">logout</span>
@@ -180,20 +178,21 @@ export default function Navbar({ isTransparent = false }) {
             <div className="flex flex-col gap-3 pt-4 border-t border-white/10">
               {!authReady ? null : user ? (
                 <>
-                  <Link href="/my-learning" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
-                    <span className="material-symbols-outlined text-base text-secondary">school</span>
-                    My Learning
-                  </Link>
+                  {user.role === 'Admin' ? (
+                    <Link href="/admin/content" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
+                      <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
+                      Admin panel
+                    </Link>
+                  ) : (
+                    <Link href="/my-learning" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
+                      <span className="material-symbols-outlined text-base text-secondary">school</span>
+                      My Learning
+                    </Link>
+                  )}
                   <Link href="/account" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
                     <span className="material-symbols-outlined text-base text-primary">manage_accounts</span>
                     Account &amp; Security
                   </Link>
-                  {user.role === 'Admin' && (
-                    <Link href="/admin/content" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
-                      <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
-                      Admin
-                    </Link>
-                  )}
                   <button type="button" onClick={handleLogout} className="text-sm font-code text-red-400 hover:text-red-300 flex items-center gap-2 py-2 focus-visible text-left">
                     <span className="material-symbols-outlined text-base">logout</span>
                     Log out
