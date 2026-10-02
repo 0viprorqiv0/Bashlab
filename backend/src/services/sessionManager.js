@@ -21,20 +21,19 @@ export class SessionManager {
     return () => this.removeListeners.delete(listener);
   }
 
-  async create() {
+  async create({ id = randomUUID(), workspaceId = id } = {}) {
     if (this.sessions.size + this.orphans.size + this.creating >= this.maxSessions) {
       throw new HttpError(503, 'SESSION_CAPACITY', 'Session capacity reached');
     }
     this.creating++;
-    const id = randomUUID();
-    const workspacePath = path.join(this.root, id);
+    const workspacePath = path.join(this.root, workspaceId);
     try {
       await fs.mkdir(this.root, { recursive: true, mode: 0o2770 });
       // Refuse a symlink root. It must be the same local bind source as the runner.
       if (!(await fs.lstat(this.root)).isDirectory()) throw new Error('Invalid workspace root');
       await fs.mkdir(workspacePath, { mode: 0o2770 });
       await fs.chmod(workspacePath, 0o2770);
-      const session = { id, workspacePath, cwd: HOME, lastActiveAt: Date.now(), commandCount: 0,
+      const session = { id, workspaceId, workspacePath, cwd: HOME, lastActiveAt: Date.now(), commandCount: 0,
         busy: false, quarantined: false };
       await this.makeDirectories(session);
       this.sessions.set(id, session);
@@ -78,6 +77,16 @@ export class SessionManager {
       await fs.mkdir(dir, { mode: 0o2770 });
       await fs.chmod(dir, 0o2770);
     }
+  }
+
+  async attach({ id, workspaceId }) {
+    const existing = this.sessions.get(id);
+    const expected = path.join(this.root, workspaceId);
+    if (existing) {
+      if (existing.workspacePath !== expected) throw new HttpError(409, 'LEASE_WORKSPACE_CONFLICT', 'Lease workspace mismatch');
+      return existing;
+    }
+    return this.create({ id, workspaceId });
   }
 
   get(id) {
