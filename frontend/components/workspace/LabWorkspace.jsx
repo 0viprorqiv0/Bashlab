@@ -1091,7 +1091,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile }) {
               <div className={styles.stoppedBanner}>
                 <div className={styles.stoppedInfo}>
                   <span className="material-symbols-outlined text-base">power_off</span>
-                  <span>{sandboxEnabled ? 'Instance is stopped. Start instance to run commands.' : 'Sandbox not configured on this environment — mark steps complete manually below.'}</span>
+                  <span>{sandboxEnabled ? 'Instance is stopped. Start instance to run commands.' : 'Sandbox not configured on this environment: the terminal needs the API running with the sandbox enabled.'}</span>
                 </div>
                 {sandboxEnabled && (
                   <button
