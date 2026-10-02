@@ -87,28 +87,34 @@ export default function Navbar({ isTransparent = false }) {
             <div className="relative hidden sm:flex items-center gap-2" ref={dropdownRef}>
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-white/5 transition-colors focus-visible border border-transparent hover:border-white/10"
+                className="flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors focus-visible border border-transparent hover:border-white/10 max-w-[190px] md:max-w-[240px] lg:max-w-[280px]"
                 aria-expanded={userDropdownOpen}
                 aria-haspopup="true"
                 aria-label="User menu"
               >
-                <span className="w-7 h-7 rounded-md bg-gradient-to-br from-primary/30 to-secondary/20 border border-primary/40 flex items-center justify-center font-code text-[11px] font-bold text-primary shadow-sm">
+                <span className="w-7 h-7 rounded-md bg-gradient-to-br from-primary/30 to-secondary/20 border border-primary/40 flex items-center justify-center font-code text-[11px] font-bold text-primary shadow-sm flex-shrink-0">
                   {user.initials}
                 </span>
-                <span className="hidden sm:inline font-code text-xs text-on-surface-variant">
+                <span className="hidden sm:inline font-code text-xs text-on-surface-variant truncate text-left" title={user.name}>
                   {user.name}
                 </span>
-                <span className="material-symbols-outlined text-sm text-on-surface-variant select-none">
+                <span className="material-symbols-outlined text-sm text-on-surface-variant select-none flex-shrink-0">
                   {userDropdownOpen ? 'expand_less' : 'expand_more'}
                 </span>
               </button>
 
               {userDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-[#141820] border border-[#26313d] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-2 border-b border-divider-border/60 mb-1">
-                    <p className="font-headline text-xs font-semibold text-white">{user.name}</p>
-                    <p className="font-code text-[11px] text-on-surface-variant truncate">{user.email}</p>
-                    <span className="inline-block mt-1 font-code text-[9px] uppercase tracking-wider text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded">
+                <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-[#141820] border border-[#26313d] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-2 border-b border-divider-border/60 mb-1 min-w-0">
+                    <p className="font-headline text-xs font-semibold text-white truncate" title={user.name}>
+                      {user.name}
+                    </p>
+                    {auth.profile?.name && auth.profile?.name !== user.email && (
+                      <p className="font-code text-[11px] text-on-surface-variant truncate mt-0.5" title={user.email}>
+                        {user.email}
+                      </p>
+                    )}
+                    <span className="inline-block mt-1.5 font-code text-[9px] uppercase tracking-wider text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded">
                       {user.role}
                     </span>
                   </div>
@@ -178,6 +184,24 @@ export default function Navbar({ isTransparent = false }) {
             <div className="flex flex-col gap-3 pt-4 border-t border-white/10">
               {!authReady ? null : user ? (
                 <>
+                  <div className="flex items-center gap-2.5 px-1 py-1 mb-1 border-b border-white/10 pb-3 min-w-0">
+                    <span className="w-8 h-8 rounded-md bg-gradient-to-br from-primary/30 to-secondary/20 border border-primary/40 flex items-center justify-center font-code text-xs font-bold text-primary shadow-sm flex-shrink-0">
+                      {user.initials}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-headline text-xs font-semibold text-white truncate" title={user.name}>{user.name}</p>
+                      {auth.profile?.name && auth.profile?.name !== user.email && (
+                        <p className="font-code text-[11px] text-on-surface-variant truncate" title={user.email}>{user.email}</p>
+                      )}
+                      <span className="inline-block mt-1 font-code text-[9px] uppercase tracking-wider text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded">
+                        {user.role}
+                      </span>
+                    </div>
+                  </div>
+                  <Link href="/account" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
+                    <span className="material-symbols-outlined text-base text-primary">manage_accounts</span>
+                    Account &amp; Security
+                  </Link>
                   {user.role === 'Admin' ? (
                     <Link href="/admin/content" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
                       <span className="material-symbols-outlined text-base text-accent-amber">admin_panel_settings</span>
@@ -189,10 +213,6 @@ export default function Navbar({ isTransparent = false }) {
                       My Learning
                     </Link>
                   )}
-                  <Link href="/account" className="text-sm font-code text-on-surface-variant hover:text-white flex items-center gap-2 py-2 focus-visible" onClick={() => setMobileOpen(false)}>
-                    <span className="material-symbols-outlined text-base text-primary">manage_accounts</span>
-                    Account &amp; Security
-                  </Link>
                   <button type="button" onClick={handleLogout} className="text-sm font-code text-red-400 hover:text-red-300 flex items-center gap-2 py-2 focus-visible text-left">
                     <span className="material-symbols-outlined text-base">logout</span>
                     Log out

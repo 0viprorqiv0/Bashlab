@@ -94,6 +94,10 @@ export default function Dashboard() {
         <Stat label="API error rate" value={live ? `${number(live.errorRate, 1)}%` : '—'} hint="5xx share of requests" />
       </dl>
 
+      <div className={dash.sectionHeader}>
+        <span aria-hidden="true" />
+        Terminal &amp; Sandbox Execution
+      </div>
       <div className={dash.grid}>
         <LineChart title="Sandbox load" unit="" series={m ? [
           ...m.sessions.map((s) => ({ ...s, name: 'sessions' })),
@@ -102,12 +106,26 @@ export default function Dashboard() {
         ] : []} />
         <LineChart title="Commands per minute" unit="/min" series={m?.commands} />
         <LineChart title="Command time, 95th percentile" unit="s" series={m?.commandP95?.map((s) => ({ ...s, name: 'p95' }))} />
+      </div>
+
+      <div className={dash.sectionHeader}>
+        <span aria-hidden="true" />
+        API Traffic &amp; Reliability
+      </div>
+      <div className={dash.grid}>
         <LineChart title="API requests per minute" unit="/min" series={m?.http} />
         <LineChart title="API response time, 95th percentile" unit="s" series={m?.httpP95?.map((s) => ({ ...s, name: 'p95' }))} />
+        <LineChart title="Requests rejected by rate limits" unit="/min" series={m?.rateLimited?.map((s) => ({ ...s, name: 'rate limited' }))} />
+      </div>
+
+      <div className={dash.sectionHeader}>
+        <span aria-hidden="true" />
+        System Resources &amp; Access Security
+      </div>
+      <div className={dash.grid}>
         <LineChart title="Sign-in activity per minute" unit="/min" series={m?.auth} />
         <LineChart title="API memory (RSS)" unit="MB" series={m?.memoryMb?.map((s) => ({ ...s, name: 'rss' }))} />
         <LineChart title="API CPU" unit="cores" series={m?.cpu?.map((s) => ({ ...s, name: 'cpu' }))} />
-        <LineChart title="Requests rejected by rate limits" unit="/min" series={m?.rateLimited?.map((s) => ({ ...s, name: 'rate limited' }))} />
       </div>
     </div>
   );
