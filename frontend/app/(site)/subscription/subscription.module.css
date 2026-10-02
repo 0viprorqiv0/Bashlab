@@ -1,4 +1,5 @@
 .pageWrapper {
+  position: relative;
   min-height: 100vh;
   padding: 120px 24px 100px;
   max-width: 1200px;
@@ -8,8 +9,42 @@
   box-sizing: border-box;
 }
 
+/* Background Media & Tint (Đồng bộ chuẩn từ trang Landing & Checkout) */
+.newBgContainer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bgMedia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.bgDimOverlay {
+  position: absolute;
+  inset: 0;
+  /* Lớp tint tối đen giúp nền đằng sau chìm sâu và làm nổi bật nội dung */
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(6, 8, 14, 0.86) 0%,
+    rgba(3, 4, 8, 0.94) 100%
+  );
+  backdrop-filter: blur(2px);
+}
+
 /* 1. Header Section */
 .headerSection {
+  position: relative;
+  z-index: 1;
   text-align: center;
   margin-bottom: 56px;
 }
@@ -150,6 +185,8 @@
 
 /* 2. Grid 3 Pricing Plans */
 .pricingGrid {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
@@ -409,6 +446,8 @@
 
 /* 3. Trusted By Organizers */
 .trustedSection {
+  position: relative;
+  z-index: 1;
   background: rgba(14, 20, 30, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
@@ -489,6 +528,8 @@
 
 /* 4. Full Plan Comparison Matrix */
 .comparisonSection {
+  position: relative;
+  z-index: 1;
   margin-bottom: 84px;
 }
 
@@ -652,6 +693,8 @@
 
 /* 5. Learner Testimonials / Reviews */
 .testimonialsSection {
+  position: relative;
+  z-index: 1;
   margin-bottom: 84px;
 }
 
@@ -737,6 +780,8 @@
 
 /* 6. FAQ Section */
 .faqSection {
+  position: relative;
+  z-index: 1;
   margin-bottom: 84px;
 }
 
@@ -809,6 +854,8 @@
 
 /* 7. Bottom CTA Banner */
 .bottomCtaBanner {
+  position: relative;
+  z-index: 1;
   background: linear-gradient(135deg, rgba(16, 38, 30, 0.9) 0%, rgba(10, 24, 34, 0.95) 100%);
   border: 1px solid rgba(104, 223, 160, 0.4);
   border-radius: 20px;

@@ -417,6 +417,19 @@ function SubscriptionContent() {
 
   return (
     <div className={styles.pageWrapper}>
+      {/* Background Cityscape với lớp tint đen như trang Landing & Checkout */}
+      <div className={styles.newBgContainer} aria-hidden="true">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className={styles.bgMedia}
+          src="/background/pixel-cityscape.1920x1080.mp4"
+        />
+        <div className={styles.bgDimOverlay} />
+      </div>
+
       {/* 1. Header Section & Dual-Segment (Individual vs Business) */}
       <section className={styles.headerSection}>
         <h1 className={styles.title}>
