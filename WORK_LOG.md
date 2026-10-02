@@ -397,4 +397,26 @@ Tài liệu này ghi lại chi tiết mọi công việc đã thực hiện, ngu
   * E2E: Pass 100%.
 * **Trạng thái**: Hoàn thành.
 
+---
+
+### [2026-10-02 23:32] Phân định Menu Điều hướng Riêng biệt theo Vai trò Người dùng (Admin vs Learner)
+
+* **Yêu cầu**: Đối với tài khoản Admin, không cần hiển thị mục "My Learning" trong menu thả xuống (dropdown) và thanh điều hướng, thay vào đó hiển thị "Admin panel". Mỗi nhóm người dùng (Admin và Learner) sẽ có danh sách các mục điều hướng phù hợp và riêng biệt.
+* **Thay đổi triển khai**:
+  * [`frontend/components/layout/Navbar.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/layout/Navbar.jsx):
+    * **Desktop Dropdown Menu**:
+      * Tài khoản **Admin**: Hiển thị `Account & Security`, `Admin panel`, `Log out` (loại bỏ hoàn toàn `My Learning`).
+      * Tài khoản **Learner**: Hiển thị `Account & Security`, `My Learning`, `Log out` (không hiển thị `Admin panel`).
+    * **Mobile Menu**: Áp dụng phân quyền tương tự: Admin thấy `Admin panel`, Learner thấy `My Learning`.
+  * [`frontend/components/workspace/LabWorkspace.jsx`](file:///home/light/Documents/B3/web_app/Bashlab/frontend/components/workspace/LabWorkspace.jsx):
+    * Popover menu ở chân Sidebar góc trái của Lab Workspace cũng phân định tương ứng: Admin thấy `Admin panel`, Learner thấy `My Learning`.
+* **Kiểm chứng thực tế (Real-browser Evidence)**:
+  * Viết kịch bản kiểm thử tự động Playwright xác nhận đồng thời 2 phiên đăng nhập:
+    * Phiên **Admin**: [`admin-dropdown-no-my-learning.png`](file:///home/light/.gemini/antigravity-cli/brain/1452835d-ecd2-4990-8c8e-966c5ec35541/admin-dropdown-no-my-learning.png) $\rightarrow$ Thấy `Admin panel`, `My Learning` hoàn toàn biến mất (`count: 0`).
+    * Phiên **Learner**: [`learner-dropdown-has-my-learning.png`](file:///home/light/.gemini/antigravity-cli/brain/1452835d-ecd2-4990-8c8e-966c5ec35541/learner-dropdown-has-my-learning.png) $\rightarrow$ Thấy `My Learning`, `Admin panel` hoàn toàn ẩn (`count: 0`).
+  * ESLint: `npm --prefix frontend run lint` $\rightarrow$ **0 warnings, 0 errors**.
+  * E2E Suites: **3/3 role tests pass 100%**.
+* **Trạng thái**: Hoàn thành xuất sắc.
+
+
 

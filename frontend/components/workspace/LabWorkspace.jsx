@@ -26,7 +26,7 @@ function getInitials(nameOrEmail) {
 // the URL is redirected to its number.
 export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, isAdmin, loading: authLoading } = useAuth();
   const nextParam = encodeURIComponent(`/courses/${courseId}/labs/${labId}`);
   const { loading, missing, error, labs, markDone, markStarted, retry } = useCourseLabs(courseId);
   const lab = labs.find((item) => String(item.id) === String(labId) || item.slug === labId);
@@ -600,15 +600,27 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                     Settings
                   </Link>
 
-                  <Link
-                    href="/my-learning"
-                    onClick={() => setAccountMenuOpen(false)}
-                    className={styles.popoverItem}
-                    role="menuitem"
-                  >
-                    <span className="material-symbols-outlined">school</span>
-                    My Learning
-                  </Link>
+                  {isAdmin ? (
+                    <Link
+                      href="/admin/content"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined" style={{ color: '#f59e0b' }}>admin_panel_settings</span>
+                      Admin panel
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/my-learning"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">school</span>
+                      My Learning
+                    </Link>
+                  )}
 
                   <Link
                     href="/courses"
