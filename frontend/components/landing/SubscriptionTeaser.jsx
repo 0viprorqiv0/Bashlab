@@ -18,7 +18,7 @@ export default function SubscriptionTeaser() {
         'Standard command checks',
         'Community Discord access',
       ],
-      ctaText: 'Current Plan',
+      ctaText: 'Start Free',
       isPopular: false,
       color: '#78cbd4',
       icon: (
@@ -47,30 +47,6 @@ export default function SubscriptionTeaser() {
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#68dfa0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-        </svg>
-      ),
-    },
-    {
-      id: 'team',
-      name: 'Squad & Team',
-      price: 'Custom',
-      period: '/ seat',
-      desc: 'Tailored for universities, SOC squads, and engineering departments.',
-      features: [
-        'Unlimited team seats & member analytics',
-        'Custom bash challenge & lab creator',
-        'Dedicated isolated runner nodes',
-        'Direct SLA & mentor support',
-      ],
-      ctaText: 'Contact Sales',
-      isPopular: false,
-      color: '#FFB800',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFB800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
     },

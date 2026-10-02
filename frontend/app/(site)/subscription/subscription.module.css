@@ -73,63 +73,7 @@
   line-height: 1.6;
 }
 
-/* TOP VIEW SWITCHER: For Individuals vs For Business (TryHackMe Style) */
-.viewTabsWrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.viewSegmentBox {
-  display: inline-flex;
-  background: rgba(14, 20, 30, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
-  padding: 5px;
-  gap: 6px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
-}
-
-.viewTabBtn {
-  background: transparent;
-  border: none;
-  border-radius: 9px;
-  padding: 10px 22px;
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 0.94rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.65);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.viewTabBtn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.viewTabBtnActive {
-  background: rgba(104, 223, 160, 0.14);
-  color: #68dfa0 !important;
-  border: 1px solid rgba(104, 223, 160, 0.35);
-  box-shadow: 0 2px 12px rgba(104, 223, 160, 0.2);
-}
-
-.teamsTabTag {
-  background: #ffb800;
-  color: #061014;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.62rem;
-  font-weight: 900;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-left: 2px;
-}
-
-/* SECONDARY SWITCHER: Monthly vs Annually */
+/* SWITCHER: Monthly vs Annually */
 .switchWrapper {
   display: flex;
   justify-content: center;
@@ -183,15 +127,22 @@
   letter-spacing: 0.05em;
 }
 
-/* 2. Grid 3 Pricing Plans */
+/* 2. Grid 2 Pricing Plans */
 .pricingGrid {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(2, minmax(300px, 460px));
+  justify-content: center;
+  gap: 32px;
   margin-bottom: 72px;
   align-items: stretch;
+}
+
+@media (max-width: 768px) {
+  .pricingGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card {
@@ -554,11 +505,6 @@
   margin: 0 0 12px 0;
 }
 
-.headingBusinessTag {
-  color: #78cbd4;
-  font-size: 0.85em;
-}
-
 .sectionSub {
   font-size: 0.95rem;
   color: rgba(255, 255, 255, 0.65);
@@ -582,7 +528,7 @@
 }
 
 .featureColHead {
-  width: 38%;
+  width: 44%;
   padding: 20px 24px;
   font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 1rem;
@@ -592,7 +538,7 @@
 }
 
 .planColHead {
-  width: 20.6%;
+  width: 28%;
   padding: 20px 16px;
   text-align: center;
   font-family: 'Space Grotesk', system-ui, sans-serif;
@@ -603,6 +549,7 @@
 }
 
 .planColPopular {
+  width: 28%;
   background: rgba(104, 223, 160, 0.06);
   border-left: 1px solid rgba(104, 223, 160, 0.25);
   border-right: 1px solid rgba(104, 223, 160, 0.25);
@@ -625,10 +572,6 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.businessCategoryRow {
-  background: rgba(120, 203, 212, 0.05);
-}
-
 .categoryTitle {
   padding: 14px 24px;
   font-family: 'JetBrains Mono', monospace;
@@ -645,16 +588,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.businessOnlyBadge {
-  background: rgba(120, 203, 212, 0.18);
-  border: 1px solid rgba(120, 203, 212, 0.35);
-  color: #78cbd4;
-  font-size: 0.65rem;
-  padding: 2px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.06em;
 }
 
 .featureRow {

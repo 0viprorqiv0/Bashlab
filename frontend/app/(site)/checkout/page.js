@@ -27,19 +27,22 @@ const COURSE_DETAILS = {
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const courseParam = searchParams.get('course');
-  const planParam = searchParams.get('plan') || 'pro';
+  const planParam = searchParams.get('plan') || 'individual';
   const cycleParam = searchParams.get('cycle') || 'annual';
 
   const selectedCourse = courseParam && COURSE_DETAILS[courseParam] ? COURSE_DETAILS[courseParam] : null;
 
   // Selected plan and billing cycle
   const [billingCycle, setBillingCycle] = useState(cycleParam === 'monthly' ? 'monthly' : 'annual');
-  const [planType, setPlanType] = useState(planParam === 'team' ? 'team' : 'pro');
+  const [planType, setPlanType] = useState('individual');
 
   // Customer form fields
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [country, setCountry] = useState('VN');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [zipCode, setZipCode] = useState('');
 
   // Credit Card fields
   const [cardNumber, setCardNumber] = useState('');
@@ -86,10 +89,9 @@ function CheckoutContent() {
   }, []);
 
   // Pricing calculations
-  const baseRate = planType === 'team' ? 29 : 9;
   const rawSubtotal = selectedCourse
     ? selectedCourse.price
-    : (billingCycle === 'annual' ? (planType === 'team' ? 290 : 89) : baseRate);
+    : (billingCycle === 'annual' ? 89 : 12);
   const discountAmount = couponApplied ? rawSubtotal * couponDiscount : 0;
   const finalTotal = Math.max(0, rawSubtotal - discountAmount);
 
@@ -168,7 +170,7 @@ function CheckoutContent() {
           <h2 className={styles.successTitle}>Payment Successful!</h2>
           <p className={styles.successMsg}>
             Congratulations <strong>{fullName || email || 'Hacker'}</strong>! Your account has been upgraded to{' '}
-            <strong>{planType === 'team' ? 'Team Access' : 'Pro Hacker Access'} ({billingCycle})</strong>. An activation receipt was sent to <strong>{email || 'your email'}</strong>.
+            <strong>Individual Access ({billingCycle})</strong>. An activation receipt was sent to <strong>{email || 'your email'}</strong>.
           </p>
           <div className={styles.orderIdBadge}>ORDER ID: {orderId}</div>
           <Link href="/courses" className={styles.successCtaBtn}>
@@ -329,7 +331,44 @@ function CheckoutContent() {
                   <option value="GB">United Kingdom</option>
                   <option value="DE">Germany</option>
                   <option value="AU">Australia</option>
+                  <option value="CA">Canada</option>
+                  <option value="FR">France</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Billing Address & ZIP */}
+            <div className={styles.formControl} style={{ marginBottom: 14 }}>
+              <label className={styles.controlLabel}>Street address</label>
+              <input
+                type="text"
+                className={styles.controlInput}
+                placeholder="123 Cyber Way, Suite 400"
+                value={streetAddress}
+                onChange={(e) => setStreetAddress(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.formGroupGrid}>
+              <div className={styles.formControl}>
+                <label className={styles.controlLabel}>City</label>
+                <input
+                  type="text"
+                  className={styles.controlInput}
+                  placeholder="City / District"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </div>
+              <div className={styles.formControl}>
+                <label className={styles.controlLabel}>Postal / ZIP code</label>
+                <input
+                  type="text"
+                  className={styles.controlInput}
+                  placeholder="e.g. 700000 or 94103"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                />
               </div>
             </div>
 
@@ -372,28 +411,22 @@ function CheckoutContent() {
         <aside className={styles.orderSummaryPanel}>
           <div className={styles.summaryTitle}>
             <span>Order Summary</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#68dfa0', fontWeight: 600 }}>
-              ACTIVE PLAN
-            </span>
           </div>
 
           {/* Plan Info Card */}
           <div className={styles.tierCard}>
             <div>
-              <span className={styles.tierBadge}>
-                {selectedCourse
-                  ? 'COURSE ENROLLMENT'
-                  : (planType === 'team' ? 'TEAM ACCESS' : 'ALL-ACCESS PASS')}
-              </span>
               <div className={styles.tierName}>
                 {selectedCourse
                   ? selectedCourse.title
-                  : (planType === 'team' ? 'Linux Team & University' : 'All Courses Pass (Shell 101, 201 & Security)')}
+                  : 'Individual Access Pass (Shell 101, 201 & Security)'}
               </div>
               <div className={styles.tierDesc}>
                 {selectedCourse
                   ? selectedCourse.desc
-                  : 'Shell 101: Bash Basics · Shell 201: Streams · Linux Security'}
+                  : (billingCycle === 'annual'
+                    ? 'Billed annually at $89/yr (Save 25%) · Persistent Sandboxes & Verified Certs'
+                    : 'Billed monthly at $12/mo · Cancel anytime · Persistent Sandboxes & Verified Certs')}
               </div>
             </div>
             <div className={styles.tierPrice}>
