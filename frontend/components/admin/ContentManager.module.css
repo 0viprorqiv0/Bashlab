@@ -1,4 +1,4 @@
-.dashboard { color-scheme: dark; }
+.dashboard { color-scheme: dark; flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: start; }
 .courseAside { position: sticky; top: 18px; overflow: hidden; }
 .courseSearch { display: block; padding: 12px 12px 10px; border-bottom: 1px solid #292929; }

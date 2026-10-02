@@ -9,6 +9,7 @@ import styles from './Admin.module.css';
 import content from './ContentManager.module.css';
 import { isValidSlug, slugify } from './slug';
 import { emptyLessonContent } from './lessonContent';
+import ContentStudio from './ContentStudio';
 
 function Icon({ name }) { return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>; }
 
@@ -33,7 +34,7 @@ export default function ContentManager() {
   const router = useRouter();
   const [courses, setCourses] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [tab, setTab] = useState('curriculum');
+  const [tab, setTab] = useState('studio');
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [dialog, setDialog] = useState(null);
@@ -131,13 +132,26 @@ export default function ContentManager() {
 
   return (
     <div className={content.dashboard}>
-      <header className={styles.header}>
-        <div><h1>Content<span>.</span></h1><p>Courses, chapters and lessons. Drafts are only visible to admins.</p></div>
-        <button type="button" className={styles.primaryButton} onClick={() => openDialog('course')}><Icon name="add" /> New course</button>
-      </header>
-      {error && <p className={styles.errorText} role="alert">{error}</p>}
+      {tab === 'studio' ? (
+        <ContentStudio initialCourseSlug={course?.slug} />
+      ) : (
+        <>
+          <header className={styles.header}>
+            <div><h1>Content<span>.</span></h1><p>Courses, chapters and lessons. Drafts are only visible to admins.</p></div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={() => setTab('studio')}
+              >
+                <Icon name="edit_document" /> Content Studio
+              </button>
+              <button type="button" className={styles.primaryButton} onClick={() => openDialog('course')}><Icon name="add" /> New course</button>
+            </div>
+          </header>
+          {error && <p className={styles.errorText} role="alert">{error}</p>}
 
-      <div className={content.layout}>
+          <div className={content.layout}>
         <aside className={`${styles.panel} ${content.courseAside}`} aria-label="Courses">
           <label className={content.courseSearch}>
             <span className={styles.srOnly}>Search courses</span>
@@ -228,6 +242,8 @@ export default function ContentManager() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {dialog && <div className={styles.backdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(null); }}>
         <form className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="content-dialog-title" onSubmit={submitDialog}>
