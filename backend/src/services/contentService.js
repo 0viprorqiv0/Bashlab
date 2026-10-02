@@ -249,6 +249,20 @@ export function createContentService({ admin, userClient }) {
       return data?.sandbox_session_id || null;
     },
 
+    async getLessonVerifier(lessonId, isAdmin = false) {
+      assertUuid(lessonId, 'lessonId');
+      const { data, error } = await admin.from('lessons')
+        .select('id, status, test_template, chapters(courses(status))').eq('id', lessonId).maybeSingle();
+      if (error) throw mapDbError(error);
+      const visible = data && (isAdmin || (data.status === 'published' && data.chapters?.courses?.status === 'published'));
+      if (!visible) throw new HttpError(404, 'LESSON_NOT_FOUND', 'Lesson not found');
+      const verifier = data.test_template?.verifier;
+      if (typeof verifier !== 'string' || !verifier.trim()) {
+        throw new HttpError(400, 'VERIFIER_UNAVAILABLE', 'Lesson has no verifier');
+      }
+      return verifier;
+    },
+
     // ---- practice session bookkeeping (called by the sandbox routes) --------
     async openPracticeRecord(userId, lessonId, sandboxSessionId) {
       if (lessonId !== undefined && lessonId !== null) assertUuid(lessonId, 'lessonId');

@@ -80,17 +80,17 @@ test('an admin can end any session (Activity page); the owner then sees it gone'
   assert.equal((await call('alice', 'GET', `/api/sessions/${sessionId}`)).status, 404);
 });
 
-test('one learner cannot exhaust the sandbox: open sessions are capped per user', async (t) => {
+test('one learner always has one session, including legacy starts without a lesson', async (t) => {
   const { call } = await startApp(t, fakeAuth({ maxSessionsPerUser: 2 }));
   const first = await (await call('alice', 'POST', '/api/sessions', {})).json();
-  assert.equal((await call('alice', 'POST', '/api/sessions', {})).status, 201);
-  const blocked = await call('alice', 'POST', '/api/sessions', {});
-  assert.equal(blocked.status, 429);
-  assert.equal((await blocked.json()).error.code, 'SESSION_LIMIT');
-  // Another user is unaffected, and closing one frees a slot.
-  assert.equal((await call('bob', 'POST', '/api/sessions', {})).status, 201);
-  assert.equal((await call('alice', 'DELETE', `/api/sessions/${first.sessionId}`)).status, 204);
-  assert.equal((await call('alice', 'POST', '/api/sessions', {})).status, 201);
+  const repeated = await call('alice', 'POST', '/api/sessions', {});
+  assert.equal(repeated.status, 200);
+  assert.equal((await repeated.json()).sessionId, first.sessionId);
+
+  const lessonId = '11111111-1111-4111-8111-111111111111';
+  const switched = await (await call('alice', 'POST', '/api/sessions', { lessonId })).json();
+  assert.notEqual(switched.sessionId, first.sessionId);
+  assert.equal((await call('alice', 'GET', `/api/sessions/${first.sessionId}`)).status, 404);
 });
 
 test('session lifecycle: same-lab start is idempotent, active session lookup works, switching labs replaces old session', async (t) => {
@@ -136,4 +136,3 @@ test('session lifecycle: same-lab start is idempotent, active session lookup wor
   assert.equal(active2.session.sessionId, data2.sessionId);
   assert.equal(active2.session.lessonId, lab2);
 });
-

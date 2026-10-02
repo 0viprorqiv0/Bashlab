@@ -45,10 +45,10 @@ if port_is_open 3001; then
 else
   (
     cd "$repo_root/backend"
-    exec npm run start:api
-  ) >"$backend_log" 2>&1 &
-  backend_pid=$!
-  printf '%s\n' "$backend_pid" >"$backend_pid_file"
+    ( ( setsid nohup npm run start:api < /dev/null >"$backend_log" 2>&1 & echo $! >"$backend_pid_file" ) & )
+  )
+  sleep 0.2
+  backend_pid=$(<"$backend_pid_file")
   wait_for_url http://127.0.0.1:3001/health backend "$backend_log"
   printf 'Backend started at http://127.0.0.1:3001 (PID %s)\n' "$backend_pid"
 fi
@@ -59,10 +59,10 @@ if port_is_open 3000; then
 else
   (
     cd "$repo_root/frontend"
-    exec npm run dev
-  ) >"$frontend_log" 2>&1 &
-  frontend_pid=$!
-  printf '%s\n' "$frontend_pid" >"$frontend_pid_file"
+    ( ( setsid nohup npm run dev < /dev/null >"$frontend_log" 2>&1 & echo $! >"$frontend_pid_file" ) & )
+  )
+  sleep 0.2
+  frontend_pid=$(<"$frontend_pid_file")
   wait_for_url http://127.0.0.1:3000/login frontend "$frontend_log"
   printf 'Frontend started at http://localhost:3000 (PID %s)\n' "$frontend_pid"
 fi

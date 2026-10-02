@@ -131,14 +131,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     sessionLessons.delete(sessionId);
     closeRecord(sessionId);
   };
-  const liveSessionsOf = (userId) => {
-    let count = 0;
-    for (const [id, owner] of owners) {
-      if (!manager.sessions.has(id)) cleanupStaleSession(id); // expired/reaped
-      else if (owner === userId) count++;
-    }
-    return count;
-  };
+  const detachSessionCleanup = manager.onRemoved((sessionId) => cleanupStaleSession(sessionId));
   const activeSessionOf = (userId) => {
     for (const [id, owner] of owners) {
       if (!manager.sessions.has(id)) cleanupStaleSession(id);
@@ -186,24 +179,21 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     if (auth) {
       const active = activeSessionOf(req.user.id);
       if (active) {
-        const boundLesson = sessionLessons.get(active.id);
-        // If starting the SAME lesson: idempotent return, workspace preserved
-        if (lessonId && boundLesson === lessonId) {
+        const boundLesson = sessionLessons.get(active.id) ?? null;
+        const requestedLesson = lessonId ?? null;
+        // A caller may omit lessonId for legacy/local usage. It is still the
+        // same logical lesson when the existing session is also unbound.
+        if (boundLesson === requestedLesson) {
           return res.status(200).json({
             ...manager.describe(active),
-            lessonId,
+            lessonId: boundLesson,
             reused: true,
           });
         }
-        // If switching lessons: stop/clean previous session and workspace down to 0
-        if (lessonId && boundLesson && boundLesson !== lessonId) {
-          await manager.withSession(active.id, (s) => manager.remove(s), { allowQuarantined: true });
-          cleanupStaleSession(active.id);
-        }
-      }
-
-      if (liveSessionsOf(req.user.id) >= (auth.maxSessionsPerUser ?? 3)) {
-        throw new HttpError(429, 'SESSION_LIMIT', 'Too many open sandbox sessions — close another lab tab first');
+        // Every different request replaces the only active workspace, even if
+        // one side is an unbound legacy session.
+        await manager.withSession(active.id, (s) => manager.remove(s), { allowQuarantined: true });
+        cleanupStaleSession(active.id);
       }
     }
 
@@ -259,11 +249,14 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     res.json(result);
   });
   app.post('/api/sessions/:id/check', ownSession, async (req, res) => {
-    const boundLesson = sessionLessons.get(req.params.id);
-    const lessonToCheck = boundLesson || req.body?.lessonId;
+    const sessionLessonId = sessionLessons.get(req.params.id);
+    const requestedLessonId = sessionLessonId || req.body?.lessonId;
+    const verifierKey = content && requestedLessonId
+      ? await content.service.getLessonVerifier(requestedLessonId, Boolean(await auth?.isAdmin?.(req.user.id)))
+      : requestedLessonId;
     res.json(await manager.withSession(req.params.id, async session => {
       await manager.checkQuota(session);
-      return verifyTask(session, lessonToCheck);
+      return verifyTask(session, verifierKey);
     }));
   });
   app.post('/api/sessions/:id/reset', ownSession, async (req, res) => {

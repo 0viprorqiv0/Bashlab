@@ -12,7 +12,13 @@ export class SessionManager {
     this.maxSessions = maxSessions;
     this.sessions = new Map();
     this.orphans = new Map();
+    this.removeListeners = new Set();
     this.creating = 0;
+  }
+
+  onRemoved(listener) {
+    this.removeListeners.add(listener);
+    return () => this.removeListeners.delete(listener);
   }
 
   async create() {
@@ -148,6 +154,9 @@ export class SessionManager {
     await fs.rm(session.workspacePath, { recursive: true, force: true });
     this.sessions.delete(session.id);
     this.orphans.delete(session.id);
+    for (const listener of this.removeListeners) {
+      try { listener(session.id); } catch { /* cleanup observers must not break removal */ }
+    }
   }
 
   describe(session) {
