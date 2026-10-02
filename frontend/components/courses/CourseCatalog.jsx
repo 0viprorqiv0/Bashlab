@@ -8,8 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { authClient } from '@/lib/authClient';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { PageError, PageLoading } from '@/components/shared/Loading';
-
-const filters = ['All', 'Core Tracks', 'Security'];
+import BinaryHacker from '@/components/auth/BinaryHacker';
 
 function courseCode(slug) {
   const digits = slug.match(/\d+/)?.[0];
@@ -52,7 +51,6 @@ export default function CourseCatalog() {
     event.preventDefault();
     router.push(`/login?next=${encodeURIComponent(`/courses/${courseId}`)}`);
   };
-  const [filter, setFilter] = useState('All');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,11 +73,8 @@ export default function CourseCatalog() {
     return () => { active = false; };
   }, [attempt]);
 
-  const visibleCourses = courses.filter((course) => filter === 'All'
-    || (filter === 'Core Tracks' && course.category === 'Core Track')
-    || course.category === filter);
-  const availableCourses = visibleCourses.filter((course) => course.status === 'published');
-  const upcomingCourses = visibleCourses.filter((course) => course.status === 'upcoming');
+  const availableCourses = courses.filter((course) => course.status === 'published');
+  const upcomingCourses = courses.filter((course) => course.status === 'upcoming');
 
   if (loading) return <PageLoading label="Loading courses…" />;
   if (error) return <PageError message={`Could not load courses: ${error}`} onRetry={() => { setError(''); setLoading(true); setAttempt((n) => n + 1); }} />;
@@ -89,14 +84,7 @@ export default function CourseCatalog() {
       <div className={styles.container}>
         <header className={styles.header}>
           <h1>Courses<span>.</span></h1>
-          <p>Learn the shell by using it. Start with the basics, then build toward the tools you use every day.</p>
         </header>
-
-        <nav className={styles.filters} aria-label="Filter courses">
-          {filters.map((item) => (
-            <button key={item} type="button" aria-pressed={filter === item} className={filter === item ? styles.activeFilter : ''} onClick={() => setFilter(item)}>{item}</button>
-          ))}
-        </nav>
 
         {availableCourses.map((course) => (
           <article id={`course-${course.id}`} className={styles.featured} key={course.id}>
@@ -109,7 +97,7 @@ export default function CourseCatalog() {
               </div>
               <Link className={styles.primaryAction} href={`/courses/${course.id}`} onClick={startLearning(course.id)}>Start learning <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span></Link>
             </div>
-            <div className={styles.courseMark} aria-hidden="true"><span>shell / bash</span><strong>{course.code}</strong><span>Learn by doing.</span></div>
+            <div className={styles.courseMark}><BinaryHacker compact /></div>
           </article>
         ))}
 

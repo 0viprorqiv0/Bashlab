@@ -251,7 +251,10 @@ export function createContentService({ admin, userClient }) {
 
     // ---- practice session bookkeeping (called by the sandbox routes) --------
     async openPracticeRecord(userId, lessonId, sandboxSessionId) {
-      if (lessonId !== undefined && lessonId !== null) assertUuid(lessonId, 'lessonId');
+      if (lessonId !== undefined && lessonId !== null) {
+        assertUuid(lessonId, 'lessonId');
+        await visibleLesson(lessonId, false);
+      }
       const { data, error } = await admin.from('practice_sessions')
         .insert({ user_id: userId, lesson_id: lessonId || null, sandbox_session_id: sandboxSessionId, status: 'active' })
         .select('id').single();

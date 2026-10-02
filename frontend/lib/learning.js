@@ -83,7 +83,7 @@ export function lessonHref(courseSlug, lessonSlug) {
 
 const capitalize = (value) => (value ? value[0].toUpperCase() + value.slice(1) : '');
 
-// Shape consumed by CourseDetail/LabWorkspace, from either a structured lab
+// Shape consumed by LabWorkspace, from either a structured lab
 // (lesson_content v1) or a legacy Markdown lesson.
 export function toDisplayLab(lesson, progressMap = new Map()) {
   const content = lesson.lesson_content?.version === 1 ? lesson.lesson_content : null;
@@ -100,7 +100,7 @@ export function toDisplayLab(lesson, progressMap = new Map()) {
     commands: content?.commands || [],
     shortObjective: content?.short_objective || lesson.objectives?.[0] || '',
     scenario: content?.scenario || '',
-    steps: (content?.steps || []).map((step) => ({ id: step.id, text: step.text, targetCmd: step.target_cmd || '' })),
+    steps: content ? (content.steps || []).map((step) => ({ id: step.id, text: step.text, targetCmd: step.target_cmd || '' })) : null,
     commandSyntax: (content?.command_syntax || []).map((row) => ({ cmd: row.command, desc: row.description })),
     examples: content?.examples || [],
     hint: content?.hint || lesson.test_template?.hint || '',

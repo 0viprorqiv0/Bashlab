@@ -68,7 +68,7 @@ function VerifyEmail() {
     <p className={styles.emailLabel}>{content[1]}</p>
     <p className={styles.emailValue}>{email || 'your email address'}</p>
     {resendError && <p className={styles.errorBox} role="alert">{resendError}</p>}
-    {view === 'verified' ? <Link className={styles.button} href="/my-learning">Start learning</Link> : <div className={styles.result}>
+    {view === 'verified' ? <Link className={styles.button} href="/courses/shell-101">Start learning</Link> : <div className={styles.result}>
       {email
         ? <button type="button" className={styles.button} onClick={resend} disabled={sending || secondsLeft > 0}>{sending ? 'Preparing request…' : secondsLeft ? `Try again in ${secondsLeft}s` : view === 'expired' ? 'Request new link' : 'Resend verification email'}</button>
         : <Link className={styles.button} href="/register">Create your account again</Link>}

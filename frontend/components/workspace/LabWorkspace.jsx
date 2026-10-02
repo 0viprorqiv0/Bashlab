@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import { useRouter, notFound } from 'next/navigation';
 import { useCourseLabs } from '@/lib/courseLabs';
@@ -50,6 +51,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
   const initialLabs = labs;
   const currentLab = initialLabs.find((item) => item.id === labId);
   const totalLabs = initialLabs.length;
+  const canCheckSolution = Boolean(currentLab.steps?.length || (sandboxEnabled && currentLab.verifier));
 
   // Active tab on left pane
   const [activeTab, setActiveTab] = useState('instructions');
@@ -276,7 +278,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
         ? prev.filter((id) => id !== stepId)
         : [...prev, stepId];
 
-      if (currentLab.steps && next.length === currentLab.steps.length) {
+      if (currentLab.steps?.length && next.length === currentLab.steps.length) {
         setIsLabSolved(true);
       }
       return next;
@@ -293,8 +295,8 @@ function Workspace({ courseId, labId, labs, markDone }) {
   }
 
   // Check solution button: runs the server-owned verifier against the real
-  // sandbox when this lab has one; otherwise falls back to the learner's own
-  // checklist (manual completion — there is nothing server-side to verify).
+  // sandbox when a session is available; otherwise use a non-empty manual
+  // checklist where this lab has no server verifier.
   async function handleCheckSolution() {
     if (currentLab.verifier && sessionIdRef.current) {
       setChecking(true);
@@ -318,14 +320,13 @@ function Workspace({ courseId, labId, labs, markDone }) {
       }
       return;
     }
-    if (currentLab.steps) {
-      const allIds = currentLab.steps.map((s) => s.id);
-      celebrate(allIds);
-      setTerminalLogs((prev) => [
-        ...prev,
-        { type: 'output', text: `\n[VERIFICATION PASSED] All ${allIds.length} checklist items marked complete.\n🎉 Lab #${currentLab.id} completed.` }
-      ]);
-    }
+    if (!currentLab.steps?.length) return;
+    const allIds = currentLab.steps.map((s) => s.id);
+    celebrate(allIds);
+    setTerminalLogs((prev) => [
+      ...prev,
+      { type: 'output', text: `\n[VERIFICATION PASSED] All ${allIds.length} checklist items marked complete.\n🎉 Lab #${currentLab.id} completed.` }
+    ]);
   }
 
   // Copy code snippet helper
@@ -363,7 +364,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
 
     // Lets the checklist track along with real commands when this lab has no
     // server verifier (manual-grading labs still deserve live feedback).
-    if (currentLab.steps) {
+    if (currentLab.steps?.length) {
       currentLab.steps.forEach((step) => {
         if (step.targetCmd && rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()) && !completedSteps.includes(step.id)) {
           setCompletedSteps((prev) => [...prev, step.id]);
@@ -526,9 +527,11 @@ function Workspace({ courseId, labId, labs, markDone }) {
             type="button"
             className={styles.checkSolutionBtn}
             onClick={handleCheckSolution}
-            disabled={checking}
+            disabled={checking || !canCheckSolution}
             aria-label="Check solution"
-            title="Validate completed tasks and check solution"
+            title={canCheckSolution
+              ? 'Validate completed tasks and check solution'
+              : 'Automated solution checks are unavailable for this legacy Markdown lesson'}
           >
             <span className="material-symbols-outlined">verified</span>
             <span>{checking ? 'Checking…' : 'Check Solution'}</span>
@@ -588,6 +591,8 @@ function Workspace({ courseId, labId, labs, markDone }) {
                   </div>
                 </div>
 
+                {currentLab.structured ? (
+                  <>
                 {/* Scenario / Story */}
                 <div className={styles.scenarioCard}>
                   <div className={styles.scenarioTitle}>Mission Scenario</div>
@@ -727,6 +732,14 @@ function Workspace({ courseId, labId, labs, markDone }) {
                         <span className="material-symbols-outlined text-sm">arrow_forward</span>
                       </Link>
                     )}
+                  </div>
+                )}
+                  </>
+                ) : (
+                  <div className={styles.legacyContent} aria-label="Lesson content">
+                    {currentLab.contentMd
+                      ? <ReactMarkdown>{currentLab.contentMd}</ReactMarkdown>
+                      : <p>No lesson instructions are available.</p>}
                   </div>
                 )}
               </>

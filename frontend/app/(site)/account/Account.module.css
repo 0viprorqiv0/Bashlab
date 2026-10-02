@@ -3,8 +3,9 @@
   --line: #262c33;
   --accent: #a8c8b2;
   width: min(1120px, calc(100% - 96px));
-  margin: 0 auto;
-  padding: 64px 0 100px;
+  margin: auto;
+  flex-shrink: 0;
+  padding: clamp(16px, 3dvh, 40px) 0;
   color: #edeef0;
   font-family: var(--font-body);
   font-size: 14px;
@@ -12,11 +13,11 @@
 }
 .page ::selection { background: #a8c8b2; color: #101512; }
 .page :is(button, a, input, textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
-.header { padding-bottom: 42px; border-bottom: 1px solid var(--line); }
+.header { padding-bottom: clamp(16px, 3dvh, 42px); border-bottom: 1px solid var(--line); }
 .header h1 { font-family: var(--font-headline); font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.2; letter-spacing: -0.035em; }
 .header h1 > span { color: var(--accent); }
 .header > p { margin-top: 12px; color: var(--muted); font-size: 15px; }
-.layout { display: grid; grid-template-columns: 208px minmax(0, 1fr); gap: 52px; padding-top: 44px; }
+.layout { display: grid; grid-template-columns: 208px minmax(0, 1fr); gap: 52px; padding-top: clamp(16px, 3dvh, 44px); }
 .sidebar nav { display: flex; flex-direction: column; gap: 6px; }
 .sidebar button { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 44px; padding: 10px 12px; color: var(--muted); border-radius: 6px; font-size: inherit; text-align: left; transition: color 160ms, background 160ms; }
 .sidebar button:hover { color: #fff; background: #151a20; }
@@ -26,7 +27,7 @@
 .memberSince span { color: #c8cbd0; }
 .content { min-width: 0; }
 .profile, .security { scroll-margin-top: 110px; }
-.profileTop { display: flex; align-items: center; gap: 20px; padding: 0 0 38px; }
+.profileTop { display: flex; align-items: center; gap: 20px; padding: 0 0 clamp(16px, 3dvh, 38px); }
 .avatarGroup { flex-shrink: 0; text-align: center; }
 .avatar { width: 76px; height: 76px; border-radius: 50%; background: #29372f; color: #c9ddcf; position: relative; display: grid; place-items: center; }
 .avatar > span:first-child { font-size: 25px; font-weight: 500; letter-spacing: -0.04em; }
@@ -55,7 +56,7 @@
 .details small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
 .tag { flex-shrink: 0; border: 1px solid #303740; border-radius: 4px; padding: 1px 7px; color: #adb5bf; font-size: 10px; }
 .security { padding-top: 4px; }
-.settingRow { display: flex; gap: 16px; align-items: center; padding: 26px 0; border-bottom: 1px solid var(--line); }
+.settingRow { display: flex; gap: 16px; align-items: center; padding: clamp(12px, 2dvh, 26px) 0; border-bottom: 1px solid var(--line); }
 .rowIcon { color: #aeb6c0; }
 .settingRow > div { flex: 1; min-width: 0; }
 .settingRow h4, .confirm h4 { font-size: 13px; font-weight: 500; }
@@ -72,7 +73,7 @@
 .bioField { grid-column: 1 / -1; }
 .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 .confirm { padding: 20px; background: #1c191d; margin-top: 16px; border-radius: 8px; }
-.dangerZone { margin-top: 40px; padding: 22px 24px; border-radius: 16px; background: #17191e; }
+.dangerZone { margin-top: clamp(16px, 2.5dvh, 40px); padding: clamp(14px, 2dvh, 22px) 24px; border-radius: 16px; background: #17191e; }
 .dangerZone h3 { color: #f3676b; font-size: 14px; font-weight: 500; }
 .dangerZone p { margin: 12px 0 16px; color: #c3c7ce; font-size: 13px; }
 .dangerZone button { border-radius: 7px; background: #d83b42; color: white; padding: 9px 14px; font-size: 12px; font-weight: 600; }

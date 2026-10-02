@@ -177,12 +177,17 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       throw new HttpError(400, 'INVALID_INPUT', 'lessonId must be a valid id');
     }
     const session = await manager.create();
+    try {
+      if (auth && content) {
+        const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
+        if (recordId) records.set(session.id, recordId);
+      }
+    } catch (error) {
+      await manager.remove(session).catch(() => {});
+      throw error;
+    }
     metrics.recordSessionCreated();
     if (auth) owners.set(session.id, req.user.id);
-    if (auth && content) {
-      const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
-      if (recordId) records.set(session.id, recordId);
-    }
     res.status(201).json(manager.describe(session));
   };
   app.get('/api/sessions/:id', ownSession, (req, res) => res.json(manager.describe(manager.get(req.params.id))));
