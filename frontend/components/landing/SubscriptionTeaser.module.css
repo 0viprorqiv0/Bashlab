@@ -1,0 +1,269 @@
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.6vh, 18px);
+}
+
+.header {
+  text-align: center;
+  max-width: 640px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #78cbd4;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(120, 203, 212, 0.08);
+  border: 1px solid rgba(120, 203, 212, 0.25);
+  margin-bottom: 6px;
+}
+
+.h2 {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+  margin: 0 0 4px 0;
+}
+
+.sub {
+  font-size: clamp(0.78rem, 0.95vw, 0.86rem);
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Grid chứa 3 gói */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(12px, 1.6vw, 18px);
+  width: 100%;
+  max-width: 1040px;
+}
+
+/* Thẻ Card kính */
+.card {
+  position: relative;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: clamp(12px, 1.5vh, 16px) clamp(14px, 1.4vw, 18px);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(120, 203, 212, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Card Pro nổi bật */
+.cardPopular {
+  border-color: rgba(104, 223, 160, 0.5);
+  background: linear-gradient(180deg, rgba(16, 36, 30, 0.75) 0%, rgba(10, 22, 28, 0.75) 100%);
+  box-shadow: 0 0 25px rgba(104, 223, 160, 0.15);
+}
+
+.cardPopular:hover {
+  border-color: #68dfa0;
+  box-shadow: 0 14px 35px rgba(104, 223, 160, 0.25);
+}
+
+.badge {
+  position: absolute;
+  top: -10px;
+  right: 18px;
+  background: linear-gradient(90deg, #68dfa0, #78cbd4);
+  color: #061014;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(104, 223, 160, 0.4);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.planName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.planIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.priceWrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.price {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.8rem, 2.5vw, 2.3rem);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.period {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.cardDesc {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 16px 0;
+  min-height: 36px;
+}
+
+/* Feature list */
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-grow: 1;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.check {
+  color: #68dfa0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.cardBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cardBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.cardBtnPopular {
+  background: #68dfa0;
+  color: #061014;
+  font-weight: 700;
+  border: none;
+}
+
+.cardBtnPopular:hover {
+  background: #78cbd4;
+  color: #061014;
+  box-shadow: 0 0 16px rgba(104, 223, 160, 0.4);
+}
+
+/* Bottom CTA section */
+.bottomArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mainCtaBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(90deg, rgba(104, 223, 160, 0.15), rgba(120, 203, 212, 0.15));
+  border: 1px solid rgba(104, 223, 160, 0.4);
+  color: #fff;
+  padding: 11px 26px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+}
+
+.mainCtaBtn:hover {
+  background: linear-gradient(90deg, #68dfa0, #78cbd4);
+  color: #061014;
+  border-color: #68dfa0;
+  box-shadow: 0 0 25px rgba(104, 223, 160, 0.4);
+  transform: translateY(-2px);
+}
+
+.btnArrow {
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+
+.mainCtaBtn:hover .btnArrow {
+  transform: translateX(4px);
+}
+
+.guarantee {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+  }
+  .cardDesc {
+    min-height: auto;
+  }
+}
