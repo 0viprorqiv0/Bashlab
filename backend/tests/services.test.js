@@ -119,3 +119,13 @@ test('server-bound verifier lookup is independent from the database lesson id', 
   const verifierKeys = new Map([['11111111-1111-4111-8111-111111111111', 'files-03']]);
   assert.equal(verifierKeys.get('11111111-1111-4111-8111-111111111111'), 'files-03');
 });
+
+test('attach reuses the lease workspace instead of allocating a second path', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'bashlab-lease-test-'));
+  t.after(() => fs.rm(root, {recursive:true,force:true}));
+  const manager = new SessionManager({root});
+  const first = await manager.create({id:'11111111-1111-4111-8111-111111111111', workspaceId:'22222222-2222-4222-8222-222222222222'});
+  const attached = await manager.attach({id:first.id, workspaceId:'22222222-2222-4222-8222-222222222222'});
+  assert.equal(attached.workspacePath, first.workspacePath);
+  assert.equal(manager.sessions.size, 1);
+});

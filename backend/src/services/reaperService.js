@@ -1,9 +1,14 @@
-export async function reapOnce(manager, now = Date.now(), ttlMs = 30 * 60 * 1000) {
+export async function reapOnce(manager, now = Date.now(), ttlMs = 30 * 60 * 1000, leaseStore = null) {
   let count = 0;
   for (const session of manager.sessions.values()) {
     if (session.busy || now - session.lastActiveAt <= ttlMs) continue;
     const release = manager.acquire(session.id, { allowQuarantined: true });
-    try { await manager.remove(session); count++; } finally { release(); }
+    try {
+      if (leaseStore) await leaseStore.beginDeletion({ leaseId: session.id });
+      await manager.remove(session);
+      if (leaseStore) await leaseStore.finishDeletion({ leaseId: session.id });
+      count++;
+    } finally { release(); }
   }
   for (const session of manager.orphans.values()) {
     if (now - session.lastActiveAt <= ttlMs) continue;

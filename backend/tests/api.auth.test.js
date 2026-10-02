@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createApp } from '../src/server.js';
 import { SessionManager } from '../src/services/sessionManager.js';
 import { SandboxRunner } from '../src/services/sandboxRunner.js';
+import { createMemoryLeaseStore } from '../src/services/sandboxLeaseStore.js';
 import { HttpError } from '../src/errors.js';
 
 // Stand-in for requireAuth: "Bearer <userId>" authenticates as that user.
@@ -21,12 +22,12 @@ const fakeAuth = (overrides = {}) => ({
   ...overrides,
 });
 
-async function startApp(t, auth) {
+async function startApp(t, auth, options = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'bashlab-auth-'));
   const manager = new SessionManager({ root });
   const runner = new SandboxRunner({ transport: async () => ({ stdout: 'ok', stderr: '', exitCode: 0,
     cwd: '/home/student', cwdUpdated: false, outputTruncated: false, termination: 'completed' }) });
-  const server = createApp({ manager, runner, rateMax: 1000, auth }).listen(0, '127.0.0.1');
+  const server = createApp({ manager, runner, rateMax: 1000, auth, ...options }).listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   t.after(async () => { await new Promise((resolve) => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -89,8 +90,9 @@ test('one learner always has one session, including legacy starts without a less
 
   const lessonId = '11111111-1111-4111-8111-111111111111';
   const switched = await (await call('alice', 'POST', '/api/sessions', { lessonId })).json();
-  assert.notEqual(switched.sessionId, first.sessionId);
-  assert.equal((await call('alice', 'GET', `/api/sessions/${first.sessionId}`)).status, 404);
+  assert.equal(switched.sessionId, first.sessionId);
+  assert.equal(switched.lessonId, lessonId);
+  assert.equal((await call('alice', 'GET', `/api/sessions/${first.sessionId}`)).status, 200);
 });
 
 test('session lifecycle: same-lab start is idempotent, active session lookup works, switching labs replaces old session', async (t) => {
@@ -121,18 +123,32 @@ test('session lifecycle: same-lab start is idempotent, active session lookup wor
   assert.equal(restartData.sessionId, data1.sessionId);
   assert.equal(restartData.reused, true);
 
-  // Starting Lab 2 automatically cleans up Lab 1 and opens a new session
+  // Starting Lab 2 keeps the durable lease/session and rebinds the workspace
   const start2 = await call('alice', 'POST', '/api/sessions', { lessonId: lab2 });
-  assert.equal(start2.status, 201);
+  assert.equal(start2.status, 200);
   const data2 = await start2.json();
-  assert.notEqual(data2.sessionId, data1.sessionId);
+  assert.equal(data2.sessionId, data1.sessionId);
+  assert.equal(data2.lessonId, lab2);
 
-  // Lab 1 session is now gone (404)
-  assert.equal((await call('alice', 'GET', `/api/sessions/${data1.sessionId}`)).status, 404);
+  // The durable session remains available after lesson replacement
+  assert.equal((await call('alice', 'GET', `/api/sessions/${data1.sessionId}`)).status, 200);
 
   // Active session is now Lab 2
   const active2 = await (await call('alice', 'GET', '/api/sessions/active')).json();
   assert.equal(active2.active, true);
   assert.equal(active2.session.sessionId, data2.sessionId);
   assert.equal(active2.session.lessonId, lab2);
+});
+
+
+test('the 101st distinct learner is rejected without a workspace', async (t) => {
+  const leaseStore = createMemoryLeaseStore({ maxActiveLeases: 100 });
+  const { call, manager } = await startApp(t, fakeAuth(), { leaseStore });
+  const lessonId = '11111111-1111-4111-8111-111111111111';
+  for (let user = 0; user < 100; user++) {
+    assert.equal((await call(`u${user}`, 'POST', '/api/sessions', { lessonId })).status, 201);
+  }
+  const rejected = await call('u100', 'POST', '/api/sessions', { lessonId });
+  assert.equal(rejected.status, 503);
+  assert.equal(manager.sessions.size, 100);
 });
