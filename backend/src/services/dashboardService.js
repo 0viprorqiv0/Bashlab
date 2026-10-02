@@ -51,8 +51,9 @@ export function createDashboardService({ admin, prometheusUrl, fetchImpl = fetch
     }));
   }
 
-  async function count(table, build = (query) => query) {
-    const { count: total, error } = await build(admin.from(table).select('id', { count: 'exact', head: true }));
+  // `column` only has to exist (progress has no `id`, its key is user_id + lesson_id).
+  async function count(table, build = (query) => query, column = 'id') {
+    const { count: total, error } = await build(admin.from(table).select(column, { count: 'exact', head: true }));
     return error ? null : total;
   }
 
@@ -64,7 +65,7 @@ export function createDashboardService({ admin, prometheusUrl, fetchImpl = fetch
       count('profiles', (q) => q.eq('is_locked', true)),
       count('practice_sessions', (q) => q.eq('status', 'active')),
       count('practice_sessions', (q) => q.gte('started_at', since)),
-      count('progress', (q) => q.eq('status', 'done').gte('updated_at', since)),
+      count('progress', (q) => q.eq('status', 'done').gte('updated_at', since), 'lesson_id'),
     ]);
     return { users, admins, locked, activeSessions, sessions24h, completed24h };
   }

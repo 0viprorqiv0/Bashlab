@@ -36,6 +36,7 @@ function fakeAdmin(tables = {}) {
       upsert: (values, options) => { writes.push({ table, op: 'upsert', values, options }); return builder; },
       delete: () => { writes.push({ table, op: 'delete' }); return builder; },
       eq: () => builder,
+      lt: (column, value) => { writes.at(-1).lt = [column, value]; return builder; },
       maybeSingle: async () => ({ data: tables[table] ?? null, error: null }),
       single: async () => ({ data: { id: ID, ...(state.values || {}) }, error: null }),
       then: (resolve) => resolve({ data: null, error: null }),
@@ -198,4 +199,16 @@ test('writes are not throttled by the shared sandbox limiter, but have their own
   let last;
   for (let i = 0; i < 6; i++) last = await call(null, 'PUT', `/api/progress/${ID}`, { status: 'done' });
   assert.equal(last.status, 429);
+});
+
+test('stale practice sessions are expired: all at startup, only idle ones afterwards', async () => {
+  const admin = fakeAdmin();
+  const service = createContentService({ admin, userClient: () => ({}) });
+  const now = () => Date.parse('2026-10-02T12:00:00Z');
+  await service.expireStalePracticeSessions({ olderThanMs: 0, now });
+  await service.expireStalePracticeSessions({ now }); // default: 30 minutes idle
+  const [startup, sweep] = admin.writes.filter((w) => w.table === 'practice_sessions');
+  assert.deepEqual(startup.values, { status: 'expired' });
+  assert.ok(Date.parse(startup.lt[1]) >= now()); // everything that is still 'active'
+  assert.equal(Date.parse(sweep.lt[1]), now() - 30 * 60 * 1000);
 });

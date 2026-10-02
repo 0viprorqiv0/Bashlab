@@ -307,12 +307,23 @@ export async function startServer() {
   } else {
     console.warn('Sandbox disabled (SANDBOX_ENABLED=false): only the auth API is served.');
   }
+  // Keep the admin Activity numbers honest: sandbox sessions die with the
+  // process, so rows still 'active' at startup are stale; afterwards, rows idle
+  // past the sandbox's own 30-minute TTL are expired every few minutes.
+  let sweeper = null;
+  if (content) {
+    content.service.expireStalePracticeSessions({ olderThanMs: 0 })
+      .then((n) => { if (n) console.log(`Marked ${n} stale practice session(s) as expired.`); }).catch(() => {});
+    sweeper = setInterval(() => content.service.expireStalePracticeSessions().catch(() => {}), 5 * 60 * 1000);
+    sweeper.unref();
+  }
   const host = process.env.HOST || '0.0.0.0';
   const server = createApp({ manager, runner, auth, authApi, content, sandbox }).listen(Number(process.env.PORT || 3001), host, () => {
     console.log(`BashLab API listening on http://${host}:${server.address().port}`);
   });
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
     stopReaper();
+    if (sweeper) clearInterval(sweeper);
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 15000).unref();
   });
