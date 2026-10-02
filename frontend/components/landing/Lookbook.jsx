@@ -3,6 +3,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+import { authClient } from '@/lib/authClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 import styles from './Lookbook.module.css';
 import CuriosityWord from './animations/CuriosityWord';
 import ReviewsSponsors from './ReviewsSponsors';
@@ -426,6 +429,14 @@ function renderQuoteContent(quote, charCount, isIdle) {
 }
 
 export default function Lookbook() {
+  const router = useRouter();
+  const { user } = useAuth();
+  // Decided at click time (not render time) so server and client markup match.
+  const startLearning = (event) => {
+    if (user || authClient.peekUserId()) return; // signed in: follow the link
+    event.preventDefault();
+    router.push(`/login?next=${encodeURIComponent('/courses/shell-101')}`);
+  };
   const sectionRefs = useRef([]);
   const scrollTimer = useRef(null);
   const snappingUntil = useRef(0);
@@ -2381,7 +2392,7 @@ export default function Lookbook() {
               Learn Bash one small step at a time. Try a command, understand what it does, and build confidence through guided practice.
             </p>
             <div className={styles.heroCtas}>
-              <a href="/courses/shell-101" className={styles.btnPrimary}>
+              <a href="/courses/shell-101" className={styles.btnPrimary} onClick={startLearning}>
                 <span>Start learning</span>
                 <span aria-hidden="true">→</span>
               </a>
