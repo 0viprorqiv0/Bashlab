@@ -3,6 +3,11 @@
   font-family: var(--font-code, monospace);
   font-size: 0.8rem;
   color: #7b8893;
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 10;
+  margin-top: auto;
 }
 
 .landingFooter {
@@ -13,9 +18,10 @@
 }
 
 .standardFooter {
-  background: #090d14;
-  border-top: 1px solid #242d38;
-  padding: 1.25rem clamp(20px, 4vw, 56px);
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 0 14px;
+  margin-top: auto;
 }
 
 .inner {

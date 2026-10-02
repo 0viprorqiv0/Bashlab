@@ -68,29 +68,29 @@ const SPONSORS = [
 
 const REVIEWS = [
   {
-    quote: 'BashLab provides the fastest feedback loop for learning shell scripting. The isolated in-browser sandbox lets you experiment boldly without fear of bricking your system.',
+    quote: 'BashLab provides the fastest feedback loop for learning shell scripting. The isolated sandbox let me experiment boldly during my OS coursework without fear of bricking my laptop.',
     author: 'Minh Tran',
-    role: 'Lead DevOps Engineer · Nexus Cloud',
+    role: 'Computer Science Student',
     initials: 'MT',
-    badge: 'Verified DevOps',
+    badge: 'Verified Student',
     accent: '#68dfa0',
     metric: '48 Labs Solved',
   },
   {
-    quote: 'The interactive lessons and real-time requirement checks feel like pair-programming with a senior mentor. It shaved weeks off onboarding our junior engineers.',
+    quote: 'The interactive lessons and real-time requirement checks feel like pair-programming with a senior mentor. It turned Linux from a dreaded subject into my favorite superpower.',
     author: 'Sarah Chen',
-    role: 'Security Researcher · Aegis Cyber',
+    role: 'Cybersecurity Learner',
     initials: 'SC',
-    badge: 'Security Pro',
+    badge: 'Security Junior',
     accent: '#78cbd4',
     metric: 'Shell 101 Graduate',
   },
   {
-    quote: 'Went from being intimidated by standard streams and regex to confidently writing production automation scripts in days. The hands-on practice is unmatched.',
+    quote: 'Went from being terrified of standard streams and bash syntax to confidently writing automated scripts in days. The hands-on practice is unmatched for beginners.',
     author: 'Alex Rivera',
-    role: 'Backend Platform Lead · OpenStack',
+    role: 'Aspiring Cloud Engineer',
     initials: 'AR',
-    badge: 'Core Contributor',
+    badge: 'Top 1% Learner',
     accent: '#f59e0b',
     metric: 'Top 1% Learner',
   },
@@ -99,39 +99,62 @@ const REVIEWS = [
 export default function ReviewsSponsors() {
   return (
     <div className={styles.container}>
-      {/* Testimonials Grid */}
-      <div className={styles.reviewsGrid}>
-        {REVIEWS.map((review) => (
-          <article
-            key={review.author}
-            className={styles.reviewCard}
-            style={{ '--card-accent': review.accent }}
-          >
-            <div className={styles.cardHeader}>
-              <div className={styles.stars} aria-label="5 out of 5 stars">
-                {'★'.repeat(5)}
+      {/* Testimonials Grid & Star Rating */}
+      <div className={styles.reviewsGroup}>
+        <div className={styles.reviewsGrid}>
+          {REVIEWS.map((review) => (
+            <article
+              key={review.author}
+              className={styles.reviewCard}
+              style={{ '--card-accent': review.accent }}
+            >
+              <div className={styles.cardHeader}>
+                <div className={styles.stars} aria-label="5 out of 5 stars">
+                  {'★'.repeat(5)}
+                </div>
+                <span className={styles.badge}>{review.badge}</span>
               </div>
-              <span className={styles.badge}>{review.badge}</span>
-            </div>
 
-            <p className={styles.quote}>"{review.quote}"</p>
+              <p className={styles.quote}>"{review.quote}"</p>
 
-            <div className={styles.authorRow}>
-              <div className={styles.avatar} aria-hidden="true">
-                {review.initials}
+              <div className={styles.authorRow}>
+                <div className={styles.avatar} aria-hidden="true">
+                  {review.initials}
+                </div>
+                <div className={styles.authorMeta}>
+                  <span className={styles.authorName}>{review.author}</span>
+                  <span className={styles.authorRole}>{review.role}</span>
+                </div>
               </div>
-              <div className={styles.authorMeta}>
-                <span className={styles.authorName}>{review.author}</span>
-                <span className={styles.authorRole}>{review.role}</span>
-              </div>
-            </div>
 
-            <div className={styles.cardFooter}>
-              <span>VERIFIED LEARNER</span>
-              <span className={styles.metricTag}>{review.metric}</span>
-            </div>
-          </article>
-        ))}
+              <div className={styles.cardFooter}>
+                <span>VERIFIED LEARNER</span>
+                <span className={styles.metricTag}>{review.metric}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {/* Sleek Star Rating (Frameless, compact & clean) */}
+        <div className={styles.ratingRow}>
+          <div className={styles.ratingStarsGroup}>
+            <span className={styles.ratingStars} aria-label="4.9 out of 5 stars">
+              ★★★★★
+            </span>
+            <span className={styles.ratingScore}>4.9/5</span>
+          </div>
+
+          <span className={styles.ratingDot} aria-hidden="true">·</span>
+
+          <div className={styles.ratingText}>
+            <span className={styles.ratingHeading}>
+              Trusted by 1,200+ students &amp; aspiring engineers
+            </span>
+            <span className={styles.ratingNote}>
+              — Zero-friction learning with instant feedback
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Sponsors & Backers Pill */}
