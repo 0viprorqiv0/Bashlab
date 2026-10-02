@@ -6,6 +6,18 @@
   position: relative;
 }
 
+.adminChromeContainer {
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
 .authMain {
   padding-top: 64px;
   flex: 1 0 auto;
@@ -13,6 +25,17 @@
 
 .workspaceMain {
   padding-top: 64px;
+  height: 100vh;
+  height: 100svh;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.adminMain {
+  padding-top: 0;
   height: 100vh;
   height: 100svh;
   box-sizing: border-box;

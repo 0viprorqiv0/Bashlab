@@ -19,6 +19,7 @@ export default function SubscriptionTeaser() {
         'Community Discord access',
       ],
       ctaText: 'Start Free',
+      href: '/courses',
       isPopular: false,
       color: '#78cbd4',
       icon: (
@@ -42,6 +43,7 @@ export default function SubscriptionTeaser() {
         'Priority runner queue & zero wait',
       ],
       ctaText: 'Unlock Individual Access',
+      href: '/checkout?plan=individual',
       isPopular: true,
       color: '#68dfa0',
       icon: (
@@ -63,7 +65,8 @@ export default function SubscriptionTeaser() {
         'Single Sign-On (SSO / SAML integration)',
         'Volume team license & priority support',
       ],
-      ctaText: 'Explore Team & University',
+      ctaText: 'Unlock Team & University Access',
+      href: '/checkout?plan=team',
       isPopular: false,
       color: '#a78bfa',
       icon: (
@@ -119,7 +122,7 @@ export default function SubscriptionTeaser() {
             </ul>
 
             <Link
-              href="/subscription"
+              href={p.href}
               className={`${styles.cardBtn} ${p.isPopular ? styles.cardBtnPopular : ''}`}
             >
               {p.ctaText}

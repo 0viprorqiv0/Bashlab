@@ -13,14 +13,14 @@
 .landingFooter {
   background: transparent;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 18px 0 6px;
+  padding: 18px 0 20px;
   margin-top: auto;
 }
 
 .standardFooter {
   background: transparent;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 18px 0 14px;
+  padding: 24px 0 max(30px, env(safe-area-inset-bottom, 30px));
   margin-top: auto;
 }
 
