@@ -192,14 +192,15 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
       setInstanceStatus('stopped');
       return;
     }
-    if (sessionIdRef.current) { endSession(sessionIdRef.current); sessionIdRef.current = null; }
     const generation = ++generationRef.current;
     const isStale = () => generationRef.current !== generation;
     setInstanceStatus('restarting');
     setTerminalLogs([{ type: 'output', text: 'Booting container instance...' }]);
     try {
       const session = await createSession(currentLab.lessonId);
-      if (isStale()) { endSession(session.sessionId); return; } // page left (or StrictMode remount) while creating
+      // The API keeps one session per learner and hands the same one back to every open, so an
+      // open that was discarded (StrictMode remount, Stop pressed meanwhile) must not delete it.
+      if (isStale()) return;
       sessionIdRef.current = session.sessionId;
       setCwd(session.cwd);
       setInstanceStatus('running');
@@ -269,7 +270,7 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
     }
   }
 
-  // Open a sandbox session as soon as the lab loads; close it on the way out
+  // Open a sandbox session as soon as the lab loads; closing the tab ends it
   useEffect(() => {
     const closeSession = () => {
       if (!sessionIdRef.current) return;
@@ -285,7 +286,9 @@ function Workspace({ courseId, labId, labs, markDone, user, profile }) {
       generationRef.current++; // eslint-disable-line react-hooks/exhaustive-deps
       window.removeEventListener('pagehide', closeSession);
       window.removeEventListener('pageshow', reopen);
-      closeSession();
+      // Leaving the lab inside the app does not delete the session: the next open (same or
+      // another lab) is answered by the learner's single session, and the reaper frees it.
+      sessionIdRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
