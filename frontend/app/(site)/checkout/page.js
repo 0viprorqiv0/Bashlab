@@ -36,6 +36,18 @@ function CheckoutContent() {
   const [billingCycle, setBillingCycle] = useState(cycleParam === 'monthly' ? 'monthly' : 'annual');
   const [planType, setPlanType] = useState(planParam === 'team' ? 'team' : 'individual');
 
+  useEffect(() => {
+    if (cycleParam) {
+      setBillingCycle(cycleParam === 'monthly' ? 'monthly' : 'annual');
+    }
+  }, [cycleParam]);
+
+  useEffect(() => {
+    if (planParam) {
+      setPlanType(planParam === 'team' ? 'team' : 'individual');
+    }
+  }, [planParam]);
+
   // Customer form fields
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -93,8 +105,8 @@ function CheckoutContent() {
   const rawSubtotal = selectedCourse
     ? selectedCourse.price
     : (isTeam
-        ? (billingCycle === 'annual' ? 240 : 29)
-        : (billingCycle === 'annual' ? 89 : 12));
+        ? (billingCycle === 'annual' ? 288 : 29)
+        : (billingCycle === 'annual' ? 108 : 12));
   const discountAmount = couponApplied ? rawSubtotal * couponDiscount : 0;
   const finalTotal = Math.max(0, rawSubtotal - discountAmount);
 
@@ -432,10 +444,10 @@ function CheckoutContent() {
                   ? selectedCourse.desc
                   : (isTeam
                       ? (billingCycle === 'annual'
-                          ? 'Billed annually at $240/seat/yr ($20/mo/seat) · Cohort Dashboard & Dedicated Nodes'
+                          ? 'Billed annually at $288/seat/yr ($24/mo/seat) · Cohort Dashboard & Dedicated Nodes'
                           : 'Billed monthly at $29/seat/mo · Cancel anytime · Cohort Dashboard & Dedicated Nodes')
                       : (billingCycle === 'annual'
-                          ? 'Billed annually at $89/yr (Save 25%) · Persistent Sandboxes & Verified Certs'
+                          ? 'Billed annually at $108/yr ($9/mo, Save 25%) · Persistent Sandboxes & Verified Certs'
                           : 'Billed monthly at $12/mo · Cancel anytime · Persistent Sandboxes & Verified Certs'))}
               </div>
             </div>
