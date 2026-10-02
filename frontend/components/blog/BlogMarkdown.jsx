@@ -11,6 +11,7 @@ function CodeBlock({ children }) {
   useEffect(() => () => clearTimeout(resetTimer.current), []);
   const rawText = String(children?.props?.children ?? '').replace(/\n$/, '');
   const language = children?.props?.className?.match(/language-([\w-]+)/)?.[1] || 'text';
+  const codeLines = rawText.split('\n');
 
   async function handleCopy() {
     if (!rawText) return;
@@ -27,13 +28,15 @@ function CodeBlock({ children }) {
   return (
     <div className={styles.codeBlock}>
       <div className={styles.terminalBar}>
-        <div className={styles.codeLabel}><span className={styles.terminalDots} aria-hidden="true"><i /><i /><i /></span><span>{language}</span></div>
-        <button type="button" onClick={handleCopy} aria-label="Copy code" className={styles.copyButton}>
+        <div className={styles.codeLabel}><span aria-hidden="true">{'</>'}</span><span>{language === 'text' ? 'bash' : language}</span></div>
+        <button type="button" onClick={handleCopy} aria-label={copyState === 'Copied' ? 'Copied' : 'Copy code'} title={copyState === 'Copied' ? 'Copied' : 'Copy code'} className={styles.copyButton}>
           <span className="material-symbols-outlined" aria-hidden="true">{copyState === 'Copied' ? 'check' : 'content_copy'}</span>
-          <span aria-live="polite">{copyState}</span>
         </button>
       </div>
-      <pre tabIndex={0} aria-label={`${language} code`} data-lenis-prevent-horizontal>{children}</pre>
+      <pre tabIndex={0} aria-label={`${language} code`} data-lenis-prevent-horizontal><code>{codeLines.map((line, index) => {
+        const commentAt = line.indexOf('#');
+        return <span key={index}>{commentAt < 0 ? line : <>{line.slice(0, commentAt)}<span className={styles.codeComment}>{line.slice(commentAt)}</span></>}{index < codeLines.length - 1 ? '\n' : ''}</span>;
+      })}</code></pre>
     </div>
   );
 }

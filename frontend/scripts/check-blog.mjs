@@ -187,11 +187,12 @@ try {
 
   await smoothPage.getByRole('navigation', { name: 'Table of contents' }).getByRole('link', { name: 'All articles', exact: true }).click();
   await smoothPage.getByRole('heading', { name: 'Latest articles' }).waitFor();
-  await smoothPage.mouse.move(30, 500);
-  const listStart = await smoothPage.evaluate(() => scrollY);
+  await smoothPage.setViewportSize({ width: 390, height: 844 });
+  await smoothPage.locator('main').hover();
   await smoothPage.mouse.wheel(0, 240);
-  await smoothPage.waitForTimeout(750);
-  assert.ok(await smoothPage.evaluate(() => scrollY) > listStart + 400, 'Leaving the reader must restore page scrolling at 200% speed');
+  await smoothPage.waitForTimeout(250);
+  assert.ok(await smoothPage.locator('main').evaluate((main) => main.scrollTop > 0), 'Blog list must scroll inside its viewport frame on mobile');
+  assert.equal(await smoothPage.evaluate(() => scrollY), 0, 'Blog list must keep the document stationary');
 
   // Native wheel scrolling also works for people who prefer reduced motion.
   await page.goto(`${baseURL}/blog/getting-started-with-linux-terminal`);

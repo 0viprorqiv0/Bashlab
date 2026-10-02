@@ -41,12 +41,9 @@ export default function BlogListPage() {
   }, [searchQuery, selectedCategory]);
 
   return (
-    <div className={styles.blogPage}>
+    <div className={`${styles.blogPage} ${styles.listPage}`}>
       {/* Editorial Journal Header */}
-      <BlogHero
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />
+      <BlogHero searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
 
       {/* Main 2-Column Section */}
@@ -54,7 +51,9 @@ export default function BlogListPage() {
         {/* CỘT TRÁI: MỤC LỤC SIDEBAR (240px - 280px) */}
         <aside className={styles.sidebar}>
           <div className={styles.stickySidebar}>
-            <h2 className={styles.sidebarHeading}>Explore topics</h2>
+            <div className={styles.sectionHeading}>
+              <h2>Explore topics</h2>
+            </div>
             <ul className={styles.categoryList}>
               {BLOG_CATEGORIES.map((cat) => {
                 const count = categoryCounts[cat] || 0;

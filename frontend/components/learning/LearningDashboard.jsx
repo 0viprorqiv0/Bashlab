@@ -9,7 +9,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { authClient } from '@/lib/authClient';
 import { PageError, PageLoading } from '@/components/shared/Loading';
 import {
-  courseCode, courseStats, fetchProgressMap, fetchPublishedCourses, lessonHref,
+  courseStats, fetchProgressMap, fetchPublishedCourses, lessonHref,
 } from '@/lib/learning';
 
 const dateLabel = (date, options) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { ...options, timeZone: 'UTC' });
@@ -159,7 +159,7 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
 
       {current ? (
         <section className={styles.journey} aria-label="Your current course">
-          <div className={styles.courseMark} aria-hidden="true"><span>$_</span><small>{courseCode(current.course.slug)}</small></div>
+          <div className={styles.courseMark} aria-hidden="true"><img src="/auth/binary-hacker-bashlab.png" alt="" /></div>
           <div className={styles.courseCopy}>
             <div className={styles.courseMeta}><span>{courseState}</span><span>{current.course.category}</span></div>
             <h2>{current.course.title}</h2>

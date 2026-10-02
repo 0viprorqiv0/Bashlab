@@ -14,18 +14,19 @@ export default function SiteChrome({ children }) {
     .some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const isWorkspace = pathname?.includes('/labs/');
   const isLanding = pathname === '/';
+  const isViewportPage = !isWorkspace && (isAuthPage || ['/blog', '/account', '/my-learning', '/courses'].includes(pathname) || pathname?.startsWith('/courses/'));
 
   return (
     <AuthProvider>
-      {!isWorkspace && <SmoothScroll wheelMultiplier={pathname === '/' || pathname?.startsWith('/blog') ? 2 : 1} duration={pathname?.startsWith('/blog') ? 0.6 : 0.8} />}
+      {!isWorkspace && !isViewportPage && <SmoothScroll wheelMultiplier={pathname === '/' || pathname?.startsWith('/blog') ? 2 : 1} duration={pathname?.startsWith('/blog') ? 0.6 : 0.8} />}
       <Navbar />
-      <div className={styles.chromeContainer}>
+      <div className={`${styles.chromeContainer} ${isViewportPage ? styles.viewportContainer : ''}`}>
         <main
           className={
             isWorkspace
               ? styles.workspaceMain
-              : isAuthPage
-              ? styles.authMain
+              : isViewportPage
+              ? styles.viewportMain
               : isAppPage
               ? styles.standardMain
               : isLanding

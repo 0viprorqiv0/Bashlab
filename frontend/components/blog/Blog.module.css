@@ -1,4 +1,4 @@
-/* A light editorial journal, anchored by BashLab's dark terminal identity. */
+/* A light editorial journal shared by the index and article pages. */
 .blogPage {
   --journal-bg: #f7f9f8;
   --journal-panel: #ffffff;
@@ -20,84 +20,42 @@
 .blogPage :is(pre, [tabindex]) { scrollbar-width: thin; scrollbar-color: #849b95 transparent; }
 /* Code and tables keep horizontal scrolling without trapping the page wheel. */
 .blogPage :is(.codeBlock pre, .tableScroll) { overscroll-behavior: contain auto; }
-.hero {
-  --journal-line: #263b45;
-  --journal-text: #edf6f5;
-  --journal-muted: #a1b8bf;
-  --journal-green: #78efb0;
-  color: var(--journal-text);
-  color-scheme: dark;
-  position: relative;
-  isolation: isolate;
-  border-bottom: 1px solid var(--journal-line);
-  background: #0c151e;
-  overflow: hidden;
-}
-.hero::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background: radial-gradient(ellipse at 82% 30%, #174c453d, transparent 55%), radial-gradient(ellipse at 12% 100%, #17505d25, transparent 60%);
-}
-.hero::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 12%;
-  width: 38%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--journal-green), transparent);
-}
-.heroLayout, .journalLayout, .readingLayout, .detailHeader {
+.journalHeader, .journalLayout, .readingLayout, .detailHeader {
   width: min(1340px, 90%);
   margin-inline: auto;
 }
-.heroLayout { display: grid; grid-template-columns: 1.3fr 1fr; gap: 72px; align-items: center; padding-block: 78px 68px; }
-.heroCopy h1 {
+.journalHeader { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding-top: clamp(32px, 5vw, 64px); }
+.journalHeader h1 {
   font-family: var(--font-headline);
-  font-size: clamp(36px, 3.8vw, 62px);
+  font-size: clamp(30px, 2.5vw, 42px);
   font-weight: 600;
   line-height: 1.12;
   letter-spacing: -0.035em;
   text-wrap: balance;
 }
-.heroCopy h1 > span:first-of-type { color: var(--journal-text); }
-.heroCopy > p { max-width: 53ch; margin-top: 22px; color: var(--journal-muted); font-size: 15px; line-height: 1.85; }
-.cursor { display: inline-block; width: 0.15em; height: 0.78em; margin-left: 0.12em; background: var(--journal-green); }
 .searchBox {
-  margin-top: 30px;
-  max-width: 540px;
+  flex: 0 1 380px;
+  min-width: 280px;
   display: flex;
   align-items: center;
   gap: 12px;
   padding-inline: 17px;
-  border: 1px solid #36534f;
+  border: 1px solid var(--journal-line);
   border-radius: 12px;
-  background: #0a131c;
+  background: var(--journal-panel);
   color: var(--journal-green);
   transition: border-color 180ms, background 180ms;
 }
-.searchBox:focus-within { border-color: var(--journal-green); background: #101e26; }
+.searchBox:focus-within { border-color: var(--journal-green); }
 .searchBox input { min-width: 0; width: 100%; height: 54px; background: transparent; color: var(--journal-text); font-size: 14px; caret-color: var(--journal-green); }
 .searchBox input::placeholder { color: var(--journal-muted); opacity: 1; }
 .searchBox input:focus-visible { outline-offset: 0; outline: none; }
 .searchBox:has(input:focus-visible) { outline: 2px solid var(--journal-green); outline-offset: 4px; }
-.heroTerminal { border: 1px solid #34514e; border-radius: 14px; background: #0a121b; transform: perspective(1200px) rotateY(-4deg) rotateX(2deg); }
-.terminalBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 45px; padding: 10px 16px; background: #15222b; border-bottom: 1px solid var(--journal-line); color: var(--journal-muted); font-family: var(--font-code); font-size: 11px; }
-.heroTerminal .terminalBar { border-radius: 14px 14px 0 0; }
+.terminalBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 6px 14px 6px 19px; background: #212121; color: #f2f2f2; font-family: var(--font-code); font-size: 12px; }
 .terminalBar > :global(.material-symbols-outlined) { font-size: 17px; }
 .terminalDots { display: flex; flex-shrink: 0; gap: 6px; }
 .terminalDots i { display: block; width: 8px; height: 8px; border-radius: 50%; background: #607881; }
 .terminalDots i:nth-child(3) { background: var(--journal-green); }
-.terminalBody { padding: 24px; font-family: var(--font-code); font-size: 12px; line-height: 1.9; }
-.terminalBody p > span:first-child { color: var(--journal-green); margin-right: 9px; }
-.terminalBody .terminalOutput { margin-bottom: 18px; color: #bfd0d5; }
-.terminalComment { color: var(--journal-muted); margin-block: 6px; font-size: 11px; }
-.terminalCursor { display: inline-block; height: 14px; width: 7px; vertical-align: middle; background: var(--journal-green); animation: cursorPulse 1.4s step-end infinite; }
-.terminalStatus { padding: 9px 16px; border-top: 1px solid var(--journal-line); display: flex; justify-content: space-between; font-family: var(--font-code); color: var(--journal-muted); font-size: 10px; }
-.terminalStatus > span:first-child { color: var(--journal-green); }
-@keyframes cursorPulse { 50% { opacity: 0.15; } }
 .journalLayout { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 54px; padding-block: 45px 80px; }
 .stickySidebar { position: sticky; top: 94px; }
 .sidebarHeading { font-family: var(--font-headline); font-size: 15px; font-weight: 600; color: var(--journal-muted); margin-bottom: 18px; }
@@ -117,7 +75,6 @@
 .cardMeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; font-size: 10px; }
 .categoryLabel { color: var(--journal-muted); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
 .featuredLabel { border: 1px solid #c4dcca; background: #edf6ef; border-radius: 4px; padding: 3px 7px; color: #245d3c; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-.hero .featuredLabel { border-color: #375d4e; background: #17362b; color: #a9d9bc; }
 .readTime { margin-left: auto; color: var(--journal-muted); font-family: var(--font-code); font-size: 10px; }
 .cardTitle { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; }
 .cardTitle h3 { font-family: var(--font-headline); font-size: 21px; line-height: 1.4; letter-spacing: -0.02em; font-weight: 600; text-wrap: pretty; }
@@ -139,10 +96,10 @@
 .notFound { width: min(650px, 90%); margin: 80px auto; }
 .notFound > span { font-size: 52px; color: var(--journal-green); }
 .notFound h1 { font-family: var(--font-headline); font-size: 36px; }
-.detailHeader { max-width: 1140px; padding-block: 40px 45px; }
+.detailHeader { max-width: 1140px; padding-block: 40px 32px; border-bottom: 1px solid var(--journal-line); }
 .breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 32px; font-size: 11px; color: var(--journal-muted); }
 .breadcrumb a:hover { color: var(--journal-green); }
-.detailHeader h1 { max-width: 34ch; font-family: var(--font-headline); font-size: clamp(32px, 3.5vw, 54px); line-height: 1.15; letter-spacing: -0.03em; font-weight: 600; text-wrap: balance; }
+.detailHeader h1 { max-width: 34ch; font-family: var(--font-headline); font-size: clamp(32px, 3.5vw, 48px); line-height: 1.2; letter-spacing: -0.03em; font-weight: 600; text-wrap: balance; }
 .detailExcerpt { max-width: 76ch; color: var(--journal-muted); font-size: 15px; line-height: 1.85; margin-top: 20px; }
 .detailMeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 22px; margin-top: 32px; padding-top: 23px; border-top: 1px solid var(--journal-line); }
 .authorAvatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid #477b64; }
@@ -182,13 +139,15 @@
 .prose blockquote { border-left: 1px solid #a3c4b2; background: #f1f6f3; border-radius: 0 8px 8px 0; padding: 17px 20px; margin-block: 24px; color: #435c50; }
 .prose blockquote > :last-child { margin-bottom: 0; }
 .prose :not(pre) > code { font-family: var(--font-code); color: #345a4a; background: #edf2ef; border-radius: 4px; padding: 2px 6px; font-size: 0.85em; }
-.codeBlock { --journal-line: #263b45; --journal-muted: #a1b8bf; --journal-green: #78efb0; color-scheme: dark; margin-block: 26px; border: 1px solid #35524f; border-radius: 12px; overflow: hidden; background: #080f17; }
-.codeLabel { display: flex; align-items: center; gap: 14px; }
-.copyButton { display: flex; align-items: center; gap: 6px; color: var(--journal-muted); border: 1px solid #3b535c; border-radius: 5px; padding: 7px 9px; font-family: var(--font-body); font-size: 11px; min-height: 32px; }
-.copyButton:hover { color: var(--journal-green); border-color: var(--journal-green); }
-.copyButton > span:first-child { font-size: 14px; }
-.codeBlock pre { overflow-x: auto; padding: 22px; font-size: 12px; line-height: 1.9; color: #a9e8cc; overflow-wrap: normal; }
+.codeBlock { --journal-line: #292929; --journal-muted: #f2f2f2; --journal-green: #78efb0; color-scheme: dark; margin-block: 26px; border: 1px solid #292929; border-radius: 12px; overflow: hidden; background: #212121; }
+.codeLabel { display: flex; align-items: center; gap: 9px; font-family: var(--font-body); font-weight: 600; }
+.codeLabel > span:first-child { font-family: var(--font-code); font-size: 15px; }
+.copyButton { display: grid; place-items: center; width: 32px; height: 32px; color: #f2f2f2; border: 0; border-radius: 7px; background: transparent; }
+.copyButton:hover { background: #333; color: var(--journal-green); }
+.copyButton > span:first-child { font-size: 18px; }
+.codeBlock pre { overflow-x: auto; padding: 14px 22px 22px; font-size: 12px; line-height: 1.9; color: #78efb0; background: #212121; overflow-wrap: normal; }
 .codeBlock pre code { font-family: var(--font-code); }
+.codeComment { color: #f2f2f2; }
 .tableScroll { overflow-x: auto; margin-block: 24px; border: 1px solid var(--journal-line); border-radius: 10px; }
 .prose table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .prose th { color: var(--journal-text); background: #f0f4f2; font-weight: 600; }
@@ -201,12 +160,55 @@
 .relatedSection { margin-top: 45px; }
 .relatedSection .articleCard { padding: 23px; }
 .relatedSection .cardTitle h3 { font-size: 19px; }
-@media (min-width: 1700px) { .heroLayout { padding-block: 90px 80px; } }
+/* Share the login/course viewport frame; reserve space for navigation and footer. */
+.listPage {
+  min-height: 100%;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 801px) {
+  .listPage .journalHeader {
+    gap: 24px;
+    padding-top: clamp(20px, 2.6dvh, 36px);
+    flex-shrink: 0;
+  }
+  .listPage .journalHeader h1 { font-size: clamp(28px, 3.8dvh, 44px); }
+  .listPage .searchBox input { height: clamp(40px, 5dvh, 54px); }
+  .listPage .journalLayout {
+    /* Keep the article area at a steady viewport height as filters change. */
+    flex: 1 0 auto;
+    margin-bottom: 0;
+    grid-template-columns: clamp(170px, 15vw, 224px) minmax(0, 1fr);
+    gap: clamp(24px, 3vw, 54px);
+    padding-block: clamp(20px, 2dvh, 32px);
+    align-content: start;
+  }
+  .listPage .articleSection { min-height: 100%; }
+  .listPage .stickySidebar { position: static; }
+  .listPage .sectionHeading {
+    padding-bottom: clamp(8px, 1.2dvh, 16px);
+    margin-bottom: clamp(10px, 1.5dvh, 20px);
+  }
+  .listPage .articleGrid { gap: clamp(10px, 1.5dvh, 20px); }
+  .listPage .articleCard { padding: clamp(10px, calc(3dvh - 12px), 27px); }
+  .listPage .cardMeta { margin-bottom: clamp(6px, calc(2dvh - 8px), 16px); }
+  .listPage .cardTitle h3 { font-size: clamp(16px, 1.9dvh, 21px); line-height: 1.3; }
+  .listPage .featuredCard .cardTitle h3 { font-size: clamp(20px, 2.5dvh, 30px); }
+  .listPage .cardExcerpt {
+    font-size: clamp(12px, 1.25dvh, 13px);
+    line-height: 1.6;
+    margin-block: clamp(6px, 1dvh, 13px) clamp(8px, 1.3dvh, 20px);
+  }
+  .listPage .cardFooter { padding-top: clamp(6px, 1dvh, 14px); }
+  .listPage .authorInitials { width: 24px; height: 24px; }
+}
+/* Short, wide screens use two card rows instead of squeezing the text. */
+@media (min-width: 1200px) and (max-height: 800px) {
+  .listPage .articleGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .listPage .featuredCard { grid-column: span 2; }
+}
 @media (max-width: 1100px) {
-  .heroLayout { gap: 32px; }
-  .heroCopy h1 { font-size: 43px; }
-  .terminalBody { padding: 20px 16px; font-size: 11px; }
-  .terminalComment { font-size: 10px; }
   .journalLayout, .readingLayout { grid-template-columns: 190px minmax(0, 1fr); gap: 28px; }
   .readingArticleContent { padding: 30px; }
   .articleCard { padding: 23px; }
@@ -214,12 +216,8 @@
   .cardFooter { flex-wrap: wrap; }
 }
 @media (max-width: 800px) {
-  .heroLayout { grid-template-columns: 1fr; padding-block: 44px 36px; gap: 32px; }
-  .heroCopy h1 { font-size: clamp(34px, 6vw, 48px); }
-  .heroCopy > p { max-width: 60ch; }
-  .heroTerminal { transform: none; }
-  .terminalBody { padding: 20px; font-size: 12px; }
-  .heroTerminal .terminalBody .terminalOutput { margin-bottom: 12px; }
+  .journalHeader { flex-direction: column; align-items: stretch; gap: 24px; }
+  .searchBox { flex: none; min-width: 0; }
   .journalLayout, .readingLayout { grid-template-columns: 1fr; gap: 30px; padding-top: 30px; }
   .stickySidebar { position: static; }
   .categoryList { flex-direction: row; flex-wrap: wrap; gap: 7px; }
@@ -233,10 +231,9 @@
   .publicationMeta { gap: 12px; }
 }
 @media (max-width: 520px) {
-  .heroLayout, .journalLayout, .readingLayout, .detailHeader { width: calc(100% - 36px); }
-  .heroCopy h1 { font-size: 34px; }
-  .heroCopy > p { font-size: 13px; margin-top: 16px; }
-  .searchBox { margin-top: 22px; padding-inline: 12px; gap: 8px; }
+  .journalHeader, .journalLayout, .readingLayout, .detailHeader { width: calc(100% - 36px); }
+  .journalHeader h1 { font-size: 34px; }
+  .searchBox { padding-inline: 12px; gap: 8px; }
   .searchBox input { font-size: 12px; height: 49px; }
   .terminalBar { font-size: 10px; padding-inline: 12px; }
   .terminalBody { font-size: 11px; padding: 18px 14px; }
@@ -262,8 +259,6 @@
   .readingLayout { gap: 24px; padding-bottom: 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .terminalCursor { animation: none; }
-  .heroTerminal { transform: none; }
   .blogPage * { transition: none; }
 }
 @media (min-width: 801px) {

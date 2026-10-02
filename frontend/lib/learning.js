@@ -83,7 +83,7 @@ export function lessonHref(courseSlug, lessonSlug) {
 
 const capitalize = (value) => (value ? value[0].toUpperCase() + value.slice(1) : '');
 
-// Shape consumed by CourseDetail/LabWorkspace, from either a structured lab
+// Shape consumed by LabWorkspace, from either a structured lab
 // (lesson_content v1) or a legacy Markdown lesson.
 export function toDisplayLab(lesson, progressMap = new Map()) {
   const content = lesson.lesson_content?.version === 1 ? lesson.lesson_content : null;

@@ -25,18 +25,16 @@ export default function BlogDetailPage() {
     );
   }
 
-  const relatedPosts = BLOG_POSTS.filter((item) => item.id !== post.id && (item.category === post.category || item.featured)).slice(0, 2);
+  const relatedPosts = [
+    ...BLOG_POSTS.filter((item) => item.id !== post.id && (item.category === post.category || item.featured)),
+    ...BLOG_POSTS.filter((item) => item.id !== post.id && item.category !== post.category && !item.featured),
+  ].slice(0, 2);
   const sections = post.content.split('\n').flatMap((line, index) => line.startsWith('## ') ? [{ id: `section-${index + 1}`, title: line.slice(3).replace(/`/g, '') }] : []);
 
   return (
     <div className={styles.blogPage}>
-      <header className={`${styles.hero} ${styles.detailHero}`}>
+      <header>
         <div className={styles.detailHeader}>
-          <nav aria-label="Breadcrumb" className={styles.breadcrumb}>
-            <Link href="/">Home</Link><span aria-hidden="true">/</span>
-            <Link href="/blog">Journal</Link><span aria-hidden="true">/</span>
-            <span aria-current="page">{post.category}</span>
-          </nav>
           <h1>{post.title}</h1>
           <p className={styles.detailExcerpt}>{post.excerpt}</p>
           <div className={styles.detailMeta}>

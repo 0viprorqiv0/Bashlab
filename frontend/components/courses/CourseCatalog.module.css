@@ -3,23 +3,21 @@
   --muted: #a3ada8;
   --line: #2c3635;
   --accent: #68dfa0;
-  flex: 1;
-  padding: clamp(34px, 4vw, 64px) 32px 104px;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(16px, 3dvh, 40px) 32px;
   color: var(--ink);
   font-family: var(--font-body);
 }
-.container { width: min(1160px, 100%); margin: 0 auto; }
-.header { max-width: 760px; margin-bottom: 34px; }
+.container { width: min(1160px, 100%); margin: auto; }
+.header { max-width: 760px; margin-bottom: clamp(16px, 2.5dvh, 34px); }
 .header h1 { font-family: var(--font-headline); font-size: 44px; font-weight: 500; line-height: 1.15; letter-spacing: -.035em; }
 .header h1 span { color: var(--accent); }
-.header p { max-width: 640px; margin-top: 14px; color: var(--muted); font-size: 16px; line-height: 1.65; }
-.filters { display: flex; gap: 32px; border-bottom: 1px solid var(--line); margin-bottom: 26px; }
-.filters button { position: relative; flex: none; padding: 0 1px 17px; color: var(--muted); font-size: 14px; font-weight: 500; white-space: nowrap; transition: color 180ms ease; }
-.filters button:hover, .filters button.activeFilter { color: var(--ink); }
-.filters button.activeFilter::after { content: ''; position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: var(--accent); }
 .page button:focus-visible, .page a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.featured { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(245px, .8fr); min-height: 344px; overflow: hidden; border: 1px solid #354440; border-radius: 14px; background: #191f22; scroll-margin-top: 100px; }
-.featureCopy { display: flex; flex-direction: column; align-items: flex-start; padding: clamp(32px, 3vw, 44px); }
+.featured { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(245px, .8fr); overflow: hidden; border: 1px solid #354440; border-radius: 14px; background: #191f22; scroll-margin-top: 16px; }
+.featured + .featured { margin-top: 16px; }
+.featureCopy { display: flex; flex-direction: column; align-items: flex-start; padding: clamp(20px, 3dvh, 44px); }
 .featureTopline { display: flex; align-items: center; gap: 10px; color: var(--accent); font-size: 12px; font-weight: 600; }
 .availableDot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .toplineDivider { height: 12px; width: 1px; background: #4c6156; margin: 0 3px; }
@@ -30,11 +28,8 @@
 .primaryAction { display: inline-flex; align-items: center; justify-content: space-between; gap: 34px; min-height: 46px; margin-top: 28px; padding: 11px 17px; border-radius: 6px; background: #176b49; color: #f1faf5; font-size: 13px; font-weight: 600; transition: background 180ms ease, transform 180ms ease; }
 .primaryAction:hover { background: #1c8058; transform: translateY(-2px); }
 .primaryAction :global(.material-symbols-outlined) { font-size: 19px; }
-.courseMark { display: flex; flex-direction: column; justify-content: space-between; padding: 30px 34px; border-left: 1px solid #3e5d4f; background: #1b2d25; color: var(--accent); }
-.courseMark span { font-family: var(--font-code); font-size: 11px; letter-spacing: .06em; }
-.courseMark span:last-child { align-self: flex-end; }
-.courseMark strong { align-self: center; font-family: var(--font-headline); font-size: clamp(96px, 9vw, 138px); font-weight: 500; line-height: 1; letter-spacing: -.075em; }
-.upcoming { margin-top: 64px; }
+.courseMark { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 260px; padding: 30px 34px; border-left: 1px solid #3e5d4f; background: #1b2d25; color: var(--accent); }
+.upcoming { margin-top: clamp(20px, 3dvh, 48px); }
 .upcomingIntro { margin-bottom: 23px; }
 .upcomingIntro h2 { font-family: var(--font-headline); font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
 .upcomingIntro p { margin-top: 5px; color: var(--muted); font-size: 13px; }
@@ -44,16 +39,13 @@
 .rowHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
 .rowHeading h3 { font-family: var(--font-headline); font-size: 20px; font-weight: 500; letter-spacing: -.018em; }
 .comingSoon { flex: none; color: #a6b8ae; font-size: 12px; }
-.rowCopy > p { max-width: 760px; margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.rowCopy > p { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .rowMeta { display: flex; flex-wrap: wrap; gap: 5px 0; margin-top: 12px; color: #8f9e95; font-size: 11px; }
 .rowMeta span + span::before { content: '·'; margin: 0 10px; color: #5d6f63; }
 @media (max-width: 760px) {
-  .page { padding: 36px 20px 72px; }
+  .page { padding: clamp(16px, 3dvh, 36px) 20px; }
   .header { margin-bottom: 34px; }
   .header h1 { font-size: 36px; }
-  .header p { font-size: 14px; }
-  .filters { gap: 26px; margin-bottom: 24px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
-  .filters::-webkit-scrollbar { display: none; }
   .featured { grid-template-columns: 1fr; }
   .featureCopy { padding: 28px 25px 30px; }
   .featureCopy h2 { margin-top: 24px; font-size: 28px; }
@@ -61,15 +53,52 @@
   .featureMeta { display: grid; grid-template-columns: repeat(2, max-content); gap: 8px 20px; margin-top: 20px; }
   .featureMeta span + span::before { display: none; }
   .primaryAction { width: 100%; margin-top: 30px; }
-  .courseMark { position: relative; grid-row: 1; min-height: 150px; border-left: 0; border-bottom: 1px solid #35433c; padding: 18px 25px; }
-  .courseMark span:first-child { position: absolute; top: 18px; left: 25px; }
-  .courseMark strong { position: absolute; top: 21px; right: 22px; font-size: 100px; }
-  .courseMark span:last-child { position: absolute; bottom: 18px; left: 25px; }
-  .upcoming { margin-top: 52px; }
+  .courseMark { grid-row: 1; min-height: 150px; border-left: 0; border-bottom: 1px solid #35433c; padding: 18px 25px; }
+  .upcoming { margin-top: 28px; }
   .upcomingRow { grid-template-columns: 1fr; gap: 8px; padding: 22px 0; }
   .rowCode { font-size: 12px; }
   .rowHeading { flex-wrap: wrap; gap: 5px 20px; }
   .rowHeading h3 { font-size: 19px; }
   .rowMeta { gap: 6px 14px; }
   .rowMeta span + span::before { display: none; }
+}
+
+@media (min-width: 1000px) {
+  .upcomingRow { grid-template-columns: 40px minmax(0, 1fr); gap: 16px; padding: clamp(12px, 1.8dvh, 24px) 0; }
+  .rowHeading { flex-wrap: wrap; gap: 4px 16px; }
+}
+
+@media (min-width: 761px) and (max-height: 1000px) {
+  .header { max-width: none; }
+  .header h1 { font-size: 36px; }
+  .featureCopy h2 { margin-top: 14px; }
+  .featureDescription { margin-top: 10px; }
+  .featureMeta { margin-top: 14px; }
+  .primaryAction { margin-top: 16px; }
+  .upcomingIntro { margin-bottom: 8px; }
+  .upcomingIntro h2 { line-height: 1.25; }
+  .rowHeading h3 { line-height: 1.25; }
+  .rowMeta { margin-top: 8px; }
+  .upcomingRow { padding: 10px 0; }
+}
+
+@media (min-width: 761px) and (max-height: 800px) {
+  .page { padding-top: 16px; padding-bottom: 16px; }
+  .header { margin-bottom: 12px; }
+  .featureCopy { padding: 16px 24px; }
+  .featureCopy h2 { font-size: 28px; }
+  .upcoming { margin-top: 18px; }
+  .upcomingIntro p { margin-top: 3px; }
+  .upcomingRow { padding: 6px 0; }
+  .rowCopy > p { margin-top: 5px; }
+  .rowMeta { margin-top: 5px; }
+}
+
+@media (min-width: 761px) and (max-height: 750px) {
+  .header h1 { font-size: 32px; }
+  .featureCopy h2 { margin-top: 10px; }
+  .featureMeta { margin-top: 10px; }
+  .primaryAction { margin-top: 12px; }
+  .upcoming { margin-top: 16px; }
+  .upcomingRow { padding: 6px 0; }
 }

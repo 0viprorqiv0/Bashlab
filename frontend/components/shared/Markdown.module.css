@@ -10,8 +10,13 @@
 .markdown strong { color: #eef1ef; font-weight: 600; }
 .markdown a { color: #00E5FF; text-decoration: underline; }
 .markdown code { font-family: var(--font-code); font-size: 13px; background: #20292a; color: #b4d4bd; padding: 2px 6px; border-radius: 4px; }
-.codeBlock { position: relative; margin: 0 0 16px; }
-.codeBlock pre { background: #0b0e15; border: 1px solid #2c3635; border-radius: 8px; padding: 14px 16px; overflow-x: auto; }
-.codeBlock pre code { background: none; padding: 0; color: #d7e6dc; line-height: 1.6; }
-.copy { position: absolute; top: 8px; right: 8px; font-family: var(--font-code); font-size: 11px; color: #a3ada8; background: #1c2425; border: 1px solid #35403b; border-radius: 4px; padding: 3px 8px; opacity: .8; }
-.copy:hover { opacity: 1; color: #eef1ef; }
+.codeBlock { margin: 0 0 16px; overflow: hidden; border: 1px solid #292929; border-radius: 18px; background: #212121; }
+.codeHeader { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 5px 14px 5px 19px; background: #212121; }
+.codeLanguage { display: flex; align-items: center; gap: 9px; color: #f2f2f2; font: 12px var(--font-body); font-weight: 600; }
+.codeLanguage > span { color: #f2f2f2; font: 15px var(--font-code); }
+.codeBlock pre { padding: 8px 20px 17px; overflow-x: auto; background: #212121; }
+.codeBlock pre code { background: none; padding: 0; color: #ff8a65; line-height: 1.75; }
+.codeBlock pre code .comment { color: #f2f2f2; }
+.copy { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 7px; background: transparent; color: #f2f2f2; cursor: pointer; }
+.copy svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.copy:hover { background: #333333; }

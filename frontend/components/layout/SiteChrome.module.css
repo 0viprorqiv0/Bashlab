@@ -6,9 +6,29 @@
   position: relative;
 }
 
-.authMain {
+.viewportContainer {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   padding-top: 64px;
-  flex: 1 0 auto;
+  overflow: hidden;
+}
+
+.viewportMain {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #33413a transparent;
+}
+
+.viewportContainer > footer {
+  flex: none;
+  margin-top: 0;
+  padding: clamp(8px, 1.5dvh, 18px) 0;
 }
 
 .workspaceMain {
