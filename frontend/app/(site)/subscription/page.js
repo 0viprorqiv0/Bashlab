@@ -8,10 +8,12 @@ import styles from './subscription.module.css';
 // Animated Rolling Number Component (TryHackMe Style Reel Transition)
 function AnimatedPrice({ value, currency = '$' }) {
   return (
-    <div className={styles.animatedPriceContainer}>
+    <div className={styles.priceGroup}>
       <span className={styles.currencySymbol}>{currency}</span>
-      <span key={value} className={styles.animatedPriceValue}>
-        {value}
+      <span className={styles.numberRollerSlot}>
+        <span key={value} className={styles.animatedPriceValue}>
+          {value}
+        </span>
       </span>
     </div>
   );
@@ -417,11 +419,6 @@ function SubscriptionContent() {
     <div className={styles.pageWrapper}>
       {/* 1. Header Section & Dual-Segment (Individual vs Business) */}
       <section className={styles.headerSection}>
-        <div className={styles.topBadge}>
-          <span className={styles.topBadgePulse} />
-          <span>CYBERSECURITY &amp; LINUX TRAINING</span>
-        </div>
-
         <h1 className={styles.title}>
           Invest in your <span className={styles.titleAccent}>Linux mastery</span>.
         </h1>
