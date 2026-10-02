@@ -32,7 +32,7 @@ export default function SiteChrome({ children }) {
   return (
     <AuthProvider>
       {!isWorkspace && !isAdmin && !isViewportPage && <SmoothScroll wheelMultiplier={pathname === '/' || pathname?.startsWith('/blog') ? 2 : 1} duration={pathname?.startsWith('/blog') ? 0.6 : 0.8} />}
-      {!isAdmin && <Navbar />}
+      {!isWorkspace && !isAdmin && <Navbar />}
       <div className={isAdmin ? styles.adminChromeContainer : `${styles.chromeContainer} ${isViewportPage ? styles.viewportContainer : ''}`}>
         <main
           className={
