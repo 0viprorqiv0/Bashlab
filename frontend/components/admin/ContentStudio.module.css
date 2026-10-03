@@ -155,23 +155,166 @@
   flex-shrink: 0;
 }
 
-.commandCenterCourseSelect {
+.commandCenterCourseDropdownWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 260px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.commandCenterCourseTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: transparent;
-  border: none;
-  color: #e0e0e0;
+  border: 1px solid transparent;
+  color: #e6edf3;
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
-  outline: none;
+  padding: 3px 6px;
+  border-radius: 4px;
   cursor: pointer;
-  padding: 0 4px;
-  max-width: 240px;
-  flex-shrink: 1;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.commandCenterCourseSelect option {
-  background: #181818;
+.commandCenterCourseTrigger:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
+}
+
+.commandCenterCourseTrigger:focus-visible {
+  outline: 2px solid #68DFA0;
+  outline-offset: 1px;
+}
+
+.commandCenterCourseTriggerText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.commandCenterChevron {
+  font-size: 16px;
+  color: #8b949e;
+  transition: transform 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.commandCenterChevronOpen {
+  transform: rotate(180deg);
+  color: #ffffff;
+}
+
+.commandCenterCourseMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 280px;
+  max-width: 360px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 6px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: commandDropdownIn 0.14s ease-out;
+}
+
+@keyframes commandDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.commandCenterMenuHeader {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+}
+
+.commandCenterMenuList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.commandCenterMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  box-sizing: border-box;
+}
+
+.commandCenterMenuItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.commandCenterMenuItemActive {
+  background: rgba(104, 223, 160, 0.12) !important;
+  color: #68dfa0 !important;
+  font-weight: 600;
+}
+
+.commandCenterItemTitle {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commandCenterItemCheck {
+  font-size: 16px;
+  color: #68dfa0;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.visuallyHiddenSelect {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .commandCenterSep {

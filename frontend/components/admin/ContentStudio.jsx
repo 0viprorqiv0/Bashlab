@@ -436,7 +436,23 @@ export default function ContentStudio({ initialCourseSlug }) {
   const [addLessonTargetChapterId, setAddLessonTargetChapterId] = useState(null);
   const [newLessonTitleInput, setNewLessonTitleInput] = useState('');
   const [showAddChapterModal, setShowAddChapterModal] = useState(false);
+  const newChapterTitleInputRef = useRef('');
   const [newChapterTitleInput, setNewChapterTitleInput] = useState('');
+
+  const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+  const courseDropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (courseDropdownRef.current && !courseDropdownRef.current.contains(e.target)) {
+        setCourseDropdownOpen(false);
+      }
+    }
+    if (courseDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [courseDropdownOpen]);
 
   const textareaRef = useRef(null);
   const lineGutterRef = useRef(null);
@@ -1481,18 +1497,74 @@ export default function ContentStudio({ initialCourseSlug }) {
           {createPortal(
             <div className={styles.vscCommandCenter} title="Quick course and lesson navigation">
               <span className={styles.commandCenterIcon}><Icon name="search" /></span>
-              <select
-                className={styles.commandCenterCourseSelect}
-                value={selectedCourseId}
-                onChange={(e) => handleCourseChange(e.target.value)}
-                aria-label="Select course"
-              >
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.title}
-                  </option>
-                ))}
-              </select>
+              {/* Custom Course Dropdown */}
+              <div className={styles.commandCenterCourseDropdownWrapper} ref={courseDropdownRef}>
+                <button
+                  type="button"
+                  className={styles.commandCenterCourseTrigger}
+                  onClick={() => setCourseDropdownOpen(!courseDropdownOpen)}
+                  aria-expanded={courseDropdownOpen}
+                  aria-haspopup="listbox"
+                  title={courses.find((c) => c.id === selectedCourseId)?.title || 'Select course'}
+                >
+                  <span className={styles.commandCenterCourseTriggerText}>
+                    {courses.find((c) => c.id === selectedCourseId)?.title || 'Select course'}
+                  </span>
+                  <span className={`material-symbols-outlined ${styles.commandCenterChevron} ${courseDropdownOpen ? styles.commandCenterChevronOpen : ''}`}>
+                    expand_more
+                  </span>
+                </button>
+
+                <select
+                  className={styles.visuallyHiddenSelect}
+                  value={selectedCourseId}
+                  onChange={(e) => handleCourseChange(e.target.value)}
+                  aria-label="Select course"
+                  tabIndex={-1}
+                >
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.title}
+                    </option>
+                  ))}
+                </select>
+
+                {courseDropdownOpen && (
+                  <div className={styles.commandCenterCourseMenu} role="listbox" aria-label="Courses">
+                    <div className={styles.commandCenterMenuHeader}>Courses</div>
+                    <div className={styles.commandCenterMenuList}>
+                      {courses.map((course) => {
+                        const isSelected = course.id === selectedCourseId;
+                        return (
+                          <button
+                            key={course.id}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`${styles.commandCenterMenuItem} ${isSelected ? styles.commandCenterMenuItemActive : ''}`}
+                            onClick={() => {
+                              handleCourseChange(course.id);
+                              setCourseDropdownOpen(false);
+                            }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '15px', opacity: isSelected ? 1 : 0.65 }}>
+                              school
+                            </span>
+                            <span className={styles.commandCenterItemTitle} title={course.title}>
+                              {course.title}
+                            </span>
+                            {isSelected && (
+                              <span className={`material-symbols-outlined ${styles.commandCenterItemCheck}`}>
+                                check
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
               <span className={styles.commandCenterSep}>›</span>
               <span className={styles.commandCenterChapter} title={currentLessonData?.chapter?.title || 'Chapter'}>
                 {currentLessonData?.chapter?.title || 'Chapter'}
