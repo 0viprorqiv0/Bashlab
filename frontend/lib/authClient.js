@@ -132,6 +132,10 @@ export const authClient = {
     await apiFetch('/api/auth/logout', { method: 'POST', token }).catch(() => {});
   },
 
+  signOut() {
+    return this.logout();
+  },
+
   // Emailed verification links land on /verify-email#access_token=…&refresh_token=…:
   // the refresh token is handed to the API once, which turns it into the
   // HttpOnly cookie; the URL fragment is already wiped by the page.

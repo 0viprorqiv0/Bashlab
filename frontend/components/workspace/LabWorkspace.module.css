@@ -1551,6 +1551,9 @@
   border-radius: 10px;
   transition: background 140ms ease;
   user-select: none;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .popoverUserRow:hover {
@@ -1562,12 +1565,6 @@
   color: #8e8e8e;
   margin-left: auto;
   flex-shrink: 0;
-}
-
-.popoverChevronRight {
-  font-size: 16px;
-  color: #71717a;
-  margin-left: auto;
 }
 
 .popoverHeader {

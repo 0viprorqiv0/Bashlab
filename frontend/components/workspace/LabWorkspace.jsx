@@ -115,8 +115,13 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
 
   async function handleLogout() {
     setAccountMenuOpen(false);
-    await authClient.signOut();
-    router.push('/login');
+    try {
+      await authClient.logout();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      router.push('/login');
+    }
   }
 
   useEffect(() => () => clearTimeout(copyTimerRef.current), []);
@@ -568,7 +573,12 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
                   }`}
                   role="menu"
                 >
-                  <div className={styles.popoverUserRow}>
+                  <Link
+                    href="/account"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className={styles.popoverUserRow}
+                    role="menuitem"
+                  >
                     <div className={styles.chatgptAvatarWrap}>
                       {avatarUrl ? (
                         <img src={avatarUrl} alt={displayName} className={styles.chatgptAvatarImg} />
@@ -581,7 +591,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
                       <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
                     </div>
                     <span className={`material-symbols-outlined ${styles.popoverChevron}`}>chevron_right</span>
-                  </div>
+                  </Link>
 
                   <div className={styles.popoverDivider} />
 
@@ -617,29 +627,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
                     </Link>
                   )}
 
-                  <Link
-                    href="/courses"
-                    onClick={() => setAccountMenuOpen(false)}
-                    className={styles.popoverItem}
-                    role="menuitem"
-                  >
-                    <span className="material-symbols-outlined">explore</span>
-                    Browse Courses
-                  </Link>
-
                   <div className={styles.popoverDivider} />
-
-                  <a
-                    href="https://github.com/0viprorqiv0/Bashlab/issues"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.popoverItem}
-                    role="menuitem"
-                  >
-                    <span className="material-symbols-outlined">help</span>
-                    <span>Help</span>
-                    <span className={`material-symbols-outlined ${styles.popoverChevronRight}`}>chevron_right</span>
-                  </a>
 
                   <button
                     type="button"
