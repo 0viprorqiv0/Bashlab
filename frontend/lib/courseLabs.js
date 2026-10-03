@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { authClient } from './authClient';
 import { fetchCourseWithLessons, fetchProgressMap, markLessonDone, markLessonStarted, toDisplayLab } from './learning';
+import { labApi } from './writeApi';
 
 export function labsOf(course, progressMap) {
   return (course?.lessons || []).map((lesson, index) => ({
@@ -35,6 +36,22 @@ export function useCourseLabs(courseSlug) {
       .catch((error) => { if (active) setState({ loading: false, error: error.message }); });
     return () => { active = false; };
   }, [courseSlug, attempt]);
+
+  // The server checks the flag and, when it is right, saves the lab as done;
+  // the result is then mirrored locally so the sidebar updates.
+  const submitFlag = useCallback(async (lab, flag) => {
+    const { data, error } = await labApi.submitFlag(lab.lessonId, flag);
+    if (error) return { error };
+    if (data?.correct) {
+      setState((prev) => {
+        if (!prev.progress) return prev;
+        const progress = new Map(prev.progress);
+        progress.set(lab.lessonId, { lesson_id: lab.lessonId, status: 'done' });
+        return { ...prev, progress };
+      });
+    }
+    return { correct: Boolean(data?.correct) };
+  }, []);
 
   // Saves through the API, then mirrors it locally so the sidebar updates.
   const markDone = useCallback(async (lab) => {
@@ -73,6 +90,7 @@ export function useCourseLabs(courseSlug) {
     missing: Boolean(state.missing),
     error: state.error || '',
     labs,
+    submitFlag,
     markDone,
     markStarted,
     retry: () => setAttempt((n) => n + 1),

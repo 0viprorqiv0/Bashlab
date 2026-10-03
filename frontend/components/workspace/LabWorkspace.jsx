@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import { useRouter, notFound } from 'next/navigation';
 import { useCourseLabs } from '@/lib/courseLabs';
 import { PageError, PageLoading } from '@/components/shared/Loading';
-import { checkSolution, createSession, endSession, getActiveSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
+import { createSession, endSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { authClient } from '@/lib/authClient';
 import BrandLogo from '../shared/BrandLogo';
@@ -14,18 +15,11 @@ import styles from './LabWorkspace.module.css';
 const HOME = '/home/student';
 const shortCwd = (path) => (!path ? '~' : path === HOME ? '~' : path.startsWith(`${HOME}/`) ? `~${path.slice(HOME.length)}` : path);
 
-function getInitials(name, email) {
-  if (name) {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  if (email) {
-    const p = email.split('@')[0].replace(/[._-]/g, ' ').trim().split(/\s+/);
-    if (p.length >= 2) return (p[0][0] + p[1][0]).toUpperCase();
-    return email.slice(0, 2).toUpperCase();
-  }
-  return 'U';
+function getInitials(nameOrEmail) {
+  if (!nameOrEmail) return 'U';
+  const parts = nameOrEmail.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 // Loads the course's labs from the database (see lib/courseLabs.js) and hands
@@ -35,7 +29,7 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   const router = useRouter();
   const { user, profile, isAdmin, loading: authLoading } = useAuth();
   const nextParam = encodeURIComponent(`/courses/${courseId}/labs/${labId}`);
-  const { loading, missing, error, labs, markDone, markStarted, retry } = useCourseLabs(courseId);
+  const { loading, missing, error, labs, submitFlag, retry } = useCourseLabs(courseId);
   const lab = labs.find((item) => String(item.id) === String(labId) || item.slug === labId);
 
   // Guests must log in before opening a lab — the instant local check avoids
@@ -53,26 +47,15 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
     if (lab && String(lab.id) !== String(labId)) router.replace(`/courses/${courseId}/labs/${lab.id}`);
   }, [lab, labId, courseId, router]);
 
-  useEffect(() => {
-    if (lab?.id) {
-      try {
-        localStorage.setItem(`bashlab:last_lab:${courseId}`, String(lab.id));
-      } catch {}
-      if (user && lab.status !== 'solved') {
-        markStarted?.(lab);
-      }
-    }
-  }, [courseId, lab, user, markStarted]);
-
   if (authLoading || !user) return <PageLoading label="Loading lab…" />;
   if (loading) return <PageLoading label="Loading lab…" />;
   if (error) return <PageError message={`Could not load this lab: ${error}`} onRetry={retry} />;
   if (missing || !lab) notFound();
   if (String(lab.id) !== String(labId)) return <PageLoading label="Loading lab…" />;
-  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} markStarted={markStarted} user={user} profile={profile} isAdmin={isAdmin} />;
+  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} submitFlag={submitFlag} user={user} profile={profile} isAdmin={isAdmin} />;
 }
 
-function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile, isAdmin }) {
+function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }) {
   const router = useRouter();
   const initialLabs = labs;
   const currentLab = initialLabs.find((item) => item.id === labId);
@@ -94,12 +77,10 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
 
-  const isUserAdmin = Boolean(isAdmin ?? (profile?.role === 'admin'));
-  const rawName = profile?.name || user?.email?.split('@')[0] || 'Learner';
-  const cleanName = rawName.split('.')[0] || 'Learner';
-  const displayName = profile?.name || cleanName;
-  const userRole = isUserAdmin ? 'Admin' : 'Learner';
-  const initials = getInitials(profile?.name, user?.email);
+  const displayName = profile?.name || user?.email || 'Learner';
+  const displayRole = profile?.role === 'admin' ? 'Administrator' : 'Learner';
+  const displayPlan = profile?.role === 'admin' ? 'Administrator' : 'Learner';
+  const initials = getInitials(displayName);
   const avatarUrl = profile?.avatar_url || null;
 
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -126,24 +107,15 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
         setAccountMenuOpen(false);
       }
     }
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') {
-        setAccountMenuOpen(false);
-      }
-    }
     if (accountMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-        document.removeEventListener('keydown', handleKeyDown);
-      };
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [accountMenuOpen]);
 
   async function handleLogout() {
     setAccountMenuOpen(false);
-    await authClient.logout();
+    await authClient.signOut();
     router.push('/login');
   }
 
@@ -203,11 +175,15 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [instanceStatus, setInstanceStatus] = useState('stopped');
+  const [instanceStatus, setInstanceStatus] = useState(sandboxEnabled ? 'restarting' : 'stopped');
   const [isMaximized, setIsMaximized] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const [flagInput, setFlagInput] = useState('');
+  const [flagBusy, setFlagBusy] = useState(false);
+  const [flagNote, setFlagNote] = useState({ kind: '', text: '' });
   const sessionIdRef = useRef(null);
+  // Bumped whenever the instance is stopped/unmounted so a create still in flight is discarded, not adopted.
+  const generationRef = useRef(0);
 
   useEffect(() => {
     setShowHint(false);
@@ -219,26 +195,40 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
       setInstanceStatus('stopped');
       return;
     }
+    const generation = ++generationRef.current;
+    const isStale = () => generationRef.current !== generation;
     setInstanceStatus('restarting');
-    setTerminalLogs([{ type: 'output', text: 'Booting container instance...' }]);
+    setTerminalLogs([]);
     try {
       const session = await createSession(currentLab.lessonId);
+      // The API keeps one session per learner and hands the same one back to every open, so an
+      // open that was discarded (StrictMode remount, Stop pressed meanwhile) must not delete it.
+      if (isStale()) return;
       sessionIdRef.current = session.sessionId;
       setCwd(session.cwd);
       setInstanceStatus('running');
-      setTerminalLogs([
-        { type: 'output', text: `BashLab Cloud Shell (Ready).\nWorkspace: ${session.cwd}\nFocus commands for this lab: ${currentLab.commands.join(', ')}` }
-      ]);
       inputRef.current?.focus();
     } catch (error) {
+      if (isStale()) return;
       setInstanceStatus('stopped');
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Could not start the sandbox: ${error.message}` }]);
     }
   }
 
+  // The API forgot this session (idle timeout, admin stop, API restart): drop it
+  // so the learner gets a clear way back instead of repeating the same error.
+  function sessionGone(error) {
+    if (error.code !== 'SESSION_NOT_FOUND' && error.code !== 'SESSION_QUARANTINED') return false;
+    sessionIdRef.current = null;
+    setInstanceStatus('stopped');
+    setTerminalLogs((prev) => [...prev, { type: 'output', text: '[error] This sandbox session ended (idle timeout or restart). Click the red dot or "Start Instance" for a new one.' }]);
+    return true;
+  }
+
   // Red button: Stop / Toggle instance
   function handleToggleStopInstance() {
     if (instanceStatus === 'running' || instanceStatus === 'restarting') {
+      generationRef.current++; // discards a create that has not answered yet
       if (sessionIdRef.current) endSession(sessionIdRef.current);
       sessionIdRef.current = null;
       setInstanceStatus('stopped');
@@ -273,15 +263,32 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
       ]);
       inputRef.current?.focus();
     } catch (error) {
+      if (sessionGone(error)) return;
       setInstanceStatus('stopped');
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Restart failed: ${error.message}` }]);
     }
   }
 
-  // Open a sandbox session as soon as the lab loads; close it on the way out
+  // Open a sandbox session as soon as the lab loads; closing the tab ends it
   useEffect(() => {
+    const closeSession = () => {
+      if (!sessionIdRef.current) return;
+      endSession(sessionIdRef.current);
+      sessionIdRef.current = null;
+    };
     handleStartInstance();
-    return () => { if (sessionIdRef.current) endSession(sessionIdRef.current); };
+    window.addEventListener('pagehide', closeSession); // tab closed / reloaded: unmount cleanup never runs
+    // Back/forward cache restores the page without re-running effects, after pagehide closed the session.
+    const reopen = (event) => { if (event.persisted && !sessionIdRef.current) handleStartInstance(); };
+    window.addEventListener('pageshow', reopen);
+    return () => {
+      generationRef.current++; // eslint-disable-line react-hooks/exhaustive-deps
+      window.removeEventListener('pagehide', closeSession);
+      window.removeEventListener('pageshow', reopen);
+      // Leaving the lab inside the app does not delete the session: the next open (same or
+      // another lab) is answered by the learner's single session, and the reaper frees it.
+      sessionIdRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -324,7 +331,7 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
 
   // Auto-scroll terminal to bottom
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    terminalEndRef.current?.scrollIntoView({ block: 'end' }); // no smooth scrolling: it made the screen jump after every command
   }, [terminalLogs]);
 
   // Focus input on click anywhere in terminal
@@ -332,62 +339,32 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
     inputRef.current?.focus();
   }
 
-  // Confirms the lab as done in progress, celebrating in the terminal log.
-  function celebrate(allIds) {
-    if (allIds) setCompletedSteps(allIds);
-    setIsLabSolved(true);
-    markDone(currentLab).then(({ error }) => {
-      if (error) setTerminalLogs((prev) => [...prev, { type: 'output', text: `[warning] Your progress could not be saved: ${error.message}` }]);
-    });
-  }
-
-  // Check solution button: runs the server-owned verifier against the real
-  // sandbox when this lab has one; otherwise falls back to the learner's own
-  // checklist (manual completion — there is nothing server-side to verify).
-  async function handleCheckSolution() {
-    if (currentLab.verifier && sessionIdRef.current) {
-      setChecking(true);
-      try {
-        const result = await checkSolution(sessionIdRef.current, currentLab.verifier);
-        if (result.passed) {
-          celebrate(currentLab.steps?.map((s) => s.id));
-          setTerminalLogs((prev) => [
-            ...prev,
-            { type: 'output', text: `\n[VERIFICATION PASSED] All ${result.checks.length} validation checks succeeded!\n✓ Sandbox state matches expected solution.\n🎉 Lab #${currentLab.id} completed.` }
-          ]);
-        } else {
-          const failed = result.checks.filter((c) => !c.passed).map((c) => `✗ ${c.name}`).join('\n');
-          setTerminalLogs((prev) => [...prev, { type: 'output', text: `\n[VERIFICATION FAILED] Not solved yet:\n${failed}` }]);
-        }
-      } catch (error) {
-        setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Check failed: ${error.message}` }]);
-      } finally {
-        setChecking(false);
-      }
-      return;
-    }
-    if (currentLab.steps) {
-      const allIds = currentLab.steps.map((s) => s.id);
-      celebrate(allIds);
-      setTerminalLogs((prev) => [
-        ...prev,
-        { type: 'output', text: `\n[VERIFICATION PASSED] All ${allIds.length} checklist items marked complete.\n🎉 Lab #${currentLab.id} completed.` }
-      ]);
+  // Flag submission: the server checks the flag and, when it is right, saves the lab as done.
+  async function handleSubmitFlag(event) {
+    event.preventDefault();
+    const value = flagInput.trim();
+    if (!value || flagBusy || isLabSolved) return;
+    setFlagBusy(true);
+    setFlagNote({ kind: '', text: '' });
+    const result = await submitFlag(currentLab, value);
+    setFlagBusy(false);
+    if (result.error) {
+      setFlagNote({ kind: 'error', text: result.error.code === 'NO_FLAG' ? 'This lab has no flag yet.' : result.error.message || 'Could not check the flag. Try again.' });
+    } else if (result.correct) {
+      setIsLabSolved(true);
+      setCompletedSteps((currentLab.steps || []).map((step) => step.id));
+      setFlagInput('');
+      setFlagNote({ kind: 'ok', text: 'Correct flag. Lab completed!' });
+    } else {
+      setFlagNote({ kind: 'error', text: 'Wrong flag. Check it and try again.' });
     }
   }
 
-  // Toggle step completion manually
+  // Toggle step completion manually (a visual checklist only: ticking steps never completes the lab)
   function toggleStep(stepId) {
-    setCompletedSteps((prev) => {
-      const next = prev.includes(stepId)
-        ? prev.filter((id) => id !== stepId)
-        : [...prev, stepId];
-
-      if (currentLab.steps && next.length === currentLab.steps.length) {
-        celebrate(next);
-      }
-      return next;
-    });
+    setCompletedSteps((prev) => (prev.includes(stepId)
+      ? prev.filter((id) => id !== stepId)
+      : [...prev, stepId]));
   }
 
   // Copy code snippet helper
@@ -421,14 +398,12 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
     const promptText = `student@bashlab:${shortCwd(cwd)}$`;
     setTerminalLogs((prev) => [...prev, { type: 'cmd', prompt: promptText, text: rawCmd }]);
 
-    if (currentLab.steps) {
+    // The checklist ticks along with the commands typed, as a progress hint only:
+    // it never completes the lab (completion is reserved for the flag submission).
+    if (currentLab.steps?.length) {
       currentLab.steps.forEach((step) => {
         if (step.targetCmd && rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()) && !completedSteps.includes(step.id)) {
-          setCompletedSteps((prev) => {
-            const next = [...prev, step.id];
-            if (next.length === currentLab.steps.length) celebrate(next);
-            return next;
-          });
+          setCompletedSteps((prev) => [...prev, step.id]);
         }
       });
     }
@@ -446,6 +421,7 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
       const warning = result.quotaExceeded ? `\n[warning] ${result.quotaError}` : '';
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `${text}${warning}` }]);
     } catch (error) {
+      if (sessionGone(error)) return;
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] ${error.message}` }]);
     } finally {
       setBusy(false);
@@ -557,7 +533,7 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
           ))}
         </nav>
 
-        {/* Bottom Account Area (Unified with Navbar & Admin Gate) */}
+        {/* Bottom Account Area (ChatGPT Style) */}
         <div ref={accountMenuRef} className={`${styles.sidebarAccountWrap} ${sidebarCollapsed ? styles.accountCollapsed : ''}`}>
           {user ? (
             <>
@@ -568,6 +544,7 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                 aria-expanded={accountMenuOpen}
                 aria-haspopup="true"
                 aria-label="User account menu"
+                title={sidebarCollapsed ? `${displayName} (${displayRole})` : undefined}
               >
                 <div className={styles.chatgptAvatarWrap}>
                   {avatarUrl ? (
@@ -577,25 +554,10 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                   )}
                 </div>
 
-                {!sidebarCollapsed && (
-                  <div className={styles.chatgptAccountMeta}>
-                    <span className={styles.chatgptAccountName} title={displayName}>
-                      {cleanName}
-                    </span>
-                    <span className={styles.chatgptAccountPlan}>
-                      <span className={`text-[9.5px] font-code font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border ${
-                        isUserAdmin ? 'border-primary/40 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.05] text-[#9BA3B5]'
-                      }`}>
-                        {userRole}
-                      </span>
-                    </span>
-                  </div>
-                )}
-                {!sidebarCollapsed && (
-                  <span className="material-symbols-outlined text-[15px] text-[#777] ml-auto select-none flex-shrink-0">
-                    {accountMenuOpen ? 'expand_less' : 'expand_more'}
-                  </span>
-                )}
+                <div className={styles.chatgptAccountMeta}>
+                  <span className={styles.chatgptAccountName}>{displayName}</span>
+                  <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
+                </div>
               </button>
 
               {accountMenuOpen && (
@@ -605,82 +567,86 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                   }`}
                   role="menu"
                 >
-                  <div className="flex items-center gap-3 p-3 border-b border-white/[0.08] mb-1 min-w-0">
-                    <span className="w-[32px] h-[32px] rounded-full flex items-center justify-center font-headline text-[12px] font-bold text-primary bg-[#052e16] border border-primary/40 flex-shrink-0">
-                      {initials}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-headline text-[13px] font-semibold text-white truncate" title={user?.email}>
-                        {displayName}
-                      </p>
-                      <p className="font-code text-[11px] text-primary mt-0.5">
-                        {userRole}
-                      </p>
+                  <div className={styles.popoverUserRow}>
+                    <div className={styles.chatgptAvatarWrap}>
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={displayName} className={styles.chatgptAvatarImg} />
+                      ) : (
+                        <span className={styles.chatgptAvatar}>{initials}</span>
+                      )}
                     </div>
+                    <div className={styles.chatgptAccountMeta}>
+                      <span className={styles.chatgptAccountName}>{displayName}</span>
+                      <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
+                    </div>
+                    <span className={`material-symbols-outlined ${styles.popoverChevron}`}>chevron_right</span>
                   </div>
 
-                  {isUserAdmin && (
-                    <Link
-                      href="/admin/content"
-                      onClick={() => setAccountMenuOpen(false)}
-                      className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
-                      role="menuitem"
-                    >
-                      <span className="material-symbols-outlined text-base text-accent-amber group-hover:brightness-125 transition-all">admin_panel_settings</span>
-                      Admin panel
-                    </Link>
-                  )}
-
-                  <Link
-                    href="/my-learning"
-                    onClick={() => setAccountMenuOpen(false)}
-                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
-                    role="menuitem"
-                  >
-                    <span className="material-symbols-outlined text-base text-primary group-hover:brightness-125 transition-all">school</span>
-                    My Learning
-                  </Link>
+                  <div className={styles.popoverDivider} />
 
                   <Link
                     href="/account"
                     onClick={() => setAccountMenuOpen(false)}
-                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
+                    className={styles.popoverItem}
                     role="menuitem"
                   >
-                    <span className="material-symbols-outlined text-base text-[#9BA3B5] group-hover:text-white transition-colors">manage_accounts</span>
-                    Account &amp; Security
+                    <span className="material-symbols-outlined">settings</span>
+                    Settings
                   </Link>
+
+                  <Link
+                    href="/my-learning"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className={styles.popoverItem}
+                    role="menuitem"
+                  >
+                    <span className="material-symbols-outlined">school</span>
+                    My Learning
+                  </Link>
+
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">admin_panel_settings</span>
+                      Admin Studio
+                    </Link>
+                  )}
 
                   <Link
                     href="/courses"
                     onClick={() => setAccountMenuOpen(false)}
-                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
+                    className={styles.popoverItem}
                     role="menuitem"
                   >
-                    <span className="material-symbols-outlined text-base text-[#9BA3B5] group-hover:text-white transition-colors">explore</span>
+                    <span className="material-symbols-outlined">explore</span>
                     Browse Courses
                   </Link>
 
-                  <div className="border-t border-white/[0.08] my-1" />
+                  <div className={styles.popoverDivider} />
 
                   <a
                     href="https://github.com/0viprorqiv0/Bashlab/issues"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
+                    className={styles.popoverItem}
                     role="menuitem"
                   >
-                    <span className="material-symbols-outlined text-base text-[#71717a] group-hover:text-white transition-all">help</span>
-                    <span>Help &amp; Support</span>
+                    <span className="material-symbols-outlined">help</span>
+                    <span>Help</span>
+                    <span className={`material-symbols-outlined ${styles.popoverChevronRight}`}>chevron_right</span>
                   </a>
 
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="group w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-red-400/80 hover:text-red-400 transition-colors text-left cursor-pointer"
+                    className={`${styles.popoverItem} ${styles.popoverLogout}`}
                     role="menuitem"
                   >
-                    <span className="material-symbols-outlined text-base text-red-400/80 group-hover:text-red-400 transition-colors">logout</span>
+                    <span className="material-symbols-outlined">logout</span>
                     Log out
                   </button>
                 </div>
@@ -775,18 +741,6 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
               Completed
             </span>
           )}
-
-          <button
-            type="button"
-            className={styles.checkSolutionBtn}
-            onClick={handleCheckSolution}
-            disabled={checking}
-            aria-label="Check solution"
-            title="Validate completed tasks and check solution"
-          >
-            <span className="material-symbols-outlined">verified</span>
-            <span>{checking ? 'Checking…' : 'Check Solution'}</span>
-          </button>
         </div>
       </header>
 
@@ -842,6 +796,8 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                   </div>
                 </div>
 
+                {currentLab.structured ? (
+                  <>
                 {/* Scenario / Story */}
                 <div className={styles.scenarioCard}>
                   <div className={styles.scenarioTitle}>Mission Scenario</div>
@@ -981,6 +937,14 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                         <span className="material-symbols-outlined text-sm">arrow_forward</span>
                       </Link>
                     )}
+                  </div>
+                )}
+                  </>
+                ) : (
+                  <div className={styles.legacyContent} aria-label="Lesson content">
+                    {currentLab.contentMd
+                      ? <ReactMarkdown>{currentLab.contentMd}</ReactMarkdown>
+                      : <p>No lesson instructions are available.</p>}
                   </div>
                 )}
               </>
@@ -1139,7 +1103,7 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
               <div className={styles.stoppedBanner}>
                 <div className={styles.stoppedInfo}>
                   <span className="material-symbols-outlined text-base">power_off</span>
-                  <span>{sandboxEnabled ? 'Instance is stopped. Start instance to run commands.' : 'Sandbox not configured on this environment — mark steps complete manually below.'}</span>
+                  <span>{sandboxEnabled ? 'Instance is stopped. Start instance to run commands.' : 'Sandbox not configured on this environment: the terminal needs the API running with the sandbox enabled.'}</span>
                 </div>
                 {sandboxEnabled && (
                   <button
@@ -1164,8 +1128,8 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                   value={terminalInput}
                   onChange={(e) => setTerminalInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={instanceStatus === 'restarting' ? 'Instance booting...' : busy ? 'running…' : 'type a bash command...'}
-                  disabled={instanceStatus === 'restarting' || busy}
+                  readOnly={busy}
+                  disabled={instanceStatus === 'restarting'}
                   aria-label="Terminal command"
                   autoComplete="off"
                   spellCheck={false}
@@ -1195,6 +1159,27 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
               <span>Found a bug?</span>
             </a>
           </div>
+
+          <form className={styles.flagBar} onSubmit={handleSubmitFlag} onClick={(event) => event.stopPropagation()}> {/* the pane focuses the terminal on click; the flag box must keep its own focus */}
+            <span className={`material-symbols-outlined ${styles.flagIcon}`} aria-hidden="true">flag</span>
+            <input
+              type="text"
+              className={styles.flagInput}
+              value={isLabSolved ? 'Lab solved' : flagInput}
+              onChange={(event) => setFlagInput(event.target.value)}
+              disabled={isLabSolved || flagBusy}
+              maxLength={256}
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Flag"
+            />
+            <button type="submit" className={styles.flagSubmit} disabled={isLabSolved || flagBusy || !flagInput.trim()}>
+              {flagBusy ? 'Checking…' : 'Submit flag'}
+            </button>
+            {flagNote.text && (
+              <span className={flagNote.kind === 'ok' ? styles.flagOk : styles.flagError} role="status">{flagNote.text}</span>
+            )}
+          </form>
         </section>
       </div>
     </div>

@@ -45,7 +45,7 @@ test.describe('admin UI guard (admin allowed)', () => {
   test.use({ asRole: 'admin' });
   test('an admin reaches /admin/content and does not see the 403 page', async ({ page }) => {
     await page.goto('/admin/content');
-    await expect(page.getByRole('heading', { name: 'Content' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Admin sections' })).toBeVisible();
     await expect(page.getByText('You do not have permission')).toHaveCount(0);
   });
 });
@@ -107,8 +107,11 @@ test.describe('RLS / RPC boundary — learner token, bypassing the UI entirely',
     const lessonId = lessons[0].id;
     const backend = forBackend(session.access_token);
 
-    const own = await backend('PUT', `/api/progress/${lessonId}`, { status: 'done' });
-    expect(own.status).toBe(204);
+    // This lab has a flag: "done" cannot be asked for directly, only earned by the flag.
+    const asked = await backend('PUT', `/api/progress/${lessonId}`, { status: 'done' });
+    expect([asked.status, asked.data.error.code]).toEqual([403, 'FLAG_REQUIRED']);
+    const own = await backend('POST', `/api/labs/${lessonId}/flag`, { flag: 'BASHLAB{ls_dash_a_shows_hidden_files}' });
+    expect([own.status, own.data]).toEqual([200, { correct: true }]);
 
     // Direct PostgREST writes no longer exist for browser tokens (migration 017).
     const direct = await api.insert('progress', { user_id: users.learner.id, lesson_id: lessonId, status: 'done' });

@@ -16,6 +16,7 @@ export default function SiteChrome({ children }) {
     .some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const isWorkspace = pathname?.includes('/labs/');
   const isLanding = pathname === '/';
+  const isViewportPage = !isAdmin && !isWorkspace && (isAuthPage || ['/blog', '/account', '/my-learning', '/courses'].includes(pathname) || pathname?.startsWith('/courses/'));
 
   useEffect(() => {
     if (isAdmin) {
@@ -49,17 +50,17 @@ export default function SiteChrome({ children }) {
 
   return (
     <AuthProvider>
-      {!isWorkspace && !isAdmin && <SmoothScroll wheelMultiplier={pathname === '/' ? 2 : 1} />}
+      {!isWorkspace && !isAdmin && !isViewportPage && <SmoothScroll wheelMultiplier={pathname === '/' || pathname?.startsWith('/blog') ? 2 : 1} duration={pathname?.startsWith('/blog') ? 0.6 : 0.8} />}
       {!isWorkspace && !isAdmin && <Navbar />}
-      <div className={isAdmin ? styles.adminChromeContainer : styles.chromeContainer}>
+      <div className={isAdmin ? styles.adminChromeContainer : `${styles.chromeContainer} ${isViewportPage ? styles.viewportContainer : ''}`}>
         <main
           className={
             isWorkspace
               ? styles.workspaceMain
               : isAdmin
               ? styles.adminMain
-              : isAuthPage
-              ? styles.authMain
+              : isViewportPage
+              ? styles.viewportMain
               : isAppPage
               ? styles.standardMain
               : isLanding

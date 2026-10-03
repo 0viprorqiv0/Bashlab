@@ -1,111 +1,131 @@
+// The whole lab workflow through the real UI and API: open a lab, find the files
+// the lab placed in the terminal's home directory, do what the lab teaches, read
+// the flag, paste it in the "Submit flag" box, and see the lab completed.
+//
+// It needs an API with a working sandbox (Linux/WSL with `npm run runner:start`,
+// see backend/RUNNING.md) and a frontend that is not told the sandbox is off.
+// It is skipped unless E2E_SANDBOX=1, so the normal suite (SANDBOX_ENABLED=false)
+// is unaffected:
+//   E2E_SANDBOX=1 npx playwright test specs/workspace.spec.js
 const { test, expect } = require('../support/session');
 const { adminClient } = require('../support/supabaseAdmin');
 const { loadUsers } = require('../support/testUsers');
 
+test.skip(!process.env.E2E_SANDBOX, 'needs a working sandbox: run with E2E_SANDBOX=1 against a Linux/WSL API');
 test.use({ asRole: 'learner' });
+test.describe.configure({ mode: 'serial' });
 
 let users;
-test.beforeAll(() => {
-  users = loadUsers();
+test.beforeAll(() => { users = loadUsers(); });
+test.afterEach(async () => { await adminClient.from('progress').delete().eq('user_id', users.learner.id); });
+
+const LAB = (slug) => `/courses/shell-101/labs/${slug}`;
+
+async function boot(page, slug) {
+  await page.goto(LAB(slug));
+  const terminal = page.getByLabel('Terminal command');
+  await expect(terminal).toBeEnabled({ timeout: 20000 });
+  return terminal;
+}
+// Each command adds two rows to the screen (the command itself and its output):
+// waiting for both means the command has finished.
+async function run(page, terminal, command) {
+  const rows = page.locator('[class*="termRow"]');
+  const before = await rows.count();
+  await terminal.fill(command);
+  await terminal.press('Enter');
+  await expect(rows).toHaveCount(before + 2);
+}
+const screen = (page) => page.locator('[class*="termScreen"]');
+async function flagFrom(page) {
+  const text = await screen(page).innerText();
+  const found = text.match(/BASHLAB\{[a-z0-9_]+\}/);
+  expect(found, `no flag on the terminal screen:\n${text}`).not.toBeNull();
+  return found[0];
+}
+
+test('the terminal opens clean: a prompt and nothing else, no placeholder, no boot banner', async ({ page }) => {
+  const terminal = await boot(page, 'terminal-fundamentals-navigation');
+  await expect(terminal).not.toHaveAttribute('placeholder', /.+/);
+  const text = await screen(page).innerText();
+  expect(text).not.toMatch(/Booting container|BashLab Cloud Shell|type a bash command/i);
+  await expect(page.getByText('student@bashlab:~$').first()).toBeVisible();
 });
 
-test.afterEach(async () => {
-  if (users?.learner?.id) {
-    await adminClient.from('progress').delete().eq('user_id', users.learner.id);
-  }
+test('find-it lab: ls hides the flag, ls -la shows its file, cat reads it, submitting it completes the lab', async ({ page }) => {
+  const terminal = await boot(page, 'terminal-fundamentals-navigation');
+  await run(page, terminal, 'ls');
+  await expect(screen(page)).toContainText('welcome.txt');
+  await expect(screen(page)).toContainText('MISSION.txt');
+  await expect(screen(page)).not.toContainText('.secret_flag');
+  await run(page, terminal, 'ls -la');
+  await expect(screen(page)).toContainText('.secret_flag');
+  await run(page, terminal, 'cat .secret_flag');
+  const flag = await flagFrom(page);
+
+  await run(page, terminal, 'cd /var/log');
+  await expect(page.getByText('student@bashlab:/var/log$').first()).toBeVisible(); // the directory persists between commands
+  await run(page, terminal, 'cd ~');
+
+  await page.getByLabel('Flag').fill('BASHLAB{definitely_wrong}');
+  await page.getByRole('button', { name: 'Submit flag' }).click();
+  await expect(page.getByText('Wrong flag. Check it and try again.')).toBeVisible();
+
+  await page.getByLabel('Flag').fill(flag);
+  await page.getByRole('button', { name: 'Submit flag' }).click();
+  await expect(page.getByText('Correct flag. Lab completed!')).toBeVisible();
+  await expect(page.getByLabel('Flag')).toBeDisabled();
+
+  const { data } = await adminClient.from('progress').select('status, lessons(slug)').eq('user_id', users.learner.id);
+  expect(data).toHaveLength(1);
+  expect(data[0].lessons.slug).toBe('terminal-fundamentals-navigation');
+  await page.reload();
+  await expect(page.getByLabel('Flag')).toBeDisabled(); // still solved after a reload
 });
 
-test('Workspace: Real interactive sandbox boot, command execution, and task completion', async ({ page }) => {
-  // 1. Navigate to Lab 1 (Terminal Fundamentals & Navigation)
-  await page.goto('/courses/shell-101/labs/terminal-fundamentals-navigation');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Terminal Fundamentals & Navigation');
+test('do-it lab: check.sh stays quiet until the work is done, then prints the flag', async ({ page }) => {
+  const terminal = await boot(page, 'directory-creation-file-manipulation');
+  await run(page, terminal, './check.sh');
+  await expect(screen(page)).toContainText('missing: project/src');
+  await expect(screen(page)).not.toContainText('BASHLAB{');
+  await run(page, terminal, 'mkdir -p project/src project/config');
+  await run(page, terminal, 'touch project/config/app.json');
+  await run(page, terminal, 'cp project/config/app.json project/config/app.json.bak');
+  await run(page, terminal, './check.sh');
+  const flag = await flagFrom(page);
 
-  // Verify the new ChatGPT-style sidebar and elements are rendered
-  await expect(page.getByLabel('Course workspace')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Close sidebar' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'User account menu' })).toBeVisible();
+  await page.getByLabel('Flag').fill(flag);
+  await page.getByRole('button', { name: 'Submit flag' }).click();
+  await expect(page.getByText('Correct flag. Lab completed!')).toBeVisible();
+});
 
-  // 2. Wait for terminal to be active and prompt to appear (sandbox auto-boots on mount)
-  const termInput = page.getByLabel('Terminal command');
-  await expect(termInput).toBeVisible({ timeout: 20000 });
-  await expect(page.locator('text=BashLab Cloud Shell (Ready)').first()).toBeVisible({ timeout: 20000 });
+test('Reset wipes the learner\'s work and puts the lab\'s starting files back', async ({ page }) => {
+  const terminal = await boot(page, 'directory-creation-file-manipulation');
+  await run(page, terminal, 'mkdir -p project');
+  await run(page, terminal, 'ls');
+  await expect(screen(page)).toContainText('project');
+  await page.getByRole('button', { name: 'Restart Instance' }).click();
+  await expect(terminal).toBeEnabled({ timeout: 20000 });
+  await run(page, terminal, 'ls');
+  const lastOutput = page.locator('[class*="termRow"]').last(); // the output of this ls
+  await expect(lastOutput).toContainText('check.sh');
+  await expect(lastOutput).not.toContainText('project');
+});
 
-  // Take screenshot: Sandbox Booted with ChatGPT Sidebar
-  await page.screenshot({ path: '/home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-booted.png', fullPage: true });
+test('the flag of another lab is refused', async ({ page }) => {
+  await boot(page, 'terminal-fundamentals-navigation');
+  await page.getByLabel('Flag').fill('BASHLAB{mkdir_touch_cp_all_done}');
+  await page.getByRole('button', { name: 'Submit flag' }).click();
+  await expect(page.getByText('Wrong flag. Check it and try again.')).toBeVisible();
+  const { data } = await adminClient.from('progress').select('status').eq('user_id', users.learner.id);
+  expect(data ?? []).toHaveLength(0);
+});
 
-  // 3. Execute command in real Docker/Bubblewrap container: pwd
-  await termInput.fill('pwd');
-  await termInput.press('Enter');
-  await expect(page.getByText('/home/student').first()).toBeVisible({ timeout: 10000 });
-
-  // 4. Execute: ls -la
-  await termInput.fill('ls -la');
-  await termInput.press('Enter');
-  await expect(page.getByText('total').first()).toBeVisible({ timeout: 10000 });
-
-  // 5. Execute: cd /var/log and check cwd updates in prompt
-  await termInput.fill('cd /var/log');
-  await termInput.press('Enter');
-  await expect(page.getByText('student@bashlab:/var/log$').first()).toBeVisible({ timeout: 10000 });
-
-  // 6. Execute: cd ~ to return home
-  await termInput.fill('cd ~');
-  await termInput.press('Enter');
-  await expect(page.getByText('student@bashlab:~$').first()).toBeVisible({ timeout: 10000 });
-
-  // Take screenshot: Commands Executed in Sandbox
-  await page.screenshot({ path: '/home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-commands.png', fullPage: true });
-
-  // 7. Click Check Solution and wait for progress API call with status: done
-  const saved = page.waitForResponse((res) => {
-    if (!res.url().includes('/api/progress/') || res.request().method() !== 'PUT') return false;
-    try {
-      const body = JSON.parse(res.request().postData() || '{}');
-      return body.status === 'done';
-    } catch {
-      return false;
-    }
-  });
-  const checkBtn = page.getByRole('button', { name: 'Check Solution' });
-  await checkBtn.click();
-  expect((await saved).status()).toBe(204);
-
-  // 8. Verify verification passed and UI celebrates
-  await expect(page.locator('text=VERIFICATION PASSED')).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText('Lab Objectives Completed!')).toBeVisible({ timeout: 15000 });
-
-  // Take screenshot: Solution Passed
-  await page.screenshot({ path: '/home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-passed.png', fullPage: true });
-
-  // 9. Test ChatGPT Popover Account Menu
-  const accountBtn = page.getByRole('button', { name: 'User account menu' });
-  await accountBtn.click();
-  await expect(page.getByRole('menu')).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: /Account & Security|Settings/ })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Log out' })).toBeVisible();
-
-  // Take screenshot: Popover Account Menu Open
-  await page.screenshot({ path: '/home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-popover.png', fullPage: true });
-
-  // Close menu by clicking outside
-  await page.mouse.click(500, 200);
-
-  // 10. Test Sidebar Collapse Toggle
-  const toggleBtn = page.getByRole('button', { name: 'Close sidebar' });
-  await toggleBtn.click();
-  await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
-  await page.waitForTimeout(600);
-
-  // Take screenshot: Collapsed Sidebar
-  await page.screenshot({ path: '/home/light/Documents/B3/web_app/Bashlab/screenshots/workspace-chatgpt-collapsed.png', fullPage: true });
-
-  // 11. Verify progress in database
-  const { data: progressRows } = await adminClient
-    .from('progress')
-    .select('status, lessons(slug)')
-    .eq('user_id', users.learner.id);
-
-  expect(progressRows).toHaveLength(1);
-  expect(progressRows[0].status).toBe('done');
-  expect(progressRows[0].lessons.slug).toBe('terminal-fundamentals-navigation');
+test('clicking the flag box keeps the focus there (it must not jump back to the terminal)', async ({ page }) => {
+  const terminal = await boot(page, 'terminal-fundamentals-navigation');
+  await page.getByLabel('Flag').click();
+  await expect(page.getByLabel('Flag')).toBeFocused();
+  await page.keyboard.type('BASHLAB{typing_here}');
+  await expect(page.getByLabel('Flag')).toHaveValue('BASHLAB{typing_here}');
+  await expect(terminal).not.toBeFocused();
 });

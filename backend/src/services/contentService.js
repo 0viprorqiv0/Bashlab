@@ -249,6 +249,17 @@ export function createContentService({ admin, userClient }) {
       return data?.sandbox_session_id || null;
     },
 
+    // The lesson's slug (the key of its flag and starting files in src/labs/catalog.js).
+    async getLessonSlug(lessonId, isAdmin = false) {
+      assertUuid(lessonId, 'lessonId');
+      const { data, error } = await admin.from('lessons')
+        .select('slug, status, chapters(courses(status))').eq('id', lessonId).maybeSingle();
+      if (error) throw mapDbError(error);
+      const visible = data && (isAdmin || (data.status === 'published' && data.chapters?.courses?.status === 'published'));
+      if (!visible) throw new HttpError(404, 'LESSON_NOT_FOUND', 'Lesson not found');
+      return data.slug;
+    },
+
     async getLessonVerifier(lessonId, isAdmin = false) {
       assertUuid(lessonId, 'lessonId');
       const { data, error } = await admin.from('lessons')
@@ -265,7 +276,10 @@ export function createContentService({ admin, userClient }) {
 
     // ---- practice session bookkeeping (called by the sandbox routes) --------
     async openPracticeRecord(userId, lessonId, sandboxSessionId) {
-      if (lessonId !== undefined && lessonId !== null) assertUuid(lessonId, 'lessonId');
+      if (lessonId !== undefined && lessonId !== null) {
+        assertUuid(lessonId, 'lessonId');
+        await visibleLesson(lessonId, false);
+      }
       const { data, error } = await admin.from('practice_sessions')
         .insert({ user_id: userId, lesson_id: lessonId || null, sandbox_session_id: sandboxSessionId, status: 'active' })
         .select('id').single();

@@ -15,6 +15,11 @@ async function send(path, method, body) {
   }
 }
 
+// A lab is completed by submitting its flag; the server checks it and writes the progress.
+export const labApi = {
+  submitFlag: (lessonId, flag) => send(`/api/labs/${lessonId}/flag`, 'POST', { flag }),
+};
+
 export const progressApi = {
   done: (lessonId) => send(`/api/progress/${lessonId}`, 'PUT', { status: 'done' }),
   started: (lessonId) => send(`/api/progress/${lessonId}`, 'PUT', { status: 'in_progress' }),

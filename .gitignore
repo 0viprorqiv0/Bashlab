@@ -69,4 +69,11 @@ _backups/
 
 # Runtime state & logs
 .run/
+.impeccable/
+.obsidian/
 
+# Cloudflare Tunnel runtime credentials. Only *.example templates are committed.
+/infra/cloudflare/tunnel/config.yml
+/infra/cloudflare/tunnel/*.json
+/infra/cloudflare/tunnel/*.pem
+/infra/cloudflare/tunnel/*.token

@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 
-export default function SmoothScroll({ wheelMultiplier = 1 }) {
+export default function SmoothScroll({ wheelMultiplier = 1, duration = 0.8 }) {
   const pathname = usePathname();
   const lenisRef = useRef(null);
+  const wheelScale = useRef(wheelMultiplier);
 
   useEffect(() => {
     // Tôn trọng cài đặt giảm chuyển động của người dùng
@@ -16,12 +17,18 @@ export default function SmoothScroll({ wheelMultiplier = 1 }) {
     }
 
     const lenis = new Lenis({
-      duration: 0.8,
+      duration,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo ease-out
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 1,
+      virtualScroll: (data) => {
+        if (data.event.type === 'wheel') {
+          data.deltaX *= wheelScale.current;
+          data.deltaY *= wheelScale.current;
+        }
+      },
       touchMultiplier: 1.2,
       smoothTouch: false,
       autoResize: true,
@@ -98,12 +105,16 @@ export default function SmoothScroll({ wheelMultiplier = 1 }) {
 
   // Cập nhật wheelMultiplier khi prop thay đổi
   useEffect(() => {
+    wheelScale.current = wheelMultiplier;
     const lenis = lenisRef.current || window.lenis;
     if (lenis) {
-      if (lenis.options) lenis.options.wheelMultiplier = wheelMultiplier;
-      if (lenis.virtualScroll?.options) lenis.virtualScroll.options.wheelMultiplier = wheelMultiplier;
+      if (lenis.options) {
+        lenis.options.wheelMultiplier = wheelMultiplier;
+        lenis.options.duration = duration;
+      }
+      if (lenis.virtualScroll?.options) lenis.virtualScroll.options.wheelMultiplier = 1;
     }
-  }, [wheelMultiplier]);
+  }, [wheelMultiplier, duration]);
 
   // Đồng bộ kích thước và vị trí cuộn khi chuyển trang (Next.js SPA routing)
   useEffect(() => {

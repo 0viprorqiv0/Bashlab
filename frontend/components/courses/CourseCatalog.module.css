@@ -31,10 +31,7 @@
 .primaryAction:hover { background: #1c8058; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(23, 107, 73, 0.3); }
 .primaryAction :global(.material-symbols-outlined) { font-size: 19px; transition: transform 180ms ease; }
 .primaryAction:hover :global(.material-symbols-outlined) { transform: translateX(3px); }
-.courseMark { display: flex; flex-direction: column; justify-content: space-between; padding: 30px 34px; border-left: 1px solid rgba(104, 223, 160, 0.15); background: #0c1815; color: var(--accent); }
-.courseMark span { font-family: var(--font-code); font-size: 11px; letter-spacing: .06em; }
-.courseMark span:last-child { align-self: flex-end; }
-.courseMark strong { align-self: center; font-family: var(--font-headline); font-size: clamp(96px, 9vw, 138px); font-weight: 500; line-height: 1; letter-spacing: -.075em; }
+.courseMark { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 260px; padding: 30px 34px; border-left: 1px solid #3e5d4f; background: #1b2d25; color: var(--accent); }
 .upcoming { margin-top: 64px; }
 .upcomingIntro { margin-bottom: 23px; }
 .upcomingIntro h2 { font-family: var(--font-headline); font-size: 22px; font-weight: 500; letter-spacing: -.02em; }

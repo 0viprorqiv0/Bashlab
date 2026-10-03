@@ -54,7 +54,7 @@ export default function LoginPage() {
     }
   }
 
-  return <AuthShell title="Welcome back" description="Log in to continue learning and return to your workspace.">
+  return <AuthShell visual="binary" title="Welcome back" description="Log in to continue learning and return to your workspace.">
     {status === 'error' && <p className={styles.errorBox} role="alert">{errorMessage || 'Invalid email or password.'}</p>}
     <form className={styles.form} onSubmit={submit} noValidate>
       <AuthField id="email" label="Email address" type="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(value) => { setEmail(value); setErrors({ ...errors, email: '' }); }} error={errors.email} />

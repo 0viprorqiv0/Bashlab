@@ -1,0 +1,14 @@
+# Copy this file to /etc/cloudflared/config.yml on the deployment machine.
+# Do not commit the copied file or the JSON credential it references.
+tunnel: <TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<TUNNEL-UUID>.json
+
+ingress:
+  - hostname: app.example.com
+    service: http://127.0.0.1:3000
+
+  - hostname: api.example.com
+    service: http://127.0.0.1:3001
+
+  # Deny every hostname/path not explicitly mapped above.
+  - service: http_status:404

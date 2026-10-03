@@ -19,6 +19,7 @@ import { createDashboardService } from './services/dashboardService.js';
 import { createAuthService } from './services/authService.js';
 import { createSupabaseAdmin, createSupabaseAnonFactory, createSupabaseUserFactory } from './lib/supabaseAdmin.js';
 import { createMemoryLeaseStore } from './services/sandboxLeaseStore.js';
+import { seedLabWorkspace } from './labs/seed.js';
 
 // `auth` decides who may use the sandbox:
 //   { authenticate, isAdmin, maxSessionsPerUser } — every /api route needs a
@@ -142,10 +143,26 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     records.delete(sessionId);
     content.service.closePracticeRecord(recordId).catch(() => {});
   };
+  // Puts the lab's starting files (and its flag) into the session's home directory.
+  // A seeding failure must not take the session down; the lab is just emptier.
+  const seedLab = async (session, lessonId) => {
+    if (!lessonId || typeof content?.service?.getLessonSlug !== 'function') return;
+    try {
+      await seedLabWorkspace(session, await content.service.getLessonSlug(lessonId, true));
+    } catch (error) {
+      console.error('lab files could not be prepared:', error.message);
+    }
+  };
   const cleanupStaleSession = (sessionId) => {
     sessionLeases.delete(sessionId);
     sessionLessons.delete(sessionId);
     closeRecord(sessionId);
+    // Whatever removed the session (DELETE, admin stop, reaper), its lease goes back
+    // to the pool; otherwise every learner who ever opened a lab keeps a slot forever.
+    Promise.resolve()
+      .then(() => leaseStore.beginDeletion({ leaseId: sessionId }))
+      .then(() => leaseStore.finishDeletion({ leaseId: sessionId }))
+      .catch(() => {});
   };
   const detachSessionCleanup = manager.onRemoved((sessionId) => cleanupStaleSession(sessionId));
   const activeSessionOf = (userId) => {
@@ -186,7 +203,18 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       },
     });
   });
-  app.post('/api/sessions', async (req, res) => {
+  // One open/switch at a time per learner: a second request that arrives while the first is
+  // still creating or resetting waits for it, and is then answered by the session it made
+  // (two near-simultaneous opens happen in dev with React StrictMode, and on a double click).
+  const openChains = new Map();
+  const serializeOpens = (userId, task) => {
+    const run = (openChains.get(userId) || Promise.resolve()).then(task);
+    const tail = run.catch(() => {});
+    openChains.set(userId, tail);
+    tail.then(() => { if (openChains.get(userId) === tail) openChains.delete(userId); });
+    return run;
+  };
+  const openSession = async (req, res) => {
     const lessonId = req.body?.lessonId;
     if (lessonId !== undefined && lessonId !== null && !isUuid(lessonId)) {
       throw new HttpError(400, 'INVALID_INPUT', 'lessonId must be a valid id');
@@ -208,7 +236,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
         }
         // The lease remains the same resource owner. A lesson switch resets
         // the recorded workspace instead of allocating a second workspace.
-        await manager.withSession(active.id, (s) => manager.reset(s), { allowQuarantined: true });
+        await manager.withSession(active.id, async (s) => { await manager.reset(s); await seedLab(s, lessonId); }, { allowQuarantined: true });
         sessionLessons.set(active.id, lessonId);
         return res.status(200).json({
           ...manager.describe(active),
@@ -223,22 +251,35 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
       const result = await leaseStore.claim({ userId: req.user.id, lessonId: lessonId ?? null });
       lease = result.lease;
     }
-    const session = await manager.create(lease ? { id: lease.leaseId, workspaceId: lease.workspaceId } : {});
-    metrics.recordSessionCreated();
-    if (auth) {
-      sessionLeases.set(session.id, req.user.id);
-      sessionLessons.set(session.id, lessonId);
-      await leaseStore.finishAllocation({ leaseId: lease.leaseId });
-    }
-    if (auth && content) {
-      const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
-      if (recordId) records.set(session.id, recordId);
+    let session = null;
+    try {
+      session = await manager.create(lease ? { id: lease.leaseId, workspaceId: lease.workspaceId } : {});
+      metrics.recordSessionCreated();
+      if (auth) {
+        sessionLeases.set(session.id, req.user.id);
+        sessionLessons.set(session.id, lessonId);
+        await leaseStore.finishAllocation({ leaseId: lease.leaseId });
+      }
+      await seedLab(session, lessonId);
+      if (auth && content) {
+        const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
+        if (recordId) records.set(session.id, recordId);
+      }
+    } catch (error) {
+      // A failed open must not leave a sandbox (or a lease) behind.
+      if (session) await manager.remove(session).catch(() => {});
+      if (lease) {
+        await leaseStore.beginDeletion({ leaseId: lease.leaseId }).catch(() => {});
+        await leaseStore.finishDeletion({ leaseId: lease.leaseId }).catch(() => {});
+      }
+      throw error;
     }
     res.status(201).json({
       ...manager.describe(session),
       ...(lessonId && { lessonId }),
     });
-  });
+  };
+  app.post('/api/sessions', (req, res) => (auth ? serializeOpens(req.user.id, () => openSession(req, res)) : openSession(req, res)));
   app.get('/api/sessions/:id', ownSession, (req, res) => res.json(manager.describe(manager.get(req.params.id))));
   app.post('/api/sessions/:id/execute', ownSession, async (req, res) => {
     const command = req.body?.command;
@@ -294,6 +335,7 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   app.post('/api/sessions/:id/reset', ownSession, async (req, res) => {
     res.json(await manager.withSession(req.params.id, async session => {
       await manager.reset(session);
+      await seedLab(session, sessionLessons.get(session.id));
       return manager.describe(session);
     }));
   });

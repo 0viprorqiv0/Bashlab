@@ -9,6 +9,7 @@ import { authClient } from '@/lib/authClient';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { PageError, PageLoading } from '@/components/shared/Loading';
 import { fetchProgressMap } from '@/lib/learning';
+import BinaryHacker from '@/components/auth/BinaryHacker';
 
 const filters = ['All', 'Core Tracks', 'Security'];
 
@@ -199,7 +200,7 @@ export default function CourseCatalog() {
                   <span className="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
                 </Link>
               </div>
-              <div className={styles.courseMark} aria-hidden="true"><span>shell / bash</span><strong>{course.code}</strong><span>Learn by doing.</span></div>
+              <div className={styles.courseMark}><BinaryHacker compact /></div>
             </article>
           );
         })}
