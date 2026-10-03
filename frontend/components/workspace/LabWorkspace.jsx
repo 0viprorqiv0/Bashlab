@@ -181,6 +181,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
   const [flagInput, setFlagInput] = useState('');
   const [flagBusy, setFlagBusy] = useState(false);
   const [flagNote, setFlagNote] = useState({ kind: '', text: '' });
+  const flagInputRef = useRef(null);
   const sessionIdRef = useRef(null);
   // Bumped whenever the instance is stopped/unmounted so a create still in flight is discarded, not adopted.
   const generationRef = useRef(0);
@@ -1162,23 +1163,47 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
 
           <form className={styles.flagBar} onSubmit={handleSubmitFlag} onClick={(event) => event.stopPropagation()}> {/* the pane focuses the terminal on click; the flag box must keep its own focus */}
             <span className={`material-symbols-outlined ${styles.flagIcon}`} aria-hidden="true">flag</span>
-            <input
-              type="text"
-              className={styles.flagInput}
-              value={isLabSolved ? 'Lab solved' : flagInput}
-              onChange={(event) => setFlagInput(event.target.value)}
-              disabled={isLabSolved || flagBusy}
-              maxLength={256}
-              autoComplete="off"
-              spellCheck={false}
-              aria-label="Flag"
-            />
-            <button type="submit" className={styles.flagSubmit} disabled={isLabSolved || flagBusy || !flagInput.trim()}>
+            <div
+              className={`${styles.flagInputWrap} ${flagNote.kind === 'error' ? styles.flagInputWrapError : flagNote.kind === 'ok' ? styles.flagInputWrapOk : ''}`}
+              onClick={() => flagInputRef.current?.focus()}
+            >
+              <input
+                ref={flagInputRef}
+                type="text"
+                className={styles.flagInput}
+                value={isLabSolved ? 'Lab solved' : flagInput}
+                onChange={(event) => {
+                  setFlagInput(event.target.value);
+                  if (flagNote.text) setFlagNote({ kind: '', text: '' });
+                }}
+                disabled={isLabSolved || flagBusy}
+                maxLength={256}
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Flag"
+                placeholder={isLabSolved ? 'Lab solved' : 'Enter flag (e.g. BASHLAB{...})'}
+              />
+              {flagNote.text && (
+                <span
+                  className={`${styles.flagNoteInside} ${flagNote.kind === 'ok' ? styles.flagNoteOk : styles.flagNoteError}`}
+                  role="status"
+                  title={flagNote.text}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '13px', lineHeight: 1 }} aria-hidden="true">
+                    {flagNote.kind === 'ok' ? 'check_circle' : 'error'}
+                  </span>
+                  <span>{flagNote.text}</span>
+                </span>
+              )}
+            </div>
+            <button
+              type="submit"
+              className={styles.flagSubmit}
+              disabled={isLabSolved || flagBusy || !flagInput.trim()}
+              title={isLabSolved ? 'Lab completed' : 'Submit flag'}
+            >
               {flagBusy ? 'Checking…' : 'Submit flag'}
             </button>
-            {flagNote.text && (
-              <span className={flagNote.kind === 'ok' ? styles.flagOk : styles.flagError} role="status">{flagNote.text}</span>
-            )}
           </form>
         </section>
       </div>
