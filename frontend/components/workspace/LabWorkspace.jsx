@@ -14,11 +14,18 @@ import styles from './LabWorkspace.module.css';
 const HOME = '/home/student';
 const shortCwd = (path) => (!path ? '~' : path === HOME ? '~' : path.startsWith(`${HOME}/`) ? `~${path.slice(HOME.length)}` : path);
 
-function getInitials(nameOrEmail) {
-  if (!nameOrEmail) return 'U';
-  const parts = nameOrEmail.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+function getInitials(name, email) {
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  if (email) {
+    const p = email.split('@')[0].replace(/[._-]/g, ' ').trim().split(/\s+/);
+    if (p.length >= 2) return (p[0][0] + p[1][0]).toUpperCase();
+    return email.slice(0, 2).toUpperCase();
+  }
+  return 'U';
 }
 
 // Loads the course's labs from the database (see lib/courseLabs.js) and hands
@@ -62,10 +69,10 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   if (error) return <PageError message={`Could not load this lab: ${error}`} onRetry={retry} />;
   if (missing || !lab) notFound();
   if (String(lab.id) !== String(labId)) return <PageLoading label="Loading lab…" />;
-  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} markStarted={markStarted} user={user} profile={profile} />;
+  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} markStarted={markStarted} user={user} profile={profile} isAdmin={isAdmin} />;
 }
 
-function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile }) {
+function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile, isAdmin }) {
   const router = useRouter();
   const initialLabs = labs;
   const currentLab = initialLabs.find((item) => item.id === labId);
@@ -87,10 +94,12 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
 
-  const displayName = profile?.name || user?.email || 'Learner';
-  const displayRole = profile?.role === 'admin' ? 'Administrator' : 'Learner';
-  const displayPlan = profile?.role === 'admin' ? 'Administrator' : 'Pro Learner';
-  const initials = getInitials(displayName);
+  const isUserAdmin = Boolean(isAdmin ?? (profile?.role === 'admin'));
+  const rawName = profile?.name || user?.email?.split('@')[0] || 'Learner';
+  const cleanName = rawName.split('.')[0] || 'Learner';
+  const displayName = profile?.name || cleanName;
+  const userRole = isUserAdmin ? 'Admin' : 'Learner';
+  const initials = getInitials(profile?.name, user?.email);
   const avatarUrl = profile?.avatar_url || null;
 
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -117,15 +126,24 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
         setAccountMenuOpen(false);
       }
     }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        setAccountMenuOpen(false);
+      }
+    }
     if (accountMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleKeyDown);
+      };
     }
   }, [accountMenuOpen]);
 
   async function handleLogout() {
     setAccountMenuOpen(false);
-    await authClient.signOut();
+    await authClient.logout();
     router.push('/login');
   }
 
@@ -539,7 +557,7 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
           ))}
         </nav>
 
-        {/* Bottom Account Area (ChatGPT Style) */}
+        {/* Bottom Account Area (Unified with Navbar & Admin Gate) */}
         <div ref={accountMenuRef} className={`${styles.sidebarAccountWrap} ${sidebarCollapsed ? styles.accountCollapsed : ''}`}>
           {user ? (
             <>
@@ -550,7 +568,6 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                 aria-expanded={accountMenuOpen}
                 aria-haspopup="true"
                 aria-label="User account menu"
-                title={sidebarCollapsed ? `${displayName} (${displayRole})` : undefined}
               >
                 <div className={styles.chatgptAvatarWrap}>
                   {avatarUrl ? (
@@ -560,10 +577,25 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                   )}
                 </div>
 
-                <div className={styles.chatgptAccountMeta}>
-                  <span className={styles.chatgptAccountName}>{displayName}</span>
-                  <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
-                </div>
+                {!sidebarCollapsed && (
+                  <div className={styles.chatgptAccountMeta}>
+                    <span className={styles.chatgptAccountName} title={displayName}>
+                      {cleanName}
+                    </span>
+                    <span className={styles.chatgptAccountPlan}>
+                      <span className={`text-[9.5px] font-code font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border ${
+                        isUserAdmin ? 'border-primary/40 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.05] text-[#9BA3B5]'
+                      }`}>
+                        {userRole}
+                      </span>
+                    </span>
+                  </div>
+                )}
+                {!sidebarCollapsed && (
+                  <span className="material-symbols-outlined text-[15px] text-[#777] ml-auto select-none flex-shrink-0">
+                    {accountMenuOpen ? 'expand_less' : 'expand_more'}
+                  </span>
+                )}
               </button>
 
               {accountMenuOpen && (
@@ -573,86 +605,82 @@ function Workspace({ courseId, labId, labs, markDone, markStarted, user, profile
                   }`}
                   role="menu"
                 >
-                  <div className={styles.popoverUserRow}>
-                    <div className={styles.chatgptAvatarWrap}>
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt={displayName} className={styles.chatgptAvatarImg} />
-                      ) : (
-                        <span className={styles.chatgptAvatar}>{initials}</span>
-                      )}
+                  <div className="flex items-center gap-3 p-3 border-b border-white/[0.08] mb-1 min-w-0">
+                    <span className="w-[32px] h-[32px] rounded-full flex items-center justify-center font-headline text-[12px] font-bold text-primary bg-[#052e16] border border-primary/40 flex-shrink-0">
+                      {initials}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-headline text-[13px] font-semibold text-white truncate" title={user?.email}>
+                        {displayName}
+                      </p>
+                      <p className="font-code text-[11px] text-primary mt-0.5">
+                        {userRole}
+                      </p>
                     </div>
-                    <div className={styles.chatgptAccountMeta}>
-                      <span className={styles.chatgptAccountName}>{displayName}</span>
-                      <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
-                    </div>
-                    <span className={`material-symbols-outlined ${styles.popoverChevron}`}>chevron_right</span>
                   </div>
 
-                  <div className={styles.popoverDivider} />
-
-                  <Link
-                    href="/account"
-                    onClick={() => setAccountMenuOpen(false)}
-                    className={styles.popoverItem}
-                    role="menuitem"
-                  >
-                    <span className="material-symbols-outlined">settings</span>
-                    Settings
-                  </Link>
-
-                  {isAdmin ? (
+                  {isUserAdmin && (
                     <Link
                       href="/admin/content"
                       onClick={() => setAccountMenuOpen(false)}
-                      className={styles.popoverItem}
+                      className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
                       role="menuitem"
                     >
-                      <span className="material-symbols-outlined" style={{ color: '#f59e0b' }}>admin_panel_settings</span>
+                      <span className="material-symbols-outlined text-base text-accent-amber group-hover:brightness-125 transition-all">admin_panel_settings</span>
                       Admin panel
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/my-learning"
-                      onClick={() => setAccountMenuOpen(false)}
-                      className={styles.popoverItem}
-                      role="menuitem"
-                    >
-                      <span className="material-symbols-outlined">school</span>
-                      My Learning
                     </Link>
                   )}
 
                   <Link
-                    href="/courses"
+                    href="/my-learning"
                     onClick={() => setAccountMenuOpen(false)}
-                    className={styles.popoverItem}
+                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
                     role="menuitem"
                   >
-                    <span className="material-symbols-outlined">explore</span>
+                    <span className="material-symbols-outlined text-base text-primary group-hover:brightness-125 transition-all">school</span>
+                    My Learning
+                  </Link>
+
+                  <Link
+                    href="/account"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
+                    role="menuitem"
+                  >
+                    <span className="material-symbols-outlined text-base text-[#9BA3B5] group-hover:text-white transition-colors">manage_accounts</span>
+                    Account &amp; Security
+                  </Link>
+
+                  <Link
+                    href="/courses"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
+                    role="menuitem"
+                  >
+                    <span className="material-symbols-outlined text-base text-[#9BA3B5] group-hover:text-white transition-colors">explore</span>
                     Browse Courses
                   </Link>
 
-                  <div className={styles.popoverDivider} />
+                  <div className="border-t border-white/[0.08] my-1" />
 
                   <a
                     href="https://github.com/0viprorqiv0/Bashlab/issues"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={styles.popoverItem}
+                    className="group flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-[#9BA3B5] hover:text-white transition-colors"
                     role="menuitem"
                   >
-                    <span className="material-symbols-outlined">help</span>
-                    <span>Help</span>
-                    <span className={`material-symbols-outlined ${styles.popoverChevronRight}`}>chevron_right</span>
+                    <span className="material-symbols-outlined text-base text-[#71717a] group-hover:text-white transition-all">help</span>
+                    <span>Help &amp; Support</span>
                   </a>
 
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className={`${styles.popoverItem} ${styles.popoverLogout}`}
+                    className="group w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-body text-[12.5px] text-red-400/80 hover:text-red-400 transition-colors text-left cursor-pointer"
                     role="menuitem"
                   >
-                    <span className="material-symbols-outlined">logout</span>
+                    <span className="material-symbols-outlined text-base text-red-400/80 group-hover:text-red-400 transition-colors">logout</span>
                     Log out
                   </button>
                 </div>

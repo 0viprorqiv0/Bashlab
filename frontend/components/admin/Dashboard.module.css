@@ -4,7 +4,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .barRight {
@@ -24,8 +24,8 @@
 }
 
 .ranges button {
-  padding: 6px 14px;
-  font-size: 12px;
+  padding: 5px 12px;
+  font-size: 11.5px;
   font-family: var(--font-code);
   color: #94a3b8;
   background: transparent;
@@ -50,11 +50,11 @@
   border: 1px solid #78350f;
   background: #241408;
   color: #fbbf24;
-  border-radius: 12px;
-  padding: 14px 18px;
-  font-size: 13px;
-  line-height: 1.55;
-  margin-bottom: 20px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -66,8 +66,8 @@
 
 .hint {
   display: block;
-  margin-top: 3px;
-  font-size: 11px;
+  margin-top: 2px;
+  font-size: 10.5px;
   color: #64748b;
   font-family: var(--font-code);
 }
@@ -77,9 +77,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 28px 0 14px;
+  margin: 20px 0 10px;
   font-family: var(--font-headline);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -94,10 +94,58 @@
   border-radius: 2px;
 }
 
+.categoryBar {
+  display: inline-flex;
+  background: #111722;
+  border: 1px solid #222d3d;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+.categoryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: #94a3b8;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.categoryBtn:hover:not(.categoryActive) {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.categoryActive {
+  color: #68dfa0;
+  background: rgba(104, 223, 160, 0.12);
+  border-color: rgba(104, 223, 160, 0.28);
+  font-weight: 600;
+}
+
+.categoryIcon {
+  font-size: 15px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
-  gap: 16px;
+  gap: 14px;
+}
+
+.gridThree {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 /* Individual Chart Card */
@@ -105,9 +153,9 @@
   position: relative;
   margin: 0;
   border: 1px solid #222d3d;
-  border-radius: 14px;
+  border-radius: 10px;
   background: linear-gradient(180deg, #131a26 0%, #0e141f 100%);
-  padding: 18px 20px 16px;
+  padding: 12px 14px 10px;
   min-width: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -123,7 +171,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .captionTitleRow {
@@ -133,7 +181,7 @@
 }
 
 .chartTitleText {
-  font-size: 13px;
+  font-size: 12.5px;
   color: #f1f5f9;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -141,7 +189,7 @@
 
 .chartUnitText {
   color: #64748b;
-  font-size: 11px;
+  font-size: 10.5px;
   font-family: var(--font-code);
 }
 
@@ -150,8 +198,8 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-code);
-  font-size: 11px;
-  padding: 2px 8px;
+  font-size: 10.5px;
+  padding: 2px 7px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -167,6 +215,7 @@
 .chart svg {
   display: block;
   width: 100%;
+  max-height: 140px;
   height: auto;
   touch-action: pan-y;
   overflow: visible;

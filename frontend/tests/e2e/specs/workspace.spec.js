@@ -16,8 +16,8 @@ test.afterEach(async () => {
 });
 
 test('Workspace: Real interactive sandbox boot, command execution, and task completion', async ({ page }) => {
-  // 1. Navigate to Lab 1
-  await page.goto('/courses/shell-101/labs/1');
+  // 1. Navigate to Lab 1 (Terminal Fundamentals & Navigation)
+  await page.goto('/courses/shell-101/labs/terminal-fundamentals-navigation');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Terminal Fundamentals & Navigation');
 
   // Verify the new ChatGPT-style sidebar and elements are rendered
@@ -81,7 +81,7 @@ test('Workspace: Real interactive sandbox boot, command execution, and task comp
   const accountBtn = page.getByRole('button', { name: 'User account menu' });
   await accountBtn.click();
   await expect(page.getByRole('menu')).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /Account & Security|Settings/ })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Log out' })).toBeVisible();
 
   // Take screenshot: Popover Account Menu Open

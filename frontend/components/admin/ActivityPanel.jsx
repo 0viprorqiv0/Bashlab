@@ -7,7 +7,7 @@ import styles from './Admin.module.css';
 import ReasonDialog from './ReasonDialog';
 import Dashboard from './Dashboard';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 8;
 const SANDBOX_CAPACITY = 1000; // SessionManager maxSessions in backend/src/services/sessionManager.js
 const IDLE_MS = 15 * 60 * 1000;
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : '—');
@@ -20,19 +20,55 @@ async function emailsFor(ids) {
 }
 
 export default function ActivityPanel() {
-  const [tab, setTab] = useState('overview');
+  const [view, setView] = useState('overview');
   return (
-    <div>
+    <div className={styles.activityRoot}>
       <header className={styles.header}>
-        <div><h1>Activity<span>.</span></h1><p>Live system dashboard, practice sessions and the admin audit log.</p></div>
+        <div><h1>System overview<span>.</span></h1><p>Operational activity, sessions, observability and audit records.</p></div>
+        <label className={styles.viewSelect}>
+          <span>View:</span>
+          <select aria-label="View" value={view} onChange={(event) => setView(event.target.value)}>
+            <option value="overview">Overview</option>
+            <option value="sessions">Sessions</option>
+            <option value="observability">Observability</option>
+            <option value="audit">Audit</option>
+          </select>
+        </label>
       </header>
-      <div className={styles.tabs} role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'overview'} onClick={() => setTab('overview')}>Overview</button>
-        <button type="button" role="tab" aria-selected={tab === 'sessions'} onClick={() => setTab('sessions')}>Sessions</button>
-        <button type="button" role="tab" aria-selected={tab === 'log'} onClick={() => setTab('log')}>Admin log</button>
-      </div>
-      {tab === 'overview' ? <Dashboard /> : tab === 'sessions' ? <SessionsTab /> : <AdminLogTab />}
+      {view === 'overview' ? <Overview /> : view === 'sessions' ? <SessionsTab /> : view === 'observability' ? <Dashboard /> : <AdminLogTab />}
     </div>
+  );
+}
+
+function Overview() {
+  const [dashboard, setDashboard] = useState({ loading: true, data: null });
+
+  useEffect(() => {
+    let alive = true;
+    adminApi.dashboard('1h').then(({ data }) => {
+      if (alive) setDashboard({ loading: false, data });
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const stats = dashboard.data?.stats;
+  const active = stats?.activeSessions ?? 0;
+  const available = dashboard.data?.available;
+  const capacity = SANDBOX_CAPACITY - active;
+  const attention = (stats?.locked || 0) + (available === false ? 1 : 0);
+
+  return (
+    <>
+      <dl className={styles.stats} aria-label="System overview KPIs">
+        <div className={styles.stat} data-kpi-card><dt>Sandbox capacity</dt><dd>{capacity} / {SANDBOX_CAPACITY}</dd></div>
+        <div className={styles.stat} data-kpi-card><dt>In progress</dt><dd>{active}</dd></div>
+        <div className={styles.stat} data-kpi-card><dt>Service health</dt><dd>{dashboard.loading ? 'Loading' : available ? 'Healthy' : 'Unavailable'}</dd></div>
+      </dl>
+      <div className={styles.overviewGrid}>
+        <section className={styles.panel} data-admin-token="panel"><h2>Today</h2><p>{stats?.sessions24h ?? 0} sessions · {stats?.completed24h ?? 0} completions</p></section>
+        <section className={styles.panel} data-admin-token="panel"><h2>Needs attention</h2><p>{attention} items require review.</p></section>
+      </div>
+    </>
   );
 }
 

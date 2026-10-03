@@ -41,6 +41,7 @@ frontend/tests/e2e/report/
 test-results/
 frontend/test-results/
 screenshots/
+artifacts/
 
 # Python bytecode
 __pycache__/

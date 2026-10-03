@@ -366,7 +366,7 @@ export default function ContentStudio({ initialCourseSlug }) {
   const [previewTab, setPreviewTab] = useState('workspace'); // workspace | terminal
 
   // Auto-measure screen and scale layout
-  const [sidetabWidth, setSidetabWidth] = useState(260);
+  const [sidetabWidth, setSidetabWidth] = useState(285);
   const [isSidetabCollapsed, setIsSidetabCollapsed] = useState(false);
   const [isDraggingResizer, setIsDraggingResizer] = useState(false);
 
@@ -383,6 +383,22 @@ export default function ContentStudio({ initialCourseSlug }) {
       setShowPreview((prev) => !prev);
     }
   }, [isSidetabCollapsed, showEditor, showPreview]);
+
+  // Responsive auto-layout for smaller viewports (collapses preview on tablet/compact screens)
+  useEffect(() => {
+    function handleAutoLayout() {
+      if (typeof window === 'undefined') return;
+      if (window.innerWidth < 1180) {
+        setShowPreview(false);
+      }
+      if (window.innerWidth < 768) {
+        setIsSidetabCollapsed(true);
+      }
+    }
+    handleAutoLayout();
+    window.addEventListener('resize', handleAutoLayout);
+    return () => window.removeEventListener('resize', handleAutoLayout);
+  }, []);
 
   // Form State for Active Lesson
   const [lessonTitle, setLessonTitle] = useState('');
@@ -698,15 +714,45 @@ export default function ContentStudio({ initialCourseSlug }) {
         }));
 
         setCourses(formatted);
+        let activeCourse = formatted[0];
         if (initialCourseSlug) {
           const matched = formatted.find((c) => c.slug === initialCourseSlug);
-          if (matched) setSelectedCourseId(matched.id);
+          if (matched) activeCourse = matched;
+        }
+        setSelectedCourseId(activeCourse.id);
+        if (activeCourse.chapters && activeCourse.chapters.length > 0) {
+          const firstChap = activeCourse.chapters[0];
+          setSelectedChapterId(firstChap.id);
+          if (firstChap.lessons && firstChap.lessons.length > 0) {
+            setSelectedLessonId(firstChap.lessons[0].id);
+            setSelectedItemType('lesson');
+          }
         }
       }
     } catch (err) {
       console.warn('Using offline/demo courses data:', err.message);
     }
   }, [initialCourseSlug]);
+
+  // Handle course switcher from Command Center
+  const handleCourseChange = useCallback((newCourseId) => {
+    setSelectedCourseId(newCourseId);
+    const targetCourse = courses.find((c) => c.id === newCourseId);
+    if (targetCourse?.chapters && targetCourse.chapters.length > 0) {
+      const firstChap = targetCourse.chapters[0];
+      setSelectedChapterId(firstChap.id);
+      if (firstChap.lessons && firstChap.lessons.length > 0) {
+        setSelectedLessonId(firstChap.lessons[0].id);
+        setSelectedItemType('lesson');
+      } else {
+        setSelectedLessonId(null);
+        setSelectedItemType('chapter');
+      }
+    } else {
+      setSelectedChapterId(null);
+      setSelectedLessonId(null);
+    }
+  }, [courses]);
 
   useEffect(() => {
     loadFromDatabase();
@@ -807,17 +853,35 @@ export default function ContentStudio({ initialCourseSlug }) {
     // Try Supabase API
     try {
       if (!lessonId.startsWith('les-')) {
-        await adminApi.updateLesson(lessonId, {
+        const payload = {
           title,
           status,
-          difficulty,
           content_md: content,
           objectives: curObjectives.map((o) => o.text),
-          lesson_content: {
-            hints: curHints.map((h) => h.text),
-            difficulty,
-          },
-        });
+        };
+
+        const existingContent = currentData?.lesson?.lesson_content;
+        if (existingContent && typeof existingContent === 'object' && existingContent.version === 1) {
+          const normDiff = ['easy', 'medium', 'hard'].includes(difficulty?.toLowerCase())
+            ? difficulty.toLowerCase()
+            : difficulty?.toLowerCase() === 'beginner'
+            ? 'easy'
+            : difficulty?.toLowerCase() === 'advanced'
+            ? 'hard'
+            : existingContent.difficulty || 'easy';
+
+          payload.lesson_content = {
+            ...existingContent,
+            version: 1,
+            difficulty: normDiff,
+            hint: curHints[0]?.text || existingContent.hint || '',
+          };
+        }
+
+        const res = await adminApi.updateLesson(lessonId, payload);
+        if (res?.error) {
+          console.warn('DB lesson update notice:', res.error.message);
+        }
       }
       setLastSavedBy(isAuto ? 'auto' : 'manual');
       setSaveStatus('saved');
@@ -1420,7 +1484,7 @@ export default function ContentStudio({ initialCourseSlug }) {
               <select
                 className={styles.commandCenterCourseSelect}
                 value={selectedCourseId}
-                onChange={(e) => setSelectedCourseId(e.target.value)}
+                onChange={(e) => handleCourseChange(e.target.value)}
                 aria-label="Select course"
               >
                 {courses.map((course) => (
@@ -1430,41 +1494,35 @@ export default function ContentStudio({ initialCourseSlug }) {
                 ))}
               </select>
               <span className={styles.commandCenterSep}>›</span>
-              <span className={styles.commandCenterChapter}>{currentLessonData?.chapter?.title || 'Chapter'}</span>
+              <span className={styles.commandCenterChapter} title={currentLessonData?.chapter?.title || 'Chapter'}>
+                {currentLessonData?.chapter?.title || 'Chapter'}
+              </span>
               <span className={styles.commandCenterSep}>›</span>
-              <span className={styles.commandCenterLesson}>{lessonTitle || 'Untitled Lesson'}</span>
+              <span className={styles.commandCenterLesson} title={lessonTitle || 'Untitled Lesson'}>
+                {lessonTitle || 'Untitled Lesson'}
+              </span>
             </div>,
             document.getElementById('admin-header-center')
           )}
 
           {document.getElementById('admin-header-right') && createPortal(
             <div className={styles.titleBarRight}>
-              <div className={`${styles.saveStatus} ${saveStatus === 'dirty' ? styles.dirty : ''}`}>
-                {saveStatus === 'saving' && <span>Saving…</span>}
-                {saveStatus === 'dirty' && <span>● Unsaved changes</span>}
+              <div
+                className={`${styles.saveStatus} ${styles[saveStatus] || ''}`}
+                title={
+                  saveStatus === 'saved'
+                    ? lastSavedBy === 'auto'
+                      ? 'All changes auto-saved'
+                      : 'Saved'
+                    : saveStatus === 'dirty'
+                    ? 'Unsaved changes'
+                    : 'Saving changes...'
+                }
+              >
+                {saveStatus === 'saving' && <span>⟳ Saving…</span>}
+                {saveStatus === 'dirty' && <span>● Unsaved</span>}
                 {saveStatus === 'saved' && <span>✓ {lastSavedBy === 'auto' ? 'Auto-saved' : 'Saved'}</span>}
               </div>
-
-              <button
-                type="button"
-                className={styles.previewToggleBtn}
-                onClick={() => setShowPreview(!showPreview)}
-                title={showPreview ? 'Hide student preview panel' : 'Show student preview panel'}
-              >
-                <Icon name={showPreview ? 'eyeOff' : 'eye'} />
-                <span>{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={styles.btnSave}
-                onClick={() => handleSaveLesson({ isAuto: false })}
-                disabled={saveStatus === 'saving'}
-                title="Save (Ctrl+S)"
-              >
-                <Icon name="save" />
-                <span>Save</span>
-              </button>
             </div>,
             document.getElementById('admin-header-right')
           )}
@@ -1477,55 +1535,48 @@ export default function ContentStudio({ initialCourseSlug }) {
         className={`${styles.workspaceLayout} ${!showPreview ? styles.hidePreviewLayout : ''}`}
       >
         {/* ==============================================================
-            COLUMN 1: VSCODE ACTIVITY BAR (FIXED 52px, NOT RESIZABLE)
+            COLUMN 1: CHATGPT-STYLE ACTIVITY RAIL (FIXED 48px, NOT RESIZABLE)
             ============================================================== */}
-        <aside className={styles.activityBar} aria-label="Activity Bar">
+        <aside className={styles.activityBar} aria-label="Activity Rail">
           <div className={styles.activityGroup}>
-            {/* 1. Toggle Explorer: Hiển thị / Ẩn Chapter & Bài học */}
+            {/* 1. Toggle Explorer: Chapters & Lessons */}
             <button
               type="button"
               className={`${styles.activityBtn} ${!isSidetabCollapsed ? styles.activityActive : ''}`}
               onClick={() => togglePanel('explorer')}
-              title={!isSidetabCollapsed ? 'Hide Explorer (Chapters & Lessons)' : 'Show Explorer (Chapters & Lessons)'}
-              aria-label="Toggle Explorer"
+              data-tooltip="Explorer"
+              title="Explorer"
+              aria-label="Explorer"
             >
               <Icon name="folder" />
             </button>
 
-            {/* 2. Toggle Editor: Hiển thị / Ẩn Khu chỉnh sửa nội dung */}
+            {/* 3. Toggle Editor: Lesson Editor */}
             <button
               type="button"
               className={`${styles.activityBtn} ${showEditor ? styles.activityActive : ''}`}
               onClick={() => togglePanel('editor')}
-              title={showEditor ? 'Hide Lesson Editor' : 'Show Lesson Editor'}
+              data-tooltip="Lesson Editor"
+              title="Lesson Editor"
               aria-label="Toggle Lesson Editor"
             >
               <Icon name="pencil" />
             </button>
 
-            {/* 3. Toggle Preview: Hiển thị / Ẩn Khu preview */}
+            {/* 4. Toggle Preview: Student Preview */}
             <button
               type="button"
               className={`${styles.activityBtn} ${showPreview ? styles.activityActive : ''}`}
               onClick={() => togglePanel('preview')}
-              title={showPreview ? 'Hide Student Preview' : 'Show Student Preview'}
+              data-tooltip="Student Preview"
+              title="Student Preview"
               aria-label="Toggle Student Preview"
             >
               <Icon name="eye" />
             </button>
           </div>
 
-          <div className={styles.activityGroupBottom}>
-            <button
-              type="button"
-              className={styles.activityBtn}
-              onClick={() => togglePanel('explorer')}
-              title={!isSidetabCollapsed ? 'Collapse Explorer' : 'Expand Explorer'}
-              aria-label="Collapse/Expand Explorer"
-            >
-              <Icon name="sidebar" />
-            </button>
-          </div>
+          <div className={styles.activityGroupBottom} />
         </aside>
 
         {/* ==============================================================
@@ -1637,23 +1688,6 @@ export default function ContentStudio({ initialCourseSlug }) {
                     <div className={styles.chapterActions}>
                       <button
                         type="button"
-                        className={styles.chapterActionBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirmTarget({
-                            type: 'chapter',
-                            id: chapter.id,
-                            title: chapter.title,
-                            lessonCount: chapter.lessons?.length || 0,
-                          });
-                        }}
-                        title="Delete chapter (or press Delete)"
-                        aria-label="Delete chapter"
-                      >
-                        <Icon name="trash" />
-                      </button>
-                      <button
-                        type="button"
                         className={styles.chapterAddLessonBtn}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1731,33 +1765,6 @@ export default function ContentStudio({ initialCourseSlug }) {
                                 {lesson.title}
                               </span>
                             )}
-
-                            <div className={styles.lessonItemActions}>
-                              <button
-                                type="button"
-                                className={styles.itemDeleteBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteConfirmTarget({
-                                    type: 'lesson',
-                                    id: lesson.id,
-                                    title: lesson.title,
-                                    chapterId: chapter.id,
-                                  });
-                                }}
-                                title="Delete lesson (or press Delete)"
-                                aria-label="Delete lesson"
-                              >
-                                <Icon name="trash" />
-                              </button>
-                              <span
-                                className={`${styles.lessonItemBadge} ${
-                                  lesson.status === 'published' ? styles.badgePublished : styles.badgeDraft
-                                }`}
-                              >
-                                {lesson.status === 'published' ? 'PUB' : 'DRAFT'}
-                              </span>
-                            </div>
                           </div>
                         );
                       })}
@@ -1851,7 +1858,7 @@ export default function ContentStudio({ initialCourseSlug }) {
               </div>
 
               <div className={styles.editorTabActions}>
-                {/* 2 dropdowns: Beginner (Difficulty) & Draft/Published (Status) */}
+                {/* Lesson difficulty dropdown */}
                 <select
                   className={styles.difficultySelect}
                   value={lessonDifficulty}
@@ -1865,20 +1872,6 @@ export default function ContentStudio({ initialCourseSlug }) {
                   <option value="Beginner">Beginner</option>
                   <option value="Intermediate">Intermediate</option>
                   <option value="Advanced">Advanced</option>
-                </select>
-
-                <select
-                  className={styles.statusSelect}
-                  value={lessonStatus}
-                  onChange={(e) => {
-                    setLessonStatus(e.target.value);
-                    markDirty();
-                  }}
-                  title="Select lesson status"
-                  aria-label="Lesson Status"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
                 </select>
               </div>
             </div>

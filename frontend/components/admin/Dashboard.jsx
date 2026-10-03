@@ -10,6 +10,12 @@ const RANGES = ['15m', '1h', '6h', '24h'];
 const REFRESH_MS = 10_000;
 const GRAFANA_URL = process.env.NEXT_PUBLIC_GRAFANA_URL || '';
 
+const METRIC_CATEGORIES = [
+  { id: 'sandbox', label: 'Terminal & Sandbox', icon: 'terminal' },
+  { id: 'api', label: 'API & Reliability', icon: 'sync_alt' },
+  { id: 'system', label: 'System & Security', icon: 'shield' },
+];
+
 const last = (series) => series?.flatMap((item) => item.points.slice(-1).map(([, v]) => v)).reduce((a, b) => a + b, 0);
 const number = (value, digits = 0) => (value == null || !Number.isFinite(value) ? '—' : value.toFixed(digits));
 
@@ -39,6 +45,7 @@ function liveStats(metrics) {
 
 export default function Dashboard() {
   const [range, setRange] = useState('1h');
+  const [activeCategory, setActiveCategory] = useState('sandbox');
   const [state, setState] = useState({ loading: true, data: null, error: '' });
   const [updated, setUpdated] = useState(null);
   const requestId = useRef(0);
@@ -94,39 +101,49 @@ export default function Dashboard() {
         <Stat label="API error rate" value={live ? `${number(live.errorRate, 1)}%` : '—'} hint="5xx share of requests" />
       </dl>
 
-      <div className={dash.sectionHeader}>
-        <span aria-hidden="true" />
-        Terminal &amp; Sandbox Execution
-      </div>
-      <div className={dash.grid}>
-        <LineChart title="Sandbox load" unit="" series={m ? [
-          ...m.sessions.map((s) => ({ ...s, name: 'sessions' })),
-          ...m.jobsActive.map((s) => ({ ...s, name: 'running jobs' })),
-          ...m.jobsPending.map((s) => ({ ...s, name: 'queued jobs' })),
-        ] : []} />
-        <LineChart title="Commands per minute" unit="/min" series={m?.commands} />
-        <LineChart title="Command time, 95th percentile" unit="s" series={m?.commandP95?.map((s) => ({ ...s, name: 'p95' }))} />
-      </div>
-
-      <div className={dash.sectionHeader}>
-        <span aria-hidden="true" />
-        API Traffic &amp; Reliability
-      </div>
-      <div className={dash.grid}>
-        <LineChart title="API requests per minute" unit="/min" series={m?.http} />
-        <LineChart title="API response time, 95th percentile" unit="s" series={m?.httpP95?.map((s) => ({ ...s, name: 'p95' }))} />
-        <LineChart title="Requests rejected by rate limits" unit="/min" series={m?.rateLimited?.map((s) => ({ ...s, name: 'rate limited' }))} />
+      <div className={dash.categoryBar} role="tablist" aria-label="Metric Categories">
+        {METRIC_CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            role="tab"
+            aria-selected={activeCategory === cat.id}
+            className={`${dash.categoryBtn} ${activeCategory === cat.id ? dash.categoryActive : ''}`}
+            onClick={() => setActiveCategory(cat.id)}
+          >
+            <span className={`material-symbols-outlined ${dash.categoryIcon}`} aria-hidden="true">{cat.icon}</span>
+            {cat.label}
+          </button>
+        ))}
       </div>
 
-      <div className={dash.sectionHeader}>
-        <span aria-hidden="true" />
-        System Resources &amp; Access Security
-      </div>
-      <div className={dash.grid}>
-        <LineChart title="Sign-in activity per minute" unit="/min" series={m?.auth} />
-        <LineChart title="API memory (RSS)" unit="MB" series={m?.memoryMb?.map((s) => ({ ...s, name: 'rss' }))} />
-        <LineChart title="API CPU" unit="cores" series={m?.cpu?.map((s) => ({ ...s, name: 'cpu' }))} />
-      </div>
+      {activeCategory === 'sandbox' && (
+        <div className={dash.gridThree}>
+          <LineChart title="Sandbox load" unit="" series={m ? [
+            ...m.sessions.map((s) => ({ ...s, name: 'sessions' })),
+            ...m.jobsActive.map((s) => ({ ...s, name: 'running jobs' })),
+            ...m.jobsPending.map((s) => ({ ...s, name: 'queued jobs' })),
+          ] : []} />
+          <LineChart title="Commands per minute" unit="/min" series={m?.commands} />
+          <LineChart title="Command time, 95th percentile" unit="s" series={m?.commandP95?.map((s) => ({ ...s, name: 'p95' }))} />
+        </div>
+      )}
+
+      {activeCategory === 'api' && (
+        <div className={dash.gridThree}>
+          <LineChart title="API requests per minute" unit="/min" series={m?.http} />
+          <LineChart title="API response time, 95th percentile" unit="s" series={m?.httpP95?.map((s) => ({ ...s, name: 'p95' }))} />
+          <LineChart title="Requests rejected by rate limits" unit="/min" series={m?.rateLimited?.map((s) => ({ ...s, name: 'rate limited' }))} />
+        </div>
+      )}
+
+      {activeCategory === 'system' && (
+        <div className={dash.gridThree}>
+          <LineChart title="Sign-in activity per minute" unit="/min" series={m?.auth} />
+          <LineChart title="API memory (RSS)" unit="MB" series={m?.memoryMb?.map((s) => ({ ...s, name: 'rss' }))} />
+          <LineChart title="API CPU" unit="cores" series={m?.cpu?.map((s) => ({ ...s, name: 'cpu' }))} />
+        </div>
+      )}
     </div>
   );
 }

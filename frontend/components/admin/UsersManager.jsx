@@ -7,7 +7,7 @@ import styles from './UsersManager.module.css';
 import ReasonDialog from './ReasonDialog';
 import { useAdmin } from './AdminGate';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 
 const AVATAR_PALETTES = [
   { bg: '#172554', border: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' }, // Blue
@@ -425,30 +425,13 @@ export default function UsersManager() {
                 {formatRelativeTime(user.last_sign_in_at)}
               </div>
 
-              {/* Quick Action & Manage Buttons */}
+              {/* Manage User Drawer/Modal Trigger */}
               <div className={styles.actionCell}>
-                <button
-                  type="button"
-                  className={styles.quickActionBtn}
-                  onClick={() => openRoleDialog(user)}
-                  disabled={isLastAdmin && user.role === 'admin'}
-                  title={isLastAdmin ? 'The last active admin cannot be demoted' : undefined}
-                >
-                  {user.role === 'admin' ? 'Make learner' : 'Make admin'}
-                </button>
-                <button
-                  type="button"
-                  className={styles.quickActionBtn}
-                  onClick={() => openLockDialog(user)}
-                  disabled={(isLastAdmin && !user.is_locked) || (isMe && !user.is_locked)}
-                  title={isMe ? 'You cannot lock yourself' : isLastAdmin ? 'The last active admin cannot be locked' : undefined}
-                >
-                  {user.is_locked ? 'Unlock' : 'Lock'}
-                </button>
                 <button
                   type="button"
                   className={styles.manageBtn}
                   onClick={() => setSelectedUser(user)}
+                  aria-label={`Manage user ${user.name || user.email}`}
                 >
                   Manage
                 </button>
@@ -576,14 +559,17 @@ export default function UsersManager() {
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>Role</span>
                   <div className={styles.fieldValue}>
+                    <span className={selectedUser.role === 'admin' ? styles.rolePillAdmin : styles.rolePillLearner}>
+                      {selectedUser.role === 'admin' ? 'Admin' : 'Learner'}
+                    </span>
                     <button
                       type="button"
-                      className={`${selectedUser.role === 'admin' ? styles.rolePillAdmin : styles.rolePillLearner} ${styles.roleToggleBtn}`}
+                      className={styles.lockBtn}
                       onClick={() => openRoleDialog(selectedUser)}
-                      disabled={modalIsLastAdmin}
-                      title={modalIsLastAdmin ? 'The last active admin cannot be demoted' : 'Click to toggle role'}
+                      disabled={modalIsLastAdmin && selectedUser.role === 'admin'}
+                      title={modalIsLastAdmin && selectedUser.role === 'admin' ? 'The last active admin cannot be demoted' : undefined}
                     >
-                      {selectedUser.role === 'admin' ? 'Admin' : 'Learner'}
+                      {selectedUser.role === 'admin' ? 'Make learner' : 'Make admin'}
                     </button>
                   </div>
                 </div>
@@ -607,7 +593,7 @@ export default function UsersManager() {
                       disabled={(modalIsLastAdmin && !selectedUser.is_locked) || (modalIsMe && !selectedUser.is_locked)}
                       title={modalIsMe ? 'You cannot lock yourself' : modalIsLastAdmin ? 'The last active admin cannot be locked' : undefined}
                     >
-                      {selectedUser.is_locked ? '🔓 Unlock Account' : '🔒 Lock Account'}
+                      {selectedUser.is_locked ? 'Unlock' : 'Lock'}
                     </button>
                   </div>
                 </div>

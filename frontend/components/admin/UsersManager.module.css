@@ -133,18 +133,18 @@
 .userList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .userRow {
   display: grid;
-  grid-template-columns: 44px minmax(180px, 1.4fr) 90px minmax(120px, 1fr) minmax(130px, 1fr) auto;
+  grid-template-columns: 36px minmax(180px, 1.4fr) 80px minmax(120px, 1fr) minmax(130px, 1fr) auto;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   background: #11141b;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 14px 20px;
+  border-radius: 8px;
+  padding: 8px 16px;
   box-sizing: border-box;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
@@ -155,14 +155,14 @@
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 11.5px;
   letter-spacing: 0.5px;
   user-select: none;
   flex-shrink: 0;
@@ -326,8 +326,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 20px;
-  padding-top: 14px;
+  margin-top: 10px;
+  padding-top: 8px;
   color: #8a919e;
   font-size: 13px;
   flex-wrap: wrap;
