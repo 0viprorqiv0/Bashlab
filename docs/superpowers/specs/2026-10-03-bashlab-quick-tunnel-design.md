@@ -29,8 +29,8 @@ Browser
        all other paths  -> Next.js at 127.0.0.1:3000
 ```
 
-The Caddy bridge gives browser code one origin. The production frontend leaves
-`NEXT_PUBLIC_API_URL` unset, so it calls relative `/api/...` URLs. Caddy passes
+The Caddy bridge gives browser code one origin. The controller explicitly sets
+`NEXT_PUBLIC_API_URL` to an empty value for the production frontend, so it calls relative `/api/...` URLs. Caddy passes
 those requests to the API without rewriting their paths.
 
 ## Runtime configuration
@@ -96,7 +96,8 @@ Runtime state and logs remain untracked under `.run/`, which is already ignored.
 ## Lifecycle
 
 1. Check `cloudflared`, `caddy`, Node, npm, Docker, and required local env
-   files.
+   files; start the existing `bashlab-box` runner or create it through the
+   repository runner script when absent.
 2. Build the frontend if no production build exists, then start frontend on
    loopback port 3000.
 3. Start Caddy on loopback port 8080.

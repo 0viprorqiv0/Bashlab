@@ -2,6 +2,8 @@
 
 Thư mục này chứa mẫu cấu hình và hướng dẫn vận hành. Nó không chứa secret và không tự thay đổi backend BashLab. Dùng cùng tài liệu này cho từng máy demo, staging hoặc production để public BashLab mà không mở HTTP/HTTPS vào Internet.
 
+Nếu chỉ cần một link demo tạm thời không domain, dùng [Quick Tunnel controller](../../scripts/quick-tunnel/README.md). Quick Tunnel không dùng cấu hình Named Tunnel hoặc WAF trong thư mục này.
+
 ```text
 Internet
   -> Cloudflare: DNS proxy, DDoS protection, WAF/rate-limit rules
