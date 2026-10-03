@@ -35,6 +35,9 @@ function formatSimpleLog(source, rawLine) {
   // Bỏ qua các thông báo rác từ npm
   if (clean.startsWith('npm notice') || clean.startsWith('npm warn')) return null;
 
+  // Bỏ qua prefix [REQ] tạm thời nếu có
+  if (clean.startsWith('[REQ]')) return null;
+
   // Bỏ qua các dòng biên dịch module của Next.js để tránh ngập màn hình
   if (clean.startsWith('○ Compiling') || clean.startsWith('✓ Compiled') || clean.startsWith('▲ Next.js')) {
     return null;
