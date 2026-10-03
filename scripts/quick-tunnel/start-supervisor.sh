@@ -81,15 +81,18 @@ for local_port in 3000 3001 8080; do
   assert_port_available "$local_port"
 done
 
-if [[ ! -f "$ROOT_DIR/frontend/.next/BUILD_ID" ]]; then
+dist_id_file="$ROOT_DIR/frontend/.next-wsl/BUILD_ID"
+[[ -f "$ROOT_DIR/frontend/.next/BUILD_ID" ]] && dist_id_file="$ROOT_DIR/frontend/.next/BUILD_ID"
+
+if [[ ! -f "$dist_id_file" ]]; then
   (
     cd "$ROOT_DIR/frontend"
-    env NEXT_PUBLIC_API_URL= npm run build
+    env NODE_ENV=production npm run build
   ) >> "$FRONTEND_LOG" 2>&1 || fail "frontend production build failed; inspect $FRONTEND_LOG"
 fi
 
 start_process "$FRONTEND_PID_FILE" 'next start -H 127.0.0.1' "$FRONTEND_LOG" \
-  bash -c "cd '$ROOT_DIR/frontend' && exec env NEXT_PUBLIC_API_URL= npm run start -- -H 127.0.0.1 -p 3000"
+  bash -c "cd '$ROOT_DIR/frontend' && exec env NODE_ENV=production npm run start -- -H 127.0.0.1 -p 3000"
 wait_for 'frontend' 30 "curl --fail --silent --max-time 1 http://127.0.0.1:3000/login >/dev/null 2>&1"
 
 start_process "$CADDY_PID_FILE" 'caddy run --config' "$CADDY_LOG" \
@@ -107,6 +110,22 @@ tunnel_url="$(quick_tunnel_url_since "$TUNNEL_LOG" "$tunnel_offset")"
 start_process "$BACKEND_PID_FILE" 'src/server.js' "$BACKEND_LOG" \
   bash -c "cd '$ROOT_DIR/backend' && exec env HOST=127.0.0.1 NODE_ENV=production COOKIE_SECURE=true CORS_ORIGINS='http://localhost:3000,http://127.0.0.1:3000,$tunnel_url' npm run start:api"
 wait_for 'backend API' 30 "curl --fail --silent --max-time 1 http://127.0.0.1:3001/health >/dev/null 2>&1"
+
+# Warm up / Preload core routes in production to prime memory cache and eliminate initial lag
+warmup_routes=(
+  "http://127.0.0.1:8080/"
+  "http://127.0.0.1:8080/login"
+  "http://127.0.0.1:8080/courses"
+  "http://127.0.0.1:8080/subscription"
+  "http://127.0.0.1:8080/blog"
+  "http://127.0.0.1:8080/courses/shell-101/labs/1"
+  "http://127.0.0.1:8080/health"
+  "$tunnel_url/health"
+  "$tunnel_url/login"
+)
+for route in "${warmup_routes[@]}"; do
+  curl --silent --max-time 4 "$route" >/dev/null 2>&1 || true
+done
 
 atomic_write_file "$TUNNEL_URL_FILE" "$tunnel_url"
 printf '%s\n' "$tunnel_url"
