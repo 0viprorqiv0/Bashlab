@@ -45,16 +45,17 @@ function formatSimpleLog(source, rawLine) {
 
   const time = getTimeStr();
 
-  // Nhận diện HTTP request: METHOD URL STATUS [time]
-  // Ví dụ backend:  "GET    /api/sessions                  401 2.1ms"
+  // Nhận diện HTTP request: METHOD URL STATUS [ERROR_CODE] [- duration]
+  // Ví dụ backend:  "GET    /api/sessions                  401 [UNAUTHENTICATED] 2.1ms"
   // Ví dụ frontend: "GET /login 200 in 23ms"
-  const httpMatch = clean.match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+([^\s]+)\s+(\d{3})(?:\s+(?:in\s+)?([0-9.]+ms))?/i);
+  const httpMatch = clean.match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+([^\s]+)\s+(\d{3})(?:\s+\[([A-Z0-9_]+)\])?(?:\s+(?:in\s+|-)?\s*([0-9.]+ms))?/i);
   if (httpMatch) {
-    const method = httpMatch[1].toUpperCase();
+    const method = httpMatch[1].toUpperCase().padEnd(6);
     const url = httpMatch[2];
     const status = httpMatch[3];
-    const duration = httpMatch[4] ? ` - ${httpMatch[4]}` : '';
-    return `[${time}] [${source}] "${method} ${url}" ${status}${duration}`;
+    const errCode = httpMatch[4] ? ` [${httpMatch[4]}]` : '';
+    const duration = httpMatch[5] ? ` (${httpMatch[5]})` : '';
+    return `[${time}] [${source.padEnd(3)}] ${method} ${url} -> ${status}${errCode}${duration}`;
   }
 
   // Các log khởi động quan trọng

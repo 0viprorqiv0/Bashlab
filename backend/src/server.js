@@ -66,7 +66,8 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
         const bold = '\x1b[1m';
         const gray = '\x1b[90m';
         const url = req.originalUrl || req.url;
-        console.log(`${bold}${req.method.padEnd(6)}${reset} ${url.padEnd(30)} ${statusColor}${status}${reset} ${gray}${durationMs}ms${reset}`);
+        const errDetail = res.locals?.errorCode ? ` [${res.locals.errorCode}]` : '';
+        console.log(`${bold}${req.method.padEnd(6)}${reset} ${url.padEnd(30)} ${statusColor}${status}${errDetail}${reset} ${gray}${durationMs}ms${reset}`);
       }
       if (req.path === '/metrics' || req.path === '/health') return;
       metrics.recordHttp(req.method, req.originalUrl, res.statusCode, Number(process.hrtime.bigint() - started) / 1e9);
@@ -308,9 +309,10 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   app.use((_req, _res, next) => next(new HttpError(404, 'NOT_FOUND', 'Endpoint not found')));
   app.use((error, _req, res, _next) => {
     const status = error.status || 500;
+    const code = error.code || (status === 400 ? 'INVALID_JSON' : 'INTERNAL_ERROR');
+    res.locals.errorCode = code;
     if (status >= 500 && error.code !== 'SANDBOX_DISABLED') console.error(error.message);
-    res.status(status).json({ error: { code: error.code || (status === 400 ? 'INVALID_JSON' : 'INTERNAL_ERROR'),
-      message: status === 500 ? 'Internal server error' : error.message } });
+    res.status(status).json({ error: { code, message: status === 500 ? 'Internal server error' : error.message } });
   });
   return app;
 }
