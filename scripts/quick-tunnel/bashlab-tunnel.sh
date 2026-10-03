@@ -30,8 +30,8 @@ case "$command" in
     exec "$ROOT_DIR/scripts/quick-tunnel/stop-supervisor.sh"
     ;;
   status)
-    status_for 'Frontend' "$RUN_DIR/frontend.pid" 'next start -H 127.0.0.1'
-    status_for 'Backend' "$RUN_DIR/backend.pid" 'src/server.js'
+    status_for 'Frontend' "$RUN_DIR/frontend.pid" 'npm run start -H 127.0.0.1 -p 3000'
+    status_for 'Backend' "$RUN_DIR/backend.pid" 'npm run start:api'
     status_for 'Caddy' "$RUN_DIR/caddy.pid" 'caddy run --config'
     status_for 'Tunnel' "$RUN_DIR/tunnel.pid" 'cloudflared tunnel --url'
     if [[ -s "$RUN_DIR/tunnel-url.txt" ]]; then

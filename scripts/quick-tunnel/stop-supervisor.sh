@@ -9,7 +9,7 @@ source "$(dirname "$0")/process-helpers.sh"
 
 stop_owned_pid_file "$RUN_DIR/tunnel.pid" 'cloudflared tunnel --url' 'Quick Tunnel'
 stop_owned_pid_file "$RUN_DIR/caddy.pid" 'caddy run --config' 'Caddy bridge'
-stop_owned_pid_file "$RUN_DIR/backend.pid" 'src/server.js' 'BashLab backend'
-stop_owned_pid_file "$RUN_DIR/frontend.pid" 'next start -H 127.0.0.1' 'BashLab frontend'
+stop_owned_pid_file "$RUN_DIR/backend.pid" 'npm run start:api' 'BashLab backend'
+stop_owned_pid_file "$RUN_DIR/frontend.pid" 'npm run start -H 127.0.0.1 -p 3000' 'BashLab frontend'
 rm -f "$RUN_DIR/tunnel-url.txt"
 printf 'Quick Tunnel controller stopped.\n'

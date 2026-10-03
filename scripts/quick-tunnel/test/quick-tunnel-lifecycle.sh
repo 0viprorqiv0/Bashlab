@@ -30,6 +30,17 @@ assert_file() {
   [[ -s "$1" ]] || fail "expected non-empty file: $1"
 }
 
+assert_session_leader() {
+  local pid="$1" label="$2" session_id=""
+  session_id="$(ps -o sid= -p "$pid" | tr -d '[:space:]')"
+  [[ "$session_id" == "$pid" ]] || fail "$label is not detached into its own session"
+}
+
+assert_process_stopped() {
+  local pid="$1" label="$2"
+  ! kill -0 "$pid" 2>/dev/null || fail "$label child process is still running after stop"
+}
+
 [[ -x "$SOURCE_ROOT/scripts/quick-tunnel/bashlab-tunnel.sh" ]] || fail "quick tunnel CLI is missing"
 
 mkdir -p "$TEST_ROOT/scripts" "$TEST_ROOT/backend" "$TEST_ROOT/frontend" "$TEST_ROOT/bin"
@@ -56,10 +67,20 @@ if [[ "$PWD" == */frontend ]]; then
     exit 0
   fi
   printf '%s\n' "${CORS_ORIGINS:-}" > "$state_dir/frontend-cors.txt"
-  exec -a 'next start -H 127.0.0.1' sleep 300
+  exec -a 'npm run start -H 127.0.0.1 -p 3000' bash -c '
+    bash -c "exec -a '\''next-server (v14.2.35)'\'' sleep 300" &
+    child=$!
+    printf "%s\\n" "$child" > "$QUICK_TUNNEL_TEST_STATE/frontend-child.pid"
+    wait "$child"
+  '
 fi
 printf '%s\n' "$CORS_ORIGINS" > "$state_dir/backend-cors.txt"
-exec -a 'node --env-file=.env src/server.js' sleep 300
+exec -a 'npm run start:api' bash -c '
+  bash -c "exec -a '\''node --env-file=.env src/server.js'\'' sleep 300" &
+  child=$!
+  printf "%s\\n" "$child" > "$QUICK_TUNNEL_TEST_STATE/backend-child.pid"
+  wait "$child"
+'
 SH
 chmod +x "$TEST_ROOT/bin/npm"
 
@@ -83,6 +104,9 @@ chmod +x "$TEST_ROOT/bin/cloudflared"
 
 cat > "$TEST_ROOT/bin/curl" <<'SH'
 #!/usr/bin/env bash
+if [[ "${QUICK_TUNNEL_TEST_PUBLIC_HEALTH_DOWN:-}" == 1 && "$*" == *'https://fresh-quick.trycloudflare.com/health'* ]]; then
+  exit 1
+fi
 if [[ "$*" == *'%{http_code}'* ]]; then
   printf '200'
 fi
@@ -113,9 +137,14 @@ printf '%s\n' 'https://stale-quick.trycloudflare.com' > "$TEST_ROOT/.run/quick-t
 
 export PATH="$TEST_ROOT/bin:$PATH"
 export QUICK_TUNNEL_TEST_STATE="$TEST_ROOT/.run/quick-tunnel"
+export QUICK_TUNNEL_TEST_PUBLIC_HEALTH_DOWN=1
 
 cd "$TEST_ROOT"
-first_start="$(./scripts/quick-tunnel/bashlab-tunnel.sh start)"
+set +e
+first_start="$(timeout 3 ./scripts/quick-tunnel/bashlab-tunnel.sh start)"
+first_start_status=$?
+set -e
+[[ "$first_start_status" -eq 0 ]] || fail 'start waited for public health before returning the registered URL'
 assert_contains "$first_start" 'https://fresh-quick.trycloudflare.com' 'start prints fresh tunnel URL'
 [[ "$first_start" != *'stale-quick'* ]] || fail 'start printed stale tunnel URL'
 assert_file .run/quick-tunnel/tunnel-url.txt
@@ -126,8 +155,13 @@ assert_contains "$(cat .run/quick-tunnel/caddy-args.txt)" 'run --config' 'Caddy 
 assert_contains "$(cat .run/quick-tunnel/docker-args.txt)" 'inspect -f {{.State.Running}} bashlab-box' 'controller verifies runner state'
 assert_contains "$(cat .run/quick-tunnel/backend-cors.txt)" 'https://fresh-quick.trycloudflare.com' 'backend receives fresh URL in CORS origins'
 [[ "$(cat .run/quick-tunnel/frontend-api-mode.txt)" == 'relative' ]] || fail 'frontend was not forced to use relative API URLs'
+assert_session_leader "$(cat .run/quick-tunnel/frontend.pid)" 'frontend'
+assert_session_leader "$(cat .run/quick-tunnel/caddy.pid)" 'Caddy bridge'
+assert_session_leader "$(cat .run/quick-tunnel/tunnel.pid)" 'Quick Tunnel'
+assert_session_leader "$(cat .run/quick-tunnel/backend.pid)" 'backend'
 
 first_tunnel_pid="$(cat .run/quick-tunnel/tunnel.pid)"
+unset QUICK_TUNNEL_TEST_PUBLIC_HEALTH_DOWN
 second_start="$(./scripts/quick-tunnel/bashlab-tunnel.sh start)"
 assert_contains "$second_start" 'https://fresh-quick.trycloudflare.com' 'idempotent start returns current URL'
 [[ "$(cat .run/quick-tunnel/tunnel.pid)" == "$first_tunnel_pid" ]] || fail 'second start created another tunnel'
@@ -154,6 +188,8 @@ assert_contains "$lost_diagnose" 'RESULT=QUICK_TUNNEL_LOST' 'diagnose reports de
 ./scripts/quick-tunnel/bashlab-tunnel.sh stop
 [[ ! -e .run/quick-tunnel/tunnel.pid ]] || fail 'stop retained tunnel pid file'
 [[ ! -e .run/quick-tunnel/tunnel-url.txt ]] || fail 'stop retained public URL'
+assert_process_stopped "$(cat .run/quick-tunnel/frontend-child.pid)" 'frontend'
+assert_process_stopped "$(cat .run/quick-tunnel/backend-child.pid)" 'backend'
 
 set +e
 conflict_output="$(QUICK_TUNNEL_TEST_CONFLICT_PORT=3000 ./scripts/quick-tunnel/bashlab-tunnel.sh start 2>&1)"

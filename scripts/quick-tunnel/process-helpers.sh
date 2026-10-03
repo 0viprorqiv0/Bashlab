@@ -44,14 +44,14 @@ stop_owned_pid_file() {
     printf 'Refusing to stop unmanaged %s (PID %s).\n' "$label" "$pid" >&2
     return 1
   fi
-  kill -TERM "$pid" 2>/dev/null || true
+  kill -TERM -- "-$pid" 2>/dev/null || true
   local _
   for _ in 1 2 3 4 5 6 7 8 9 10; do
-    pid_is_alive "$pid" || break
+    kill -0 -- "-$pid" 2>/dev/null || break
     sleep 0.1
   done
-  if pid_is_alive "$pid"; then
-    kill -KILL "$pid" 2>/dev/null || true
+  if kill -0 -- "-$pid" 2>/dev/null; then
+    kill -KILL -- "-$pid" 2>/dev/null || true
   fi
   rm -f "$file"
 }
