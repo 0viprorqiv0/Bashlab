@@ -424,6 +424,11 @@
   min-width: 0;
 }
 
+.shellStandard:has(.activityRoot) {
+  display: flex;
+  flex-direction: column;
+}
+
 .shellStandard .panel,
 .shellStandard .tableWrap {
   min-width: 0;
@@ -459,17 +464,29 @@
   }
 }
 
-.viewSelect select { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.viewSwitcher { z-index: 2; width: 168px; }
+.auditFilter { width: min(220px, 100%); }
+.viewStage { animation: adminViewEnter 180ms ease-out both; min-width: 0; }
+@keyframes adminViewEnter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
-.overviewGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(12px, 2vw, 24px); }
-.overviewGrid .panel { min-height: 150px; padding: clamp(16px, 2vw, 24px); }
+.viewStage:has(.overviewView) { display: flex; flex: 1 1 auto; min-height: 0; }
+.overviewView { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.overviewGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(12px, 2vw, 24px); flex: 1 1 auto; min-height: 0; }
+.overviewGrid .panel { min-height: 150px; padding: clamp(16px, 2vw, 24px); display: flex; }
+.overviewPanelContent { display: grid; gap: 8px; align-content: center; width: 100%; }
+.overviewPanelContent h2, .overviewPanelContent p, .overviewPanelContent small { margin: 0; }
+.overviewPanelContent h2 { font-size: 17px; font-weight: 500; }
+.overviewPanelContent p { font-size: 16px; }
+.overviewPanelContent small { color: var(--muted); font-size: 13px; }
 @media (max-width: 640px) { .overviewGrid { grid-template-columns: minmax(0, 1fr); } }
 
-.activityRoot { min-height: calc(100vh - 64px); display: flex; flex-direction: column; }
-.activityRoot .overviewGrid { flex: 1; align-items: stretch; min-height: 0; }
-.activityRoot .overviewGrid .panel { min-height: 260px; }
+.activityRoot { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.activityRoot .overviewGrid { align-items: stretch; }
+.activityRoot .overviewGrid .panel { min-height: 0; }
 @media (max-width: 640px) {
-  .activityRoot { min-height: auto; }
-  .activityRoot .overviewGrid { flex: none; }
-  .activityRoot .overviewGrid .panel { min-height: 150px; }
+  .activityRoot .overviewGrid .panel { min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewStage { animation: none; }
 }

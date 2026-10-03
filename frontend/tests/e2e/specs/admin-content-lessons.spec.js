@@ -37,17 +37,19 @@ test.afterAll(async () => {
 
 test('the Content Studio lists the chapters and lessons with their status', async ({ page }) => {
   await page.goto('/admin/content');
-  await page.getByRole('combobox', { name: 'Select course' }).selectOption({ label: courseTitle });
+  await page.getByRole('button', { name: /^Select course:/ }).click();
+  await page.getByRole('option', { name: courseTitle }).click();
   const explorer = page.getByRole('complementary', { name: 'Course content navigation' });
   await expect(explorer.getByText('Chapter One')).toBeVisible();
   await expect(explorer.getByText('First Lesson')).toBeVisible();
-  await expect(explorer.getByText('DRAFT').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lesson Difficulty: Beginner' })).toBeVisible();
 });
 
 test('the database refuses to publish an unfinished lab, and says why', async ({ page }) => {
   await page.goto(editor());
   await page.getByRole('tab', { name: 'Settings' }).click();
-  await page.locator('main').getByLabel('Status').selectOption('published');
+  await page.locator('main').getByRole('button', { name: 'Status: Draft' }).click();
+  await page.getByRole('menuitemradio', { name: 'Published' }).click();
   await page.getByRole('button', { name: 'Save' }).click();
   // Client-side check first (same rules as the database trigger)...
   await expect(page.getByRole('status')).toContainText('Cannot publish: add a short objective.');
@@ -63,7 +65,8 @@ test('admin fills the structured form, previews it, saves and publishes; the les
   await form.getByLabel('Short objective').fill('Print the working directory');
   await form.getByLabel('Track', { exact: true }).fill('Core Commands');
   await form.getByLabel('Tag', { exact: true }).fill('Navigation');
-  await form.getByLabel('Difficulty').selectOption('easy');
+  await form.getByRole('button', { name: 'Difficulty: Easy' }).click();
+  await form.getByRole('menuitemradio', { name: 'Easy' }).click();
   await form.getByLabel('Focus commands').fill('pwd, ls');
   await form.getByRole('textbox', { name: 'Scenario', exact: true }).fill('You just logged in to a **new** server and need to know where you are.');
   await form.getByRole('button', { name: 'Add step' }).click();
@@ -85,7 +88,8 @@ test('admin fills the structured form, previews it, saves and publishes; the les
   await expect(preview).toContainText('Where am I?');
 
   await page.getByRole('tab', { name: 'Settings' }).click();
-  await page.locator('main').getByLabel('Status').selectOption('published');
+  await page.locator('main').getByRole('button', { name: 'Status: Draft' }).click();
+  await page.getByRole('menuitemradio', { name: 'Published' }).click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('All changes saved')).toBeVisible();
 
@@ -96,7 +100,8 @@ test('admin fills the structured form, previews it, saves and publishes; the les
   expect(data.lesson_content.commands).toEqual(['pwd', 'ls']);
 
   await page.goto('/admin/content');
-  await page.getByRole('combobox', { name: 'Select course' }).selectOption({ label: courseTitle });
+  await page.getByRole('button', { name: /^Select course:/ }).click();
+  await page.getByRole('option', { name: courseTitle }).click();
   const explorer = page.getByRole('complementary', { name: 'Course content navigation' });
   await expect(explorer.getByText('First Lesson')).toBeVisible();
   await expect(explorer.getByText('PUB').first()).toBeVisible();
@@ -164,7 +169,8 @@ test('once the course is published, learners see the admin-authored lab: same ti
 test('unpublishing the lesson in the editor stops the workspace from serving it', async ({ page, browser }) => {
   await page.goto(editor());
   await page.getByRole('tab', { name: 'Settings' }).click();
-  await page.locator('main').getByLabel('Status').selectOption('draft');
+  await page.locator('main').getByRole('button', { name: 'Status: Published' }).click();
+  await page.getByRole('menuitemradio', { name: 'Draft' }).click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('All changes saved')).toBeVisible();
 

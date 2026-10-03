@@ -1,0 +1,14 @@
+.root { position: relative; min-width: 0; }
+.trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-width: 0; min-height: 38px; padding: 0 10px 0 12px; border: 1px solid var(--line, #2b2b2b); border-radius: 8px; background: var(--panel, #121824); color: var(--ink, #eef1ef); font: inherit; font-size: 13px; text-align: left; transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease; }
+.trigger:hover, .trigger[aria-expanded='true'] { border-color: color-mix(in srgb, var(--sage, #68dfa0) 52%, var(--line, #2b2b2b)); background: color-mix(in srgb, var(--panel, #121824) 88%, var(--sage, #68dfa0)); }
+.trigger:focus-visible, .item:focus-visible { outline: 2px solid var(--sage, #68dfa0); outline-offset: 2px; }
+.trigger:disabled { cursor: not-allowed; opacity: 0.52; }
+.chevron { flex: 0 0 auto; color: var(--muted, #9da39c); font-size: 18px; transition: transform 150ms ease; }
+.trigger[aria-expanded='true'] .chevron { transform: rotate(180deg); }
+.menu { position: absolute; top: calc(100% + 8px); left: 0; z-index: 10; display: grid; gap: 2px; min-width: max(100%, 184px); padding: 6px; border: 1px solid var(--line, #2b2b2b); border-radius: 10px; background: #121824; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.38); animation: adminSelectEnter 150ms ease-out both; }
+.menuRight { right: 0; left: auto; }
+.item { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 34px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--muted, #9da39c); font: inherit; font-size: 13px; text-align: left; transition: background-color 120ms ease, color 120ms ease; }
+.item:hover, .item[aria-checked='true'] { background: rgba(104, 223, 160, 0.12); color: var(--ink, #eef1ef); }
+.item :global(.material-symbols-outlined) { color: var(--sage, #68dfa0); font-size: 17px; }
+@keyframes adminSelectEnter { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .menu { animation: none; } .trigger, .chevron, .item { transition: none; } }

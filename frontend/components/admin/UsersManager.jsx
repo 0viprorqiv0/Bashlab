@@ -6,6 +6,7 @@ import { adminApi } from '@/lib/writeApi';
 import styles from './UsersManager.module.css';
 import ReasonDialog from './ReasonDialog';
 import { useAdmin } from './AdminGate';
+import AdminSelect from './AdminSelect';
 
 const PAGE_SIZE = 8;
 
@@ -333,42 +334,30 @@ export default function UsersManager() {
           />
         </div>
 
-        <div className={styles.sortSelectWrap}>
-          <select
-            className={styles.sortSelect}
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            aria-label="Filter by role"
-          >
-            <option value="all">Sort: Role</option>
-            <option value="learner">Role: Learner</option>
-            <option value="admin">Role: Admin</option>
-          </select>
-          <span className={styles.selectArrow}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </span>
-        </div>
+        <AdminSelect
+          className={styles.sortPicker}
+          label="Filter by role"
+          value={roleFilter}
+          onChange={setRoleFilter}
+          options={[
+            { value: 'all', label: 'Sort: Role' },
+            { value: 'learner', label: 'Role: Learner' },
+            { value: 'admin', label: 'Role: Admin' },
+          ]}
+        />
 
-        <div className={styles.sortSelectWrap}>
-          <select
-            className={styles.sortSelect}
-            value={activitySort}
-            onChange={(e) => setActivitySort(e.target.value)}
-            aria-label="Sort by activity"
-          >
-            <option value="recent">Sort: Last Active</option>
-            <option value="least_recent">Last Active: Oldest</option>
-            <option value="name_asc">Name: A to Z</option>
-            <option value="labs_desc">Labs Completed</option>
-          </select>
-          <span className={styles.selectArrow}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </span>
-        </div>
+        <AdminSelect
+          className={styles.sortPicker}
+          label="Sort by activity"
+          value={activitySort}
+          onChange={setActivitySort}
+          options={[
+            { value: 'recent', label: 'Sort: Last Active' },
+            { value: 'least_recent', label: 'Last Active: Oldest' },
+            { value: 'name_asc', label: 'Name: A to Z' },
+            { value: 'labs_desc', label: 'Labs Completed' },
+          ]}
+        />
 
         <div className={styles.learnerCounter}>
           {activeLearners} Active Learner{activeLearners === 1 ? '' : 's'}

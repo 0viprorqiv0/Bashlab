@@ -105,7 +105,7 @@ wait_for 'Cloudflare connector registration' 30 "cloudflared_registered_since '$
 tunnel_url="$(quick_tunnel_url_since "$TUNNEL_LOG" "$tunnel_offset")"
 
 start_process "$BACKEND_PID_FILE" 'src/server.js' "$BACKEND_LOG" \
-  bash -c "cd '$ROOT_DIR/backend' && exec env HOST=127.0.0.1 NODE_ENV=production COOKIE_SECURE=true CORS_ORIGINS='http://localhost:3000,$tunnel_url' npm run start:api"
+  bash -c "cd '$ROOT_DIR/backend' && exec env HOST=127.0.0.1 NODE_ENV=production COOKIE_SECURE=true CORS_ORIGINS='http://localhost:3000,http://127.0.0.1:3000,$tunnel_url' npm run start:api"
 wait_for 'backend API' 30 "curl --fail --silent --max-time 1 http://127.0.0.1:3001/health >/dev/null 2>&1"
 
 atomic_write_file "$TUNNEL_URL_FILE" "$tunnel_url"

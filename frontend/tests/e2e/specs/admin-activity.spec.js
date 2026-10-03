@@ -28,9 +28,10 @@ test.afterAll(async () => {
 
 test('Sessions tab lists the active session and Stop records a reason + updates status', async ({ page }) => {
   await page.goto('/admin/activity');
-  await expect(page.getByLabel('View', { exact: true })).toHaveValue('overview');
-  await page.getByLabel('View', { exact: true }).selectOption('sessions');
-  await expect(page.getByLabel('View', { exact: true })).toHaveValue('sessions');
+  await expect(page.getByRole('button', { name: 'View: Overview' })).toBeVisible();
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await page.getByRole('menuitemradio', { name: 'Sessions' }).click();
+  await expect(page.getByRole('button', { name: 'View: Sessions' })).toBeVisible();
 
   const row = page.getByRole('row').filter({ hasText: users.target.email });
   await expect(row).toBeVisible();
@@ -47,8 +48,10 @@ test('Sessions tab lists the active session and Stop records a reason + updates 
 
 test('Admin log tab shows the stop_session entry, filterable by action, with a reason detail dialog', async ({ page }) => {
   await page.goto('/admin/activity');
-  await page.getByLabel('View', { exact: true }).selectOption('audit');
-  await page.getByLabel('Action').selectOption('stop_session');
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await page.getByRole('menuitemradio', { name: 'Audit' }).click();
+  await page.getByRole('button', { name: 'Action: All actions' }).click();
+  await page.getByRole('menuitemradio', { name: 'stop_session' }).click();
 
   // A stop_session log's "Target" column shows the session id, not the
   // learner's email (admin_logs only records who was stopped by session

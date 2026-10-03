@@ -23,19 +23,22 @@ for (const route of routes) {
 test('activity overview uses approved accessible admin layout', async ({ page }) => {
   await page.goto('/admin/activity');
   await expect(page.getByRole('heading', { name: /System overview/i })).toBeVisible();
-  await expect(page.getByRole('combobox', { name: /View/i })).toBeVisible();
-  await expect(page.getByLabel('View', { exact: true })).toHaveValue('overview');
-  await expect(page.getByLabel('View', { exact: true }).locator('option[value="observability"]')).toHaveText('Observability');
+  await expect(page.getByRole('button', { name: 'View: Overview' })).toBeVisible();
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await expect(page.getByRole('menu', { name: 'Operations views' })).toBeVisible();
+  await expect(page.getByRole('menuitemradio', { name: 'Observability' })).toBeVisible();
   await expect(page.locator('[data-kpi-card]')).toHaveCount(3);
 });
 
 test('activity overview fills desktop lower panels and exposes visible View label', async ({ page }) => {
-  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('/admin/activity');
-  await expect(page.getByText(/^View:/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View: Overview' })).toBeVisible();
   await expect(page.getByText('Service health', { exact: true })).toBeVisible();
-  const heights = await page.locator('[data-admin-token=\"panel\"]').evaluateAll((panels) => panels.map((panel) => panel.getBoundingClientRect().height));
-  expect(heights.some((height) => height >= 260)).toBe(true);
+  const bottoms = await page.locator('[class*=overviewGrid] [data-admin-token=\"panel\"]').evaluateAll((panels) => panels.map((panel) => panel.getBoundingClientRect().bottom));
+  expect(Math.max(...bottoms)).toBeGreaterThan(720);
+  const hasInternalScroll = await page.locator('[class*=shellStandard]').evaluate((shell) => shell.scrollHeight > shell.clientHeight + 1);
+  expect(hasInternalScroll).toBe(false);
 });
 
 test('activity overview renders real dashboard KPI labels without placeholders', async ({ page }) => {
@@ -46,4 +49,14 @@ test('activity overview renders real dashboard KPI labels without placeholders',
   await expect(page.getByText('Today', { exact: true })).toBeVisible();
   await expect(page.getByText('Needs attention', { exact: true })).toBeVisible();
   await expect(page.locator('[data-kpi-value="placeholder"]')).toHaveCount(0);
+});
+
+test('activity view switcher replaces the active view in one labelled stage', async ({ page }) => {
+  await page.goto('/admin/activity');
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await page.getByRole('menuitemradio', { name: 'Sessions' }).click();
+  await expect(page.getByRole('button', { name: 'View: Sessions' })).toBeVisible();
+  await expect(page.locator('[data-active-view="sessions"]')).toBeVisible();
+  await expect(page.getByRole('table')).toBeVisible();
+  await expect(page.getByText('Sandbox capacity', { exact: true })).toHaveCount(0);
 });

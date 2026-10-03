@@ -63,6 +63,11 @@
   align-items: center;
 }
 
+.sortPicker {
+  width: max-content;
+  min-width: 154px;
+}
+
 .sortSelect {
   background: #11141b;
   border: 1px solid rgba(255, 255, 255, 0.12);

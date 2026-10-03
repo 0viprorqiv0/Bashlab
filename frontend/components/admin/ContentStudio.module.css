@@ -1346,6 +1346,10 @@
   border-color: rgba(104, 223, 160, 0.4);
 }
 
+.difficultyPicker {
+  width: 128px;
+}
+
 /* Microsoft Word Style Toolbar */
 .wordToolbar {
   background: #090c10;
@@ -2442,4 +2446,3 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
-

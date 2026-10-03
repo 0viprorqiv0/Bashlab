@@ -39,8 +39,9 @@ test('the Overview tab is the Activity landing page and degrades gracefully with
     });
   });
   await page.goto('/admin/activity');
-  await expect(page.getByLabel('View', { exact: true })).toHaveValue('overview');
-  await page.getByLabel('View', { exact: true }).selectOption('observability');
+  await expect(page.getByRole('button', { name: 'View: Overview' })).toBeVisible();
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await page.getByRole('menuitemradio', { name: 'Observability' }).click();
   // When Prometheus is unavailable, banner indicates it
   await expect(page.getByText('Prometheus is not connected.')).toBeVisible();
   // ...but the database-backed numbers are still there.
@@ -57,7 +58,8 @@ test('with Prometheus data every chart renders, ranges re-query, and the hover t
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FAKE(range)), headers: { 'access-control-allow-origin': 'http://localhost:3000', 'access-control-allow-credentials': 'true' } });
   });
   await page.goto('/admin/activity');
-  await page.getByLabel('View', { exact: true }).selectOption('observability');
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await page.getByRole('menuitemradio', { name: 'Observability' }).click();
 
   await expect(page.getByText('Prometheus is not connected.')).toHaveCount(0);
   const stat = (label) => page.locator('dl[aria-label="Headline numbers"] div').filter({ hasText: label }).locator('dd');

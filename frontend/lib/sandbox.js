@@ -6,7 +6,7 @@
 import { API_BASE as BASE } from './api';
 import { authClient } from './authClient';
 
-export const sandboxEnabled = Boolean(BASE);
+export const sandboxEnabled = process.env.NEXT_PUBLIC_DISABLE_SANDBOX !== 'true';
 
 async function authHeader() {
   const token = await authClient.getAccessToken();

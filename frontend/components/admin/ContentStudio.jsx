@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { adminApi } from '@/lib/writeApi';
 import Markdown from '@/components/shared/Markdown';
 import styles from './ContentStudio.module.css';
+import AdminSelect from './AdminSelect';
 
 // SVG Icons helper
 function Icon({ name, className = '' }) {
@@ -351,6 +352,7 @@ export default function ContentStudio({ initialCourseSlug }) {
   // Courses state
   const [courses, setCourses] = useState(INITIAL_DEMO_COURSES);
   const [selectedCourseId, setSelectedCourseId] = useState(INITIAL_DEMO_COURSES[0].id);
+  const selectedCourseIdRef = useRef(INITIAL_DEMO_COURSES[0].id);
   const [selectedLessonId, setSelectedLessonId] = useState(INITIAL_DEMO_COURSES[0].chapters[0].lessons[0].id);
   const [selectedChapterId, setSelectedChapterId] = useState(INITIAL_DEMO_COURSES[0].chapters[0].id);
   const [selectedItemType, setSelectedItemType] = useState('lesson'); // 'lesson' | 'chapter'
@@ -730,11 +732,12 @@ export default function ContentStudio({ initialCourseSlug }) {
         }));
 
         setCourses(formatted);
-        let activeCourse = formatted[0];
-        if (initialCourseSlug) {
+        let activeCourse = formatted.find((c) => c.id === selectedCourseIdRef.current) || formatted[0];
+        if (initialCourseSlug && !formatted.some((c) => c.id === selectedCourseIdRef.current)) {
           const matched = formatted.find((c) => c.slug === initialCourseSlug);
           if (matched) activeCourse = matched;
         }
+        selectedCourseIdRef.current = activeCourse.id;
         setSelectedCourseId(activeCourse.id);
         if (activeCourse.chapters && activeCourse.chapters.length > 0) {
           const firstChap = activeCourse.chapters[0];
@@ -752,6 +755,7 @@ export default function ContentStudio({ initialCourseSlug }) {
 
   // Handle course switcher from Command Center
   const handleCourseChange = useCallback((newCourseId) => {
+    selectedCourseIdRef.current = newCourseId;
     setSelectedCourseId(newCourseId);
     const targetCourse = courses.find((c) => c.id === newCourseId);
     if (targetCourse?.chapters && targetCourse.chapters.length > 0) {
@@ -1505,6 +1509,7 @@ export default function ContentStudio({ initialCourseSlug }) {
                   onClick={() => setCourseDropdownOpen(!courseDropdownOpen)}
                   aria-expanded={courseDropdownOpen}
                   aria-haspopup="listbox"
+                  aria-label={`Select course: ${courses.find((c) => c.id === selectedCourseId)?.title || 'Select course'}`}
                   title={courses.find((c) => c.id === selectedCourseId)?.title || 'Select course'}
                 >
                   <span className={styles.commandCenterCourseTriggerText}>
@@ -1514,20 +1519,6 @@ export default function ContentStudio({ initialCourseSlug }) {
                     expand_more
                   </span>
                 </button>
-
-                <select
-                  className={styles.visuallyHiddenSelect}
-                  value={selectedCourseId}
-                  onChange={(e) => handleCourseChange(e.target.value)}
-                  aria-label="Select course"
-                  tabIndex={-1}
-                >
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.title}
-                    </option>
-                  ))}
-                </select>
 
                 {courseDropdownOpen && (
                   <div className={styles.commandCenterCourseMenu} role="listbox" aria-label="Courses">
@@ -1931,20 +1922,21 @@ export default function ContentStudio({ initialCourseSlug }) {
 
               <div className={styles.editorTabActions}>
                 {/* Lesson difficulty dropdown */}
-                <select
-                  className={styles.difficultySelect}
+                <AdminSelect
+                  className={styles.difficultyPicker}
+                  label="Lesson Difficulty"
                   value={lessonDifficulty}
-                  onChange={(e) => {
-                    setLessonDifficulty(e.target.value);
+                  onChange={(value) => {
+                    setLessonDifficulty(value);
                     markDirty();
                   }}
-                  title="Select lesson difficulty"
-                  aria-label="Lesson Difficulty"
-                >
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                </select>
+                  options={[
+                    { value: 'Beginner', label: 'Beginner' },
+                    { value: 'Intermediate', label: 'Intermediate' },
+                    { value: 'Advanced', label: 'Advanced' },
+                  ]}
+                  align="right"
+                />
               </div>
             </div>
 
