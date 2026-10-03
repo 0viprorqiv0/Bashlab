@@ -1549,22 +1549,8 @@
   gap: 10px;
   padding: 8px 10px;
   border-radius: 10px;
-  transition: background 140ms ease;
   user-select: none;
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-.popoverUserRow:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.popoverChevron {
-  font-size: 18px;
-  color: #8e8e8e;
-  margin-left: auto;
-  flex-shrink: 0;
+  cursor: default;
 }
 
 .popoverHeader {

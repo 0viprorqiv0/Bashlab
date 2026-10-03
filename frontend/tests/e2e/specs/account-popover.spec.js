@@ -22,9 +22,10 @@ test('workspace account popover: profile link navigates to /account, logout work
   const screenshotPath = '/home/light/.gemini/antigravity-cli/brain/1452835d-ecd2-4990-8c8e-966c5ec35541/account-popover-updated.png';
   await popover.screenshot({ path: screenshotPath });
 
-  // Verify Admin Demo (popoverUserRow) is a link to /account
+  // Verify Admin Demo (popoverUserRow) is purely display: div with no href and no chevron
   const profileRow = page.locator('[class*="popoverUserRow"]');
-  await expect(profileRow).toHaveAttribute('href', '/account');
+  await expect(profileRow).not.toHaveAttribute('href', /.*/);
+  await expect(profileRow.locator('.material-symbols-outlined:has-text("chevron_right")')).toHaveCount(0);
 
   // Test Logout button
   const logoutBtn = popover.getByRole('menuitem', { name: 'Log out' });

@@ -573,12 +573,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
                   }`}
                   role="menu"
                 >
-                  <Link
-                    href="/account"
-                    onClick={() => setAccountMenuOpen(false)}
-                    className={styles.popoverUserRow}
-                    role="menuitem"
-                  >
+                  <div className={styles.popoverUserRow}>
                     <div className={styles.chatgptAvatarWrap}>
                       {avatarUrl ? (
                         <img src={avatarUrl} alt={displayName} className={styles.chatgptAvatarImg} />
@@ -590,8 +585,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
                       <span className={styles.chatgptAccountName}>{displayName}</span>
                       <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
                     </div>
-                    <span className={`material-symbols-outlined ${styles.popoverChevron}`}>chevron_right</span>
-                  </Link>
+                  </div>
 
                   <div className={styles.popoverDivider} />
 
