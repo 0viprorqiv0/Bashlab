@@ -226,7 +226,7 @@ start_backend() {
 
   (
     cd "${REPO_ROOT}/backend"
-    ( ( setsid nohup npm run start:api < /dev/null >"${BACKEND_LOG}" 2>&1 & echo $! >"${BACKEND_PID_FILE}" ) & )
+    ( ( setsid nohup npm run start:api < /dev/null >>"${BACKEND_LOG}" 2>&1 & echo $! >"${BACKEND_PID_FILE}" ) & )
   )
   sleep 0.5
   if [[ -f "${BACKEND_PID_FILE}" ]]; then
@@ -256,7 +256,7 @@ start_frontend() {
 
   (
     cd "${REPO_ROOT}/frontend"
-    ( ( setsid nohup npm run dev < /dev/null >"${FRONTEND_LOG}" 2>&1 & echo $! >"${FRONTEND_PID_FILE}" ) & )
+    ( ( setsid nohup npm run dev < /dev/null >>"${FRONTEND_LOG}" 2>&1 & echo $! >"${FRONTEND_PID_FILE}" ) & )
   )
   sleep 0.5
   if [[ -f "${FRONTEND_PID_FILE}" ]]; then
@@ -423,6 +423,31 @@ do_status() {
   printf "  • Grafana Metrics:        ${C_CYAN}http://127.0.0.1:3002${C_RESET} (User: admin / Pass: admin)\n\n"
 }
 
+stream_live_logs() {
+  local stop_runner="${1:-false}"
+  printf "${C_GRAY}======================================================================${C_RESET}\n"
+  printf "${C_BOLD}📡 ĐANG TRUYỀN TRỰC TIẾP LOG MÁY CHỦ (LIVE SERVER LOGS)...${C_RESET}\n"
+  printf "   • ${C_CYAN}[BACKEND]${C_RESET}  API Express tại ${C_CYAN}http://127.0.0.1:3001${C_RESET}\n"
+  printf "   • ${C_MAGENTA}[FRONTEND]${C_RESET} App Next.js tại ${C_MAGENTA}http://localhost:3000${C_RESET}\n"
+  printf "   • Nhấn ${C_BOLD}Ctrl+C${C_RESET} để dừng toàn bộ server và thoát an toàn.\n"
+  printf "${C_GRAY}======================================================================${C_RESET}\n\n"
+
+  cleanup_on_interrupt() {
+    printf "\n\n${C_BOLD}${C_YELLOW}🛑 Nhận tín hiệu dừng (Ctrl+C). Đang tắt toàn bộ server BashLab...${C_RESET}\n\n"
+    do_stop "$stop_runner"
+    printf "${C_GREEN}✔ Đã tắt toàn bộ dịch vụ server an toàn. Hẹn gặp lại!${C_RESET}\n"
+    exit 0
+  }
+  trap cleanup_on_interrupt INT TERM
+
+  node "${REPO_ROOT}/scripts/stream-logs.mjs" \
+    --backend="${BACKEND_LOG}" \
+    --frontend="${FRONTEND_LOG}" \
+    --tail=10 || true
+
+  cleanup_on_interrupt
+}
+
 do_logs() {
   local target="${1:-all}"
   case "$target" in
@@ -443,17 +468,11 @@ do_logs() {
       docker logs -f "$RUNNER_CONTAINER"
       ;;
     all|*)
-      printf "${C_BOLD}Xem 20 dòng log mới nhất của các dịch vụ:${C_RESET}\n\n"
-      if [[ -f "${BACKEND_LOG}" ]]; then
-        printf "${C_CYAN}=== BACKEND LOG (${BACKEND_LOG}) ===${C_RESET}\n"
-        tail -n 20 "${BACKEND_LOG}" || true
-        printf "\n"
-      fi
-      if [[ -f "${FRONTEND_LOG}" ]]; then
-        printf "${C_MAGENTA}=== FRONTEND LOG (${FRONTEND_LOG}) ===${C_RESET}\n"
-        tail -n 20 "${FRONTEND_LOG}" || true
-        printf "\n"
-      fi
+      log_info "Theo dõi toàn bộ log máy chủ (Backend & Frontend):"
+      node "${REPO_ROOT}/scripts/stream-logs.mjs" \
+        --backend="${BACKEND_LOG}" \
+        --frontend="${FRONTEND_LOG}" \
+        --tail=25
       ;;
   esac
 }
@@ -463,32 +482,43 @@ show_help() {
   printf "${C_BOLD}SỬ DỤNG:${C_RESET}\n"
   printf "  ./start.sh [LỆNH] [TÙY CHỌN]\n\n"
   printf "${C_BOLD}CÁC LỆNH CHÍNH:${C_RESET}\n"
-  printf "  ${C_GREEN}start${C_RESET}         Khởi chạy toàn bộ hệ thống (Runner, Monitoring, Backend, Frontend) [Mặc định]\n"
+  printf "  ${C_GREEN}start${C_RESET}         Khởi chạy toàn bộ hệ thống và hiển thị trực tiếp log [Mặc định]\n"
   printf "  ${C_RED}stop${C_RESET}          Dừng toàn bộ các dịch vụ đang chạy\n"
-  printf "  ${C_YELLOW}restart${C_RESET}       Khởi động lại toàn bộ các dịch vụ\n"
+  printf "  ${C_YELLOW}restart${C_RESET}       Khởi động lại toàn bộ các dịch vụ và tiếp tục truyền log\n"
   printf "  ${C_CYAN}status${C_RESET}        Kiểm tra trạng thái thời gian thực của các dịch vụ\n"
   printf "  ${C_BLUE}logs${C_RESET} [tên]    Xem log dịch vụ: backend, frontend, monitoring, runner, all\n"
   printf "  ${C_GRAY}help${C_RESET}          Hiển thị hướng dẫn này\n\n"
   printf "${C_BOLD}TÙY CHỌN KÈM THEO:${C_RESET}\n"
+  printf "  -d, --detach    Chạy ngầm toàn bộ dịch vụ (không stream log ra terminal)\n"
   printf "  --with-runner   Khi 'stop', dừng luôn cả container runner ${RUNNER_CONTAINER}\n"
-  printf "  --no-monitoring Bỏ qua không khởi động Prometheus & Grafana\n"
-  printf "  --foreground,-f Giữ terminal theo dõi log sau khi đã khởi động thành công\n\n"
+  printf "  --no-monitoring Bỏ qua không khởi động Prometheus & Grafana\n\n"
   printf "${C_BOLD}VÍ DỤ:${C_RESET}\n"
-  printf "  ./start.sh              # Bật toàn bộ dịch vụ\n"
-  printf "  ./start.sh status       # Xem bảng trạng thái\n"
-  printf "  ./start.sh logs backend # Xem log backend theo thời gian thực\n"
+  printf "  ./start.sh              # Bật toàn bộ dịch vụ & hiện log 200, 404... trực tiếp\n"
+  printf "  ./start.sh -d           # Chạy ngầm server không gắn log\n"
+  printf "  ./start.sh status       # Xem bảng trạng thái các dịch vụ\n"
+  printf "  ./start.sh logs         # Xem log ghép nối Backend + Frontend trực tiếp\n"
   printf "  ./start.sh stop         # Tắt toàn bộ dịch vụ\n\n"
 }
 
 main() {
-  local cmd="${1:-start}"
+  local cmd="start"
   local with_runner=false
   local with_monitoring=true
-  local foreground=false
+  local detach=false
 
-  # Xử lý các flag
+  # Xử lý tham số đầu tiên
   if [[ $# -gt 0 ]]; then
-    shift
+    case "$1" in
+      start|stop|restart|status|logs|help|--help|-h)
+        cmd="$1"
+        shift
+        ;;
+      -d|--detach|--background)
+        cmd="start"
+        detach=true
+        shift
+        ;;
+    esac
   fi
 
   while [[ $# -gt 0 ]]; do
@@ -501,8 +531,8 @@ main() {
         with_monitoring=false
         shift
         ;;
-      --foreground|-f)
-        foreground=true
+      -d|--detach|--background)
+        detach=true
         shift
         ;;
       *)
@@ -524,10 +554,12 @@ main() {
       printf "\n"
       do_status
       log_ok "Toàn bộ hệ thống BashLab đã sẵn sàng phục vụ!"
-      if [[ "$foreground" == "true" ]]; then
-        log_info "Chế độ Foreground: Đang theo dõi log (Nhấn Ctrl+C để thoát theo dõi)..."
-        do_logs all
+      if [[ "$detach" == "true" ]]; then
+        log_info "Hệ thống đang chạy ngầm (chế độ detach). Để xem log thời gian thực: ${C_CYAN}./start.sh logs${C_RESET}"
+        log_info "Để dừng hệ thống: ${C_RED}./start.sh stop${C_RESET}"
+        exit 0
       fi
+      stream_live_logs "$with_runner"
       ;;
     stop)
       do_stop "$with_runner"
@@ -536,8 +568,6 @@ main() {
       print_banner
       do_stop "$with_runner"
       sleep 1
-      cmd="start"
-      print_banner
       preflight_checks
       start_runner
       if [[ "$with_monitoring" == "true" ]]; then
@@ -548,6 +578,11 @@ main() {
       printf "\n"
       do_status
       log_ok "Toàn bộ hệ thống BashLab đã được khởi động lại thành công!"
+      if [[ "$detach" == "true" ]]; then
+        log_info "Hệ thống đang chạy ngầm. Để xem log: ./start.sh logs"
+        exit 0
+      fi
+      stream_live_logs "$with_runner"
       ;;
     status)
       do_status

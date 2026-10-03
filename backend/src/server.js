@@ -50,10 +50,24 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
   }));
   // credentials: the refresh-token cookie travels on cross-origin fetches from the allow-listed frontend only.
   app.use(cors({ origin: origins, credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
-  // Every request feeds the admin dashboard (Prometheus scrapes /metrics).
+  // Every request feeds the admin dashboard (Prometheus scrapes /metrics) and logs to console.
   app.use((req, res, next) => {
     const started = process.hrtime.bigint();
     res.on('finish', () => {
+      const isTest = Boolean(process.env.NODE_ENV === 'test' || process.env.NODE_TEST_CONTEXT || process.argv.some(a => a.includes('test')));
+      if (req.path !== '/metrics' && !isTest) {
+        const durationMs = (Number(process.hrtime.bigint() - started) / 1e6).toFixed(1);
+        const status = res.statusCode;
+        const statusColor = status >= 500 ? '\x1b[31;1m'  // Bright Red
+          : status >= 400 ? '\x1b[33;1m'                  // Bright Yellow
+          : status >= 300 ? '\x1b[36;1m'                  // Bright Cyan
+          : '\x1b[32;1m';                                 // Bright Green
+        const reset = '\x1b[0m';
+        const bold = '\x1b[1m';
+        const gray = '\x1b[90m';
+        const url = req.originalUrl || req.url;
+        console.log(`${bold}${req.method.padEnd(6)}${reset} ${url.padEnd(30)} ${statusColor}${status}${reset} ${gray}${durationMs}ms${reset}`);
+      }
       if (req.path === '/metrics' || req.path === '/health') return;
       metrics.recordHttp(req.method, req.originalUrl, res.statusCode, Number(process.hrtime.bigint() - started) / 1e9);
     });
