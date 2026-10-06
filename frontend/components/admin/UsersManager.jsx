@@ -124,7 +124,13 @@ export default function UsersManager() {
         { count: lessonsCount },
         { data: sessionsData },
       ] = await Promise.all([
-        supabase.rpc('admin_list_users', { p_search: query, p_limit: PAGE_SIZE, p_offset: page * PAGE_SIZE }),
+        supabase.rpc('admin_list_users', {
+          p_search: query,
+          p_limit: PAGE_SIZE,
+          p_offset: page * PAGE_SIZE,
+          p_role: roleFilter,
+          p_sort: activitySort,
+        }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('is_locked', false),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'learner').eq('is_locked', false),
         supabase.from('progress').select('user_id, status').eq('status', 'done'),
@@ -163,7 +169,7 @@ export default function UsersManager() {
     } catch (err) {
       setResult((prev) => ({ ...prev, loading: false, error: err.message }));
     }
-  }, [query, page]);
+  }, [query, page, roleFilter, activitySort]);
 
   useEffect(() => {
     load();
@@ -178,44 +184,17 @@ export default function UsersManager() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Process rows with local sort/filter
-  const displayRows = useMemo(() => {
-    let rows = [...result.rows];
-
-    // Filter by role
-    if (roleFilter === 'learner') {
-      rows = rows.filter((u) => u.role === 'learner');
-    } else if (roleFilter === 'admin') {
-      rows = rows.filter((u) => u.role === 'admin');
+  // Automatically reset page to 0 if total rows reduce below current page offset
+  useEffect(() => {
+    if (result.total > 0 && page * PAGE_SIZE >= result.total) {
+      setPage(0);
     }
+  }, [result.total, page]);
 
-    // Sort
-    rows.sort((a, b) => {
-      if (activitySort === 'recent') {
-        const timeA = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0;
-        const timeB = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0;
-        return timeB - timeA;
-      }
-      if (activitySort === 'least_recent') {
-        const timeA = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : Infinity;
-        const timeB = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : Infinity;
-        return timeA - timeB;
-      }
-      if (activitySort === 'name_asc') {
-        const nameA = (a.name || a.email).toLowerCase();
-        const nameB = (b.name || b.email).toLowerCase();
-        return nameA.localeCompare(nameB);
-      }
-      if (activitySort === 'labs_desc') {
-        const labsA = completedMap[a.id] || 0;
-        const labsB = completedMap[b.id] || 0;
-        return labsB - labsA;
-      }
-      return 0;
-    });
-
-    return rows;
-  }, [result.rows, roleFilter, activitySort, completedMap]);
+  // Display rows directly from database (already filtered, sorted across entire DB, and paginated)
+  const displayRows = useMemo(() => {
+    return result.rows || [];
+  }, [result.rows]);
 
   function openRoleDialog(user) {
     const newRole = user.role === 'admin' ? 'learner' : 'admin';
@@ -338,7 +317,10 @@ export default function UsersManager() {
           className={styles.sortPicker}
           label="Filter by role"
           value={roleFilter}
-          onChange={setRoleFilter}
+          onChange={(newRole) => {
+            setRoleFilter(newRole);
+            setPage(0);
+          }}
           options={[
             { value: 'all', label: 'Sort: Role' },
             { value: 'learner', label: 'Role: Learner' },
@@ -350,7 +332,10 @@ export default function UsersManager() {
           className={styles.sortPicker}
           label="Sort by activity"
           value={activitySort}
-          onChange={setActivitySort}
+          onChange={(newSort) => {
+            setActivitySort(newSort);
+            setPage(0);
+          }}
           options={[
             { value: 'recent', label: 'Sort: Last Active' },
             { value: 'least_recent', label: 'Last Active: Oldest' },

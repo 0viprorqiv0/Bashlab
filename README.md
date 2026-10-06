@@ -1,144 +1,205 @@
-# BashLab — Technical System Documentation
+# BashLab — Cybersecurity Lab & Learning Platform
 
-This document answers the specification requirement:
-> **Advanced requirements: Includes 4–5 main features, and advanced functionalities (e.g., optimize performance, benchmarking, stress testing, ...).**
-
----
-
-## 1. System Overview
-
-BashLab is an educational software system for Linux commands.
-The system executes student commands in isolated Linux containers.
-The frontend uses Next.js and Supabase.
-The backend API uses Node.js, Express, and Docker.
+This document describes the technical architecture, security model, and verification metrics for BashLab.
+The documentation complies with the ASD-STE100 (Simplified Technical English) specification.
 
 ---
 
-## 2. Five Main Features
+## 1. System Overview & Security Threat Model
 
-### 2.1 Feature 1: Interactive Terminal Sandbox and Auto-Grading Engine
-- The system executes user commands in an authentic Linux environment.
-- The system does not use a browser simulation.
-- A Bubblewrap sandbox isolates the filesystem and system resources.
-- The root filesystem and system binaries are read-only.
-- The sandbox blocks network access and isolates process trees.
-- A watchdog timer stops commands that exceed 3.0 seconds.
-- The task verifier inspects files directly through file descriptors to prevent command injection.
+BashLab is an interactive Computer Science training platform for Linux system engineering and security operations.
+The primary engineering challenge is safe multi-tenant Remote Code Execution (RCE).
+The platform executes untrusted student commands while protecting the host system, network, and database.
 
-### 2.2 Feature 2: Content Studio for Course Management
-- The user interface uses a layout similar to Visual Studio Code.
-- A navigation tree shows courses, chapters, and lessons.
-- The editor contains four tabs: lesson theory, learning objectives, hints, and verification rules.
-- The system provides a live preview of Markdown content.
-- Administrators can set the status of a lesson to draft or published.
+```text
+Untrusted Web Client (Browser)
+      │
+      ▼ (HTTPS / TLS 1.3)
+Cloudflare Edge / Reverse Proxy (Caddy Loopback Bridge)
+      │
+      ▼
+Express 5 API Gateway (Rate Limiter, RBAC, JWT Auth Cache)
+      │
+      ▼
+Admission Queue & Concurrency Limiter (4 Worker Slots, Backpressure)
+      │
+      ▼
+Docker Runner Container (`bashlab-box`)
+      │
+      ▼
+Bubblewrap Linux Sandbox (`bwrap` Namespace & Capability Isolation)
+      │
+      ├── Read-Only Root Filesystem (`/`, `/etc`, `/usr`)
+      ├── Masked Sensitive Files (`/etc/shadow`, `/proc`)
+      ├── Network Isolation (`--unshare-net`)
+      ├── Dropped Linux Capabilities (`--cap-drop ALL`)
+      └── Execution Constraints (3.0s Timeout, 10 MiB File Cap, 64 KB Output Cap)
+```
 
-### 2.3 Feature 3: Access Control and User Management
-- The system uses token-based authentication with JSON Web Tokens.
-- Secure cookies protect authentication tokens against cross-site scripting.
-- The system separates user permissions into Learner and Administrator roles.
-- Role-based access control operates at the database, API, and user interface layers.
-- Administrators can promote, demote, or lock user accounts.
-- The system rejects locked accounts immediately with HTTP 403.
-
-### 2.4 Feature 4: System Observability and Activity Dashboard
-- The activity dashboard shows system health, active sessions, and completion rates.
-- The layout fills the screen and prevents unnecessary page scrolling.
-- Administrators can stop suspicious student sessions immediately.
-- The system records all administrative actions in an immutable audit log.
-- A Prometheus endpoint collects performance metrics.
-- A Grafana dashboard visualizes system activity.
-
-### 2.5 Feature 5: Concurrency Control and Admission Queue
-- A rate limiter blocks excessive requests from single IP addresses and accounts.
-- A session mutex allows only one active command per student session.
-- An admission queue limits execution to four concurrent jobs.
-- The queue holds a maximum of 32 pending requests.
-- The system cancels requests that wait longer than 5.0 seconds.
-- When the queue is full, the system returns HTTP 503 to protect system resources.
+The system defends against five primary attack classes:
+1. **Container Breakout and Sandbox Escape:** Unauthorized access to host kernel, host files, or peer containers.
+2. **Privilege Escalation:** Vertical escalation to Administrator role and horizontal access to peer student sessions.
+3. **Resource Exhaustion (Denial of Service):** Fork bombs, CPU starvation loops, memory leaks, and disk saturation.
+4. **Network Reconnaissance:** Outbound lateral movement, port scanning, and command-and-control communication.
+5. **Data Tampering & Injection:** SQL injection, Cross-Site Scripting (XSS), and forged authorization tokens.
 
 ---
 
-## 3. Advanced Functionalities
+## 2. Five Core Features
 
-### 3.1 Performance Optimization
-- **Token Cache in Memory:**
-  The backend caches verified tokens for 60 seconds.
+### 2.1 Multi-Layered Terminal Sandbox and Auto-Grading Engine
+- **Kernel-Level Process Isolation:**
+  The engine launches commands inside Bubblewrap (`bwrap`) containers.
+  The sandbox unshares PID, mount, IPC, UTS, and network namespaces.
+- **Filesystem Immutability:**
+  The root directory, system binaries, and configuration folders remain strictly read-only.
+  The engine creates isolated `tmpfs` mounts for temporary execution files.
+  The system hides `/etc/shadow` and kernel parameters from the executing user.
+- **Zero-Network Policy:**
+  The sandbox uses `--unshare-net` to eliminate network interfaces.
+  Commands cannot open sockets, resolve external DNS, or connect to internal networks.
+- **Deterministic Auto-Grading:**
+  The grading engine inspects file contents, exit codes, and environment changes directly.
+  The engine operates without simulated browser terminals to guarantee genuine Linux execution semantics.
+
+### 2.2 Content Studio with Secure Curriculum Management
+- **Visual Studio Code Interface:**
+  The editor displays a file tree of courses, chapters, and lab exercises.
+  The interface includes tabbed panels for theory, task objectives, hints, and validation rules.
+- **Content Sanitization:**
+  The editor sanitizes Markdown content before rendering live previews to prevent Cross-Site Scripting (XSS).
+- **Access Boundary:**
+  Only authenticated users with the Administrator role can create, modify, or publish lab content.
+  Learner requests to Content Studio endpoints return HTTP 403 Forbidden.
+
+### 2.3 Identity and Role-Based Access Control (RBAC)
+- **Token-Based Authentication:**
+  The API validates signed JSON Web Tokens (JWT) for all sensitive operations.
+  Secure, HTTP-only, SameSite cookies store refresh tokens to prevent token theft via script injection.
+- **Strict Role Separation:**
+  The platform defines two discrete roles: Learner and Administrator.
+  The database layer enforces Supabase Row Level Security (RLS) on all user tables.
+- **Session Isolation:**
+  Horizontal access checks prevent learners from accessing sessions owned by other accounts.
+  Unauthorized session queries return HTTP 404 to eliminate user enumeration oracles.
+- **Account Revocation:**
+  Administrators can lock or ban compromised accounts instantly.
+  The API terminates active sessions and rejects banned credentials with HTTP 403 Forbidden.
+
+### 2.4 Security Observability and Activity Audit Trail
+- **Real-Time Session Monitoring:**
+  The admin console displays active sandboxes, executing commands, and memory utilization.
+  Administrators can terminate runaway or suspicious student sessions with one click.
+- **Immutable Security Audit Log:**
+  The system logs all administrative operations, role modifications, and login events.
+  Audit logs record client IP, timestamp, user ID, target entity, and outcome.
+- **Telemetry Infrastructure:**
+  A Prometheus endpoint exposes operational metrics, error rates, and queue latency.
+  Pre-configured Grafana dashboards display execution volume, runner RAM, and HTTP status codes.
+
+### 2.5 Denial-of-Service (DoS) Mitigation and Admission Control
+- **Per-Client Rate Limiting:**
+  A sliding-window rate limiter blocks brute-force authentication and request flooding.
+- **Single-Command Session Mutex:**
+  The engine enforces a concurrency lock per student session.
+  Concurrent command submissions on the same session return HTTP 409 Conflict.
+- **Worker Admission Queue:**
+  The system restricts execution to four parallel worker slots.
+  The queue buffers up to 32 pending execution requests with a 5.0-second timeout.
+- **Active Backpressure:**
+  When the queue exceeds capacity, the server returns HTTP 503 Service Unavailable immediately.
+  This defense preserves system stability and protects host resources during heavy traffic bursts.
+
+---
+
+## 3. Advanced Security Functions & Engineering
+
+### 3.1 Defense-in-Depth Sandbox Architecture
+
+| Security Layer | Technology | Defensive Mechanism | Threat Mitigated |
+|---|---|---|---|
+| **L1: Process Boundary** | Linux Bubblewrap (`bwrap`) | Kernel namespaces (PID, mount, IPC, UTS, net) | Process snooping, peer container interference |
+| **L2: Privilege Boundary** | Linux Capabilities | Drop all capabilities (`--cap-drop ALL`), set `PR_SET_NO_NEW_PRIVS` | Privilege escalation, `setuid` binary abuse |
+| **L3: Filesystem Boundary** | Read-Only Bind Mounts | Read-only `/`, `/usr`, `/etc`; masked `/etc/shadow`; private `tmpfs` | Rootkit installation, system file modification |
+| **L4: Network Boundary** | Network Namespace Unshare | `--unshare-net` (loopback only, no external routes) | Data exfiltration, lateral scanning, botnet C2 |
+| **L5: Resource Boundary** | POSIX RLIMITs & Timers | 3.0s execution timeout (SIGKILL), 10 MiB `RLIMIT_FSIZE`, 64 KB output buffer | CPU starvation, infinite loops, disk exhaustion |
+| **L6: Container Boundary** | Docker (`bashlab-box`) | Unprivileged container user (`nobody`), memory limit (512 MiB) | Host breakout, kernel memory exhaustion |
+
+### 3.2 Performance Optimization under Security Constraints
+- **In-Memory JWT Verification Cache:**
+  The backend caches validated token public claims for 60 seconds.
   This cache reduces authentication latency from 350 ms to less than 0.5 ms.
-  This mechanism eliminates 99.8 percent of external network requests.
-- **Warm Container Reuse:**
-  The system keeps a hardened runner container active.
-  The system creates Bubblewrap sandboxes inside the active container.
-  This method reduces startup latency from 2.0 seconds to less than 15 ms.
-- **Responsive Layout Design:**
-  The layout uses CSS Grid and Flexbox.
-  The interface adjusts to mobile, tablet, and desktop screens without broken elements.
-  The cumulative layout shift score is less than 0.05.
+  The cache removes 99.8 percent of remote database authentication requests.
+- **Warm Container Execution Architecture:**
+  The host maintains one active, pre-warmed runner container (`bashlab-box`).
+  The API spawns ephemeral Bubblewrap sandboxes inside this container.
+  This design reduces command initialization latency from 2.0 seconds to under 15 ms.
 
-### 3.2 Stress Testing and Benchmarking
-The project team tested the system under concurrent burst loads.
-The benchmark evaluated four concurrency levels:
+### 3.3 Concurrency Stress Testing and Empirical Benchmarks
+The engineering team conducted stress testing using the automated benchmark harness (`tests/benchmark.js`).
+The benchmark evaluated four concurrency tiers (C = 10, 20, 30, and 50):
 
-| Concurrency Level | Total Requests | Success Rate | Throughput | Median Latency (p50) | 95th Percentile (p95) | System Behavior |
-|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| **C = 10** | 10 | **100%** | **7.5 req/s** | **988 ms** | 1,421 ms | Normal operation with immediate admission |
-| **C = 20** | 20 | **100%** | **7.4 req/s** | **1,649 ms** | 2,710 ms | Stable distribution across four workers |
-| **C = 30** | 30 | Active Protection | 5.8 req/s | 2,120 ms | 4,890 ms | Rejection of requests waiting over 5.0 s |
-| **C = 50** | 50 | Backpressure | 5.1 req/s | 2,450 ms | 5,000 ms | Return of HTTP 503 when queue exceeds 32 |
+| Concurrency Tier | Total Requests | Success Rate | Throughput (req/s) | Median Latency (p50) | 95th Percentile (p95) | Peak Runner RAM | Defense & Stability Behavior |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **C = 10** | 30 | **100.0%** | **9.57 req/s** | **679 ms** | 1,162 ms | 4.94 MiB | Normal operation; zero queue latency |
+| **C = 20** | 60 | **100.0%** | **11.81 req/s** | **1,017 ms** | 1,674 ms | 19.06 MiB | Full worker saturation across 4 execution slots |
+| **C = 30** | 90 | **100.0%** | **10.28 req/s** | **1,618 ms** | 2,932 ms | 11.45 MiB | Queue absorption; all requests served within 5.0s |
+| **C = 50** | 150 | **72.0%** | **13.54 req/s** | **1,367 ms** | 3,521 ms | 15.42 MiB | **Active backpressure:** 42 excess requests rejected with HTTP 503 |
 
-- **Resource Consumption During Peak Load:**
-  The runner CPU reached 117.8 percent of 200 percent maximum capacity.
-  The runner memory peaked at 24.6 MiB of 512 MiB maximum capacity.
-  The system showed zero memory leaks during all test runs.
+- **Resource Confinement Evidence:**
+  The runner container memory peaked at 19.06 MiB out of 512 MiB total allocated capacity.
+  The container memory remained below 20 MiB across all concurrency tiers.
+  The test run produced zero orphaned processes and zero container leaks.
 
-### 3.3 Penetration Testing and Security Verification
-The security suite tested 24 attack vectors.
-The system passed all 24 tests (100 percent pass rate):
+### 3.4 Penetration Testing and Security Audit
+The automated security suite (`backend/scripts/run-pentest-audit.mjs`) evaluated 24 attack vectors.
+The system achieved a **100.0 percent pass rate (24/24 passed)**:
 
-1. **Horizontal Session Isolation:**
-   Unauthorized session access returns HTTP 404.
-   This response prevents attackers from identifying valid session IDs.
-2. **Vertical Privilege Control:**
-   Learner requests to administrator endpoints return HTTP 403.
-3. **Locked Account Enforcement:**
-   Locked accounts cannot execute commands even with a valid token.
-4. **Sandbox Escape Prevention:**
-   The root directory and `/usr` are read-only.
-   The `/etc/shadow` file is masked and cannot be read.
-   The sandbox isolates network namespaces and allows only loopback traffic.
-5. **Denial of Service Prevention:**
-   The container limits process counts to 128 to block fork bombs.
-   The file size limit is 10 MiB to prevent disk-filling attacks.
-   The system locks workspaces that exceed 30 MiB or 100 files.
-
-### 3.4 Service Orchestration and Request Logging
-- **Single-Command Startup:**
-  The `start.sh` script starts all services in the correct sequence.
-  The sequence starts the runner container, monitoring tools, API, and frontend.
-- **Standard Request Logs:**
-  The logger displays HTTP requests in plain text without complex formatting.
-  Each line shows the timestamp, source, method, path, status, and duration.
-  Error responses display the error code to help debugging.
+1. **Vertical Privilege Escalation (6 tests):**
+   - Unauthenticated requests to protected endpoints return HTTP 401 Unauthorized.
+   - Learner requests to admin endpoints return HTTP 403 Forbidden.
+   - Forged, tampered, and expired JWT tokens are rejected.
+2. **Horizontal Privilege Escalation (4 tests):**
+   - Access attempts to foreign sessions return HTTP 404 Not Found (hiding resource existence).
+   - Learners cannot execute commands or terminate sessions owned by other users.
+3. **Sandbox Escape & Jailbreak Resistance (5 tests):**
+   - Root filesystem and system binary modifications are blocked (Read-Only filesystem).
+   - Access to `/etc/shadow` is denied (masked file).
+   - Outbound internet connections (`curl`, `ping`, raw sockets) are blocked.
+   - `sudo` commands and setuid execution are blocked.
+4. **Denial of Service & Resource Abuse (5 tests):**
+   - CPU loops (`yes`, `while true`) are killed at 3.0 seconds with exit code 124.
+   - File generation exceeding 10 MiB is halted by `RLIMIT_FSIZE`.
+   - Output buffer exceeding 64 KB is safely truncated.
+   - Concurrent command spam on the same session returns HTTP 409 Conflict.
+   - Oversized JSON request payloads return HTTP 413 Payload Too Large.
+5. **Input Sanitization & Access Enforcement (4 tests):**
+   - SQL injection vectors in parameters are neutralized by parameterized queries.
+   - Non-string command payloads return HTTP 400 Bad Request.
+   - Banned accounts are blocked immediately with HTTP 403 Forbidden.
+   - Internal metrics endpoints permit queries only from loopback addresses.
 
 ---
 
 ## 4. Test Verification Evidence
 
-All detailed reports and test logs are in `docs/audit_benchmark_pentest/`:
+The directory `docs/audit_benchmark_pentest/` contains complete audit logs and execution traces:
 
-| Test Category | Test Tool | Test Count | Result | Reference Document |
-|---|---|:---:|:---:|---|
-| **Backend Tests** | Node.js Test Runner | 74 tests | **74 Passed** | `tests/*.test.js` |
-| **Penetration Tests** | Custom Security Harness | 24 tests | **24 Passed** | `01_MASTER_BENCHMARK_AND_PENTEST_REPORT.md` |
-| **OWASP ASVS 5.0** | Security Checklist | Full suite | **Compliant** | `03_OWASP_ASVS5_SECURITY_RETEST.md` |
-| **Stress Benchmark** | Custom Benchmark Script | C = 10 to 50 | **7.5 req/s** | `02_BACKEND_API_BENCHMARK_PENTEST_REPORT.md` |
-| **E2E Browser Tests** | Playwright Chromium | 26 tests | **26 Passed** | `frontend/tests/e2e/specs/` |
+| Audit Category | Tool / Test Runner | Test Scope | Results | Compliance Status | Reference File |
+|---|---|:---:|:---:|:---:|---|
+| **Backend Unit & Integration** | Node.js Test Runner | 105 tests | 105 / 105 passed | **100.0% PASS** | `backend/tests/*.test.js` |
+| **Penetration Security Suite** | Automated Pentest Harness | 24 attack vectors | 24 / 24 blocked | **100.0% SECURE** | `backend/scripts/run-pentest-audit.mjs` |
+| **OWASP ASVS 5.0 Audit** | Security Checklist Verification | 62 requirements | 62 verified | **100.0% COMPLIANT** | `docs/audit_benchmark_pentest/03_OWASP_ASVS5_SECURITY_RETEST.md` |
+| **Concurrency Benchmark** | Stress Test Suite (`benchmark.js`) | 4 concurrency tiers | 330 requests | **PASSED (C=10..50)** | `backend/benchmarks/latest.json` |
+| **E2E Browser Verification** | Playwright Chromium | 42 test specs | 41 passed, 1 skipped | **97.6% PASS** | `frontend/tests/e2e/specs/` |
+| **Quick Tunnel Lifecycle** | Controller Regression Suite | 11 state assertions | 11 passed | **100.0% PASS** | `scripts/quick-tunnel/test/quick-tunnel-lifecycle.sh` |
 
 ---
 
 ## 5. Quick Start Instructions
 
-### 5.1 Start the System
-Run the start script from the repository root:
+### 5.1 Start Local Stack
+Run the startup orchestrator from the project root:
 ```bash
 ./start.sh
 ```
@@ -148,7 +209,7 @@ To run all services in the background:
 ./start.sh -d
 ```
 
-To check service status:
+To inspect service health:
 ```bash
 ./start.sh status
 ```
@@ -158,11 +219,58 @@ To stop all services:
 ./start.sh stop
 ```
 
-### 5.2 Test Accounts
+### 5.2 System Endpoints
+- Web Application: `http://localhost:3000`
+- Backend API Health Check: `http://127.0.0.1:3001/health`
+- Prometheus Metrics Explorer: `http://127.0.0.1:9090`
+- Grafana Security Dashboards: `http://127.0.0.1:3002` (Credentials: `admin` / `admin`)
 
-| Role | Email | Password | Access Level |
+### 5.3 Test Credentials
+
+| Role | Email Address | Password | Permitted Operations |
 |---|---|---|---|
-| **Administrator** | `admin@bashlab.local` | `BashLab2026!` | Management: `/admin`, Content Studio, Users, Activity |
-| **Learner** | `learner@bashlab.local` | `BashLab2026!` | Student: `/courses`, Terminal Sandbox, My Learning |
+| **Administrator** | `admin@bashlab.local` | `BashLab2026!` | Full Admin: `/admin`, Content Studio, User Management, Security Audit Trail |
+| **Learner** | `learner@bashlab.local` | `BashLab2026!` | Student: `/courses`, Terminal Sandbox, Course Exercises, Flag Verification |
 
-Web Application URL: `http://localhost:3000`
+---
+
+## 6. Zero-Trust Remote Demo (Cloudflare Quick Tunnel)
+
+BashLab includes a zero-trust remote demo orchestrator.
+The controller exposes the application through an outbound-only encrypted tunnel without opening inbound firewall ports.
+
+### 6.1 Start Public Tunnel
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh start -d
+```
+
+The supervisor verifies local loopback listeners, starts Caddy as an internal bridge, establishes the encrypted tunnel, and injects the dynamic public URL into backend CORS origins:
+```text
+Public URL: https://<subdomain>.trycloudflare.com
+```
+
+### 6.2 Inspect Tunnel Health & Diagnostics
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh status
+./scripts/quick-tunnel/bashlab-tunnel.sh diagnose
+```
+
+When healthy, the diagnostic output reports:
+```text
+LOCAL_FRONTEND=200
+LOCAL_API=200
+PUBLIC_HEALTH=200
+RESULT=CONNECTOR_READY
+```
+
+### 6.3 Restart Local App Without Losing Public URL
+To reload code or restart frontend/backend without resetting the public URL:
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh restart -d
+```
+
+### 6.4 Stop Tunnel Controller
+To terminate all tunnel and bridge processes:
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh stop
+```

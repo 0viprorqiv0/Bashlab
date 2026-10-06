@@ -7,9 +7,24 @@ RUN_DIR="$ROOT_DIR/.run/quick-tunnel"
 # shellcheck source=process-helpers.sh
 source "$(dirname "$0")/process-helpers.sh"
 
-stop_owned_pid_file "$RUN_DIR/tunnel.pid" 'cloudflared tunnel --url' 'Quick Tunnel'
-stop_owned_pid_file "$RUN_DIR/caddy.pid" 'caddy run --config' 'Caddy bridge'
-stop_owned_pid_file "$RUN_DIR/backend.pid" 'npm run start:api' 'BashLab backend'
-stop_owned_pid_file "$RUN_DIR/frontend.pid" 'npm run start -H 127.0.0.1 -p 3000' 'BashLab frontend'
-rm -f "$RUN_DIR/tunnel-url.txt"
-printf 'Quick Tunnel controller stopped.\n'
+keep_tunnel=false
+for arg in "$@"; do
+  if [[ "$arg" == "--keep-tunnel" ]]; then
+    keep_tunnel=true
+  fi
+done
+
+# Always stop localhost web application services
+stop_owned_pid_file "$RUN_DIR/backend.pid" 'start:api' 'BashLab backend'
+stop_owned_pid_file "$RUN_DIR/frontend.pid" 'npm run start' 'BashLab frontend'
+
+if [[ "$keep_tunnel" == true ]]; then
+  tunnel_url="$(cat "$RUN_DIR/tunnel-url.txt" 2>/dev/null || echo 'none')"
+  printf 'Localhost services stopped. Tunnel kept persistent at: %s\n' "$tunnel_url"
+else
+  stop_owned_pid_file "$RUN_DIR/caddy.pid" 'caddy run --config' 'Caddy bridge'
+  stop_owned_pid_file "$RUN_DIR/tunnel.pid" 'cloudflared tunnel --url' 'Quick Tunnel'
+  docker stop bashlab-prometheus bashlab-grafana >/dev/null 2>&1 || true
+  rm -f "$RUN_DIR/tunnel-url.txt"
+  printf 'Quick Tunnel controller stopped.\n'
+fi

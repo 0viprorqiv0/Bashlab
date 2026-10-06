@@ -68,3 +68,31 @@ cloudflared_registered_since() {
   [[ "$offset" =~ ^[0-9]+$ && -r "$log_file" ]] || return 1
   tail -c +$((offset + 1)) "$log_file" 2>/dev/null | grep -q 'Registered tunnel connection'
 }
+
+verify_tunnel_liveness() {
+  local url="$1" timeout="${2:-3}" body=""
+  [[ -n "$url" && "$url" =~ ^https://[[:alnum:]-]+\.trycloudflare\.com$ ]] || return 1
+  if [[ -n "${QUICK_TUNNEL_TEST_STATE:-}" ]]; then
+    curl --silent --fail --max-time "$timeout" "$url/health" >/dev/null 2>&1
+    return $?
+  fi
+  body="$(curl --silent --fail --max-time "$timeout" "$url/quick-tunnel-ping" 2>/dev/null || true)"
+  if [[ "$body" == *"caddy-tunnel-ok"* ]]; then
+    return 0
+  fi
+  body="$(curl --silent --fail --max-time "$timeout" "$url/health" 2>/dev/null || true)"
+  [[ "$body" == *"status"* && "$body" == *"ok"* ]]
+}
+
+is_port_available() {
+  local port="$1" listener_pids=""
+  if command -v lsof >/dev/null 2>&1; then
+    listener_pids="$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+    [[ -z "$listener_pids" ]] && return 0 || return 1
+  fi
+  if command -v ss >/dev/null 2>&1 && ss -ltn "sport = :$port" 2>/dev/null | tail -n +2 | grep -q .; then
+    return 1
+  fi
+  return 0
+}
+

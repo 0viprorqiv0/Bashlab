@@ -863,32 +863,101 @@
 }
 
 .realTermInputWrapper {
+  position: relative;
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: baseline;
+  display: inline-flex;
+  align-items: center;
+  cursor: text;
 }
 
 .realTermInput {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  flex: 1;
-  min-width: 0;
+  height: 100%;
+  caret-color: transparent !important;
+  color: transparent !important;
   background: transparent;
   border: 0;
   outline: 0;
-  color: #eef0f5;
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
   padding: 0;
   margin: 0;
-  caret-color: #68dfa0;
-  caret-shape: block;
+  z-index: 2;
+  cursor: text;
 }
 
-.realTermInput::selection {
-  background: rgba(104, 223, 160, 0.35);
-  color: #fff;
+.realTermVisualLine {
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  white-space: pre;
+  color: #eef0f5;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.termBlockCursor {
+  display: inline-block;
+  background-color: #68dfa0;
+  color: #0b1017;
+  font-weight: 700;
+  width: 1ch;
+  min-width: 1ch;
+  height: 1.25em;
+  line-height: 1.25em;
+  text-align: center;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  outline: none;
+  vertical-align: text-bottom;
+  box-sizing: border-box;
+}
+
+.termCursorSolid {
+  background-color: #68dfa0 !important;
+  color: #0b1017 !important;
+  animation: none !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.termCursorBlink {
+  animation: termCursorBlink 1.2s steps(1) infinite;
+}
+
+.termCursorInactive {
+  background-color: transparent !important;
+  color: inherit !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+@keyframes termCursorBlink {
+  0%, 49.9% {
+    background-color: #68dfa0;
+    color: #0b1017;
+    outline: none;
+    box-shadow: none;
+    border: none;
+  }
+  50%, 100% {
+    background-color: transparent;
+    color: inherit;
+    outline: none;
+    box-shadow: none;
+    border: none;
+  }
 }
 
 /* Fastfetch output layout */

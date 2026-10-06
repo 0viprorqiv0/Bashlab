@@ -331,9 +331,74 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [cmdHistory, setCmdHistory] = useState([]);
   const [terminalLogs, setTerminalLogs] = useState([]);
+  const [cursorPos, setCursorPos] = useState(0);
+  const [isInputFocused, setIsInputFocused] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimerRef = useRef(null);
+  const [autoCopied, setAutoCopied] = useState(false);
+  const autoCopyTimerRef = useRef(null);
+
+  const resetBlinkToSolid = React.useCallback(() => {
+    setIsTyping(true);
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 600);
+  }, []);
+
+  const handleTerminalMouseUp = React.useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    let selectedText = window.getSelection() ? window.getSelection().toString() : '';
+    if (!selectedText && document.activeElement && typeof document.activeElement.selectionStart === 'number') {
+      const el = document.activeElement;
+      if (el.selectionEnd > el.selectionStart) {
+        selectedText = el.value.substring(el.selectionStart, el.selectionEnd);
+      }
+    }
+    if (selectedText && selectedText.trim().length > 0) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(selectedText);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = selectedText;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        setAutoCopied(true);
+        if (autoCopyTimerRef.current) clearTimeout(autoCopyTimerRef.current);
+        autoCopyTimerRef.current = setTimeout(() => {
+          setAutoCopied(false);
+        }, 1800);
+      } catch (err) {
+        console.warn('Auto copy failed:', err);
+      }
+    }
+  }, []);
 
   const terminalEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  const updateCursorPos = React.useCallback(() => {
+    if (inputRef.current) {
+      setCursorPos(inputRef.current.selectionStart ?? terminalInput.length);
+    }
+  }, [terminalInput.length]);
+
+  useEffect(() => {
+    updateCursorPos();
+  }, [terminalInput, updateCursorPos]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (autoCopyTimerRef.current) clearTimeout(autoCopyTimerRef.current);
+    };
+  }, []);
 
   // Auto-scroll terminal to bottom
   useEffect(() => {
@@ -342,7 +407,13 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
 
   // Focus input on click anywhere in terminal
   function focusTerminal() {
+    if (typeof window !== 'undefined') {
+      const sel = window.getSelection();
+      if (sel && sel.toString().trim().length > 0) return;
+    }
     inputRef.current?.focus();
+    setIsInputFocused(true);
+    updateCursorPos();
   }
 
   // Flag submission: the server checks the flag and, when it is right, saves the lab as done.
@@ -980,6 +1051,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
         <section
           className={`${styles.rightPane} ${isMaximized ? styles.rightPaneMaximized : ''}`}
           data-lenis-prevent="true"
+          onMouseUp={handleTerminalMouseUp}
           onClick={focusTerminal}
           aria-label="Interactive terminal shell"
         >
@@ -1066,6 +1138,16 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
             </div>
           </div>
 
+          {/* Floating Auto-Copied Badge */}
+          {autoCopied && (
+            <div className={styles.termCopyToast} role="status" aria-live="polite">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Copied to clipboard</span>
+            </div>
+          )}
+
           {/* Terminal Screen Output Area */}
           <div className={styles.termScreen} data-lenis-prevent="true">
             {terminalLogs.map((log, index) => (
@@ -1104,19 +1186,61 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
                 <span className={styles.termPrompt}>
                   student@bashlab:{shortCwd(cwd)}$
                 </span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  className={styles.termRealInput}
-                  value={terminalInput}
-                  onChange={(e) => setTerminalInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  readOnly={busy}
-                  disabled={instanceStatus === 'restarting'}
-                  aria-label="Terminal command"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
+                <div className={styles.termInputWrapper} onClick={focusTerminal}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className={styles.termRealInput}
+                    value={terminalInput}
+                    onChange={(e) => {
+                      setTerminalInput(e.target.value);
+                      resetBlinkToSolid();
+                      setTimeout(updateCursorPos, 0);
+                    }}
+                    onKeyDown={(e) => {
+                      resetBlinkToSolid();
+                      handleKeyDown(e);
+                      setTimeout(updateCursorPos, 0);
+                    }}
+                    onSelect={() => {
+                      resetBlinkToSolid();
+                      updateCursorPos();
+                    }}
+                    onClick={() => {
+                      resetBlinkToSolid();
+                      updateCursorPos();
+                    }}
+                    onFocus={() => {
+                      setIsInputFocused(true);
+                      resetBlinkToSolid();
+                      updateCursorPos();
+                    }}
+                    onBlur={() => {
+                      setIsInputFocused(false);
+                      setIsTyping(false);
+                    }}
+                    readOnly={busy}
+                    disabled={instanceStatus === 'restarting'}
+                    aria-label="Terminal command"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <div className={styles.termVisualLine} aria-hidden="true">
+                    <span>{terminalInput.slice(0, cursorPos)}</span>
+                    <span
+                      className={`${styles.termBlockCursor} ${
+                        !isInputFocused || busy
+                          ? styles.termCursorInactive
+                          : isTyping
+                            ? styles.termCursorSolid
+                            : styles.termCursorBlink
+                      }`}
+                    >
+                      {terminalInput[cursorPos] || '\u00A0'}
+                    </span>
+                    <span>{terminalInput.slice(cursorPos + 1)}</span>
+                  </div>
+                </div>
               </form>
             )}
 
@@ -1129,6 +1253,7 @@ function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }
               <span><kbd className={styles.shortcutTag}>Enter</kbd> execute</span>
               <span><kbd className={styles.shortcutTag}>Ctrl+L</kbd> clear</span>
               <span><kbd className={styles.shortcutTag}>↑ / ↓</kbd> history</span>
+              <span className={styles.autoCopyHint}>Highlight to copy</span>
             </div>
 
             <a

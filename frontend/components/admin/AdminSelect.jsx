@@ -55,7 +55,7 @@ export default function AdminSelect({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        <span>{buttonText || selected?.label}</span>
+        <span className={styles.triggerText}>{buttonText || selected?.label}</span>
         <span className={`material-symbols-outlined ${styles.chevron}`} aria-hidden="true">expand_more</span>
       </button>
       {open && (
