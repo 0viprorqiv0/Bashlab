@@ -25,114 +25,124 @@ The documentation complies with the ASD-STE100 (Simplified Technical English) sp
 
 ---
 
-## 1. System Overview & Security Threat Model
+## 1. System Overview & Cybersecurity Threat Model
 
-BashLab is an interactive Computer Science training platform for Linux system engineering and security operations.
-The primary engineering challenge is safe multi-tenant Remote Code Execution (RCE).
-The platform executes untrusted student commands while protecting the host system, network, and database.
+BashLab is an interactive Computer Science cyber range and defensive learning platform.
+The system trains students in Linux system internals, defensive hardening, vulnerability analysis, and security operations.
+The primary engineering challenge is safe multi-tenant Remote Code Execution (RCE) in an untrusted educational environment.
+The architecture executes untrusted student commands while it protects the host operating system, network interfaces, and database records.
 
 ```text
 Untrusted Web Client (Browser)
       │
       ▼ (HTTPS / TLS 1.3)
-Cloudflare Edge / Reverse Proxy (Caddy Loopback Bridge)
+Cloudflare Edge / Zero-Trust Tunnel (Outbound-Only Encrypted Tunnel)
       │
       ▼
-Express 5 API Gateway (Rate Limiter, RBAC, JWT Auth Cache)
+Loopback Reverse Proxy Bridge (Caddy Header Sanitization & Strict Origin Binding)
       │
       ▼
-Admission Queue & Concurrency Limiter (4 Worker Slots, Backpressure)
+Express 5 API Gateway (Sliding-Window Rate Limiter, RBAC, JWT Claims Cache)
       │
       ▼
-Docker Runner Container (`bashlab-box`)
+Admission Queue & Concurrency Limiter (4 Execution Slots, Backpressure)
       │
       ▼
-Bubblewrap Linux Sandbox (`bwrap` Namespace & Capability Isolation)
+Docker Runner Container (`bashlab-box`, Non-Root User, 512 MiB RAM Cap)
       │
-      ├── Read-Only Root Filesystem (`/`, `/etc`, `/usr`)
-      ├── Masked Sensitive Files (`/etc/shadow`, `/proc`)
-      ├── Network Isolation (`--unshare-net`)
-      ├── Dropped Linux Capabilities (`--cap-drop ALL`)
+      ▼
+Bubblewrap Linux Sandbox (`bwrap` Namespace & Linux Capability Isolation)
+      │
+      ├── Read-Only System Mounts (`/`, `/etc`, `/usr`, `/bin`, `/lib`)
+      ├── Masked Sensitive Files (`/etc/shadow`, `/etc/gshadow`, `/proc`)
+      ├── Complete Network Isolation (`--unshare-net`, Loopback Only)
+      ├── Dropped Linux Capabilities (`--cap-drop ALL`, `PR_SET_NO_NEW_PRIVS`)
       └── Execution Constraints (3.0s Timeout, 10 MiB File Cap, 64 KB Output Cap)
 ```
 
-The system defends against five primary attack classes:
-1. **Container Breakout and Sandbox Escape:** Unauthorized access to host kernel, host files, or peer containers.
-2. **Privilege Escalation:** Vertical escalation to Administrator role and horizontal access to peer student sessions.
-3. **Resource Exhaustion (Denial of Service):** Fork bombs, CPU starvation loops, memory leaks, and disk saturation.
-4. **Network Reconnaissance:** Outbound lateral movement, port scanning, and command-and-control communication.
-5. **Data Tampering & Injection:** SQL injection, Cross-Site Scripting (XSS), and forged authorization tokens.
+### 1.1 Threat Matrix and Defensive Posture
+
+The platform defends against five primary threat categories:
+
+| Threat Category | Attack Vector | Potential Impact | BashLab Defensive Mechanism |
+|---|---|---|---|
+| **Sandbox Breakout** | Linux kernel exploit, container breakout, filesystem writes to host | Host compromise, rootkit installation | Bubblewrap namespaces, read-only system mounts, dropped Linux capabilities, unprivileged Docker container user |
+| **Privilege Escalation** | Vertical escalation to Administrator role, horizontal access to peer sessions | Data exfiltration, grading tampering, unauthorized course edits | Postgres Row Level Security (RLS), signed JWT verification, session ownership validation returning HTTP 404 |
+| **Denial of Service** | Fork bombs, CPU exhaustion loops, disk fill attacks | Host freeze, resource starvation for other students | 3.0s execution timeout (SIGKILL), 10 MiB `RLIMIT_FSIZE`, single-command session mutex, 4-worker admission queue with HTTP 503 backpressure |
+| **Network Reconnaissance** | Outbound port scanning, lateral network traversal, botnet C2 traffic | Internal network breach, scanning internal cloud services | Complete network namespace isolation (`--unshare-net`), elimination of all external routing and network interfaces |
+| **Payload Injection** | SQL injection, cross-site scripting (XSS), command parameter tampering | Database leakage, session hijack, shell injection | Parameterized database queries, sanitized Markdown parsing, memfd-based task verification eliminating shell concatenation |
 
 ---
 
 ## 2. Five Core Features
 
-### 2.1 Multi-Layered Terminal Sandbox and Auto-Grading Engine
-- **Kernel-Level Process Isolation:**
-  The engine launches commands inside Bubblewrap (`bwrap`) containers.
-  The sandbox unshares PID, mount, IPC, UTS, and network namespaces.
-- **Filesystem Immutability:**
-  The root directory, system binaries, and configuration folders remain strictly read-only.
-  The engine creates isolated `tmpfs` mounts for temporary execution files.
-  The system hides `/etc/shadow` and kernel parameters from the executing user.
-- **Zero-Network Policy:**
-  The sandbox uses `--unshare-net` to eliminate network interfaces.
-  Commands cannot open sockets, resolve external DNS, or connect to internal networks.
-- **Deterministic Auto-Grading:**
-  The grading engine inspects file contents, exit codes, and environment changes directly.
-  The engine operates without simulated browser terminals to guarantee genuine Linux execution semantics.
+### 2.1 Multi-Layer Linux Sandbox and Deterministic CTF Auto-Grading Engine
+- **Kernel-Level Isolation:**
+  The runner spawns commands inside Linux Bubblewrap (`bwrap`) sandboxes.
+  The sandbox separates PID, mount, IPC, UTS, and network namespaces.
+- **Filesystem Immutability and Data Masking:**
+  System binaries, libraries, and core configuration directories remain strictly read-only.
+  The engine allocates ephemeral `tmpfs` mounts for temporary student workspaces.
+  The sandbox masks `/etc/shadow`, `/etc/gshadow`, and sensitive `/proc` paths.
+- **Strict Zero-Network Policy:**
+  The sandbox uses `--unshare-net` to eliminate all network interfaces.
+  Student commands cannot resolve DNS, establish outbound sockets, or scan internal networks.
+- **Tamper-Resistant CTF Flag Verification:**
+  The auto-grading engine validates student task completion and Capture-The-Flag (CTF) token submissions.
+  The verifier inspects file status directly through file descriptors (`memfd_create`) to prevent shell injection during grading.
+  The engine does not use a simulated browser terminal; it executes authentic Linux system calls.
 
-### 2.2 Content Studio with Secure Curriculum Management
-- **Visual Studio Code Interface:**
-  The editor displays a file tree of courses, chapters, and lab exercises.
-  The interface includes tabbed panels for theory, task objectives, hints, and validation rules.
-- **Content Sanitization:**
-  The editor sanitizes Markdown content before rendering live previews to prevent Cross-Site Scripting (XSS).
-- **Access Boundary:**
-  Only authenticated users with the Administrator role can create, modify, or publish lab content.
-  Learner requests to Content Studio endpoints return HTTP 403 Forbidden.
+### 2.2 Content Studio with Secure Curriculum and Challenge Authoring
+- **Integrated Development Environment:**
+  The Content Studio uses a Visual Studio Code layout with a course and lesson navigation tree.
+  The editor contains four dedicated panels: theory, learning objectives, hints, and automated verification rules.
+- **Stored XSS Defense:**
+  The editor sanitizes Markdown content before rendering live previews to prevent Stored Cross-Site Scripting (XSS).
+- **Strict Role-Based Authoring Boundary:**
+  Only authenticated accounts with the Administrator role can create, modify, or publish lab challenges.
+  Learner requests to administrative authoring endpoints return HTTP 403 Forbidden.
 
-### 2.3 Identity and Role-Based Access Control (RBAC)
-- **Token-Based Authentication:**
-  The API validates signed JSON Web Tokens (JWT) for all sensitive operations.
-  Secure, HTTP-only, SameSite cookies store refresh tokens to prevent token theft via script injection.
-- **Strict Role Separation:**
-  The platform defines two discrete roles: Learner and Administrator.
-  The database layer enforces Supabase Row Level Security (RLS) on all user tables.
-- **Session Isolation:**
-  Horizontal access checks prevent learners from accessing sessions owned by other accounts.
-  Unauthorized session queries return HTTP 404 to eliminate user enumeration oracles.
-- **Account Revocation:**
-  Administrators can lock or ban compromised accounts instantly.
-  The API terminates active sessions and rejects banned credentials with HTTP 403 Forbidden.
+### 2.3 Identity, Role-Based Access Control (RBAC), and Session Shield
+- **Cryptographic Token Authentication:**
+  The API validates signed JSON Web Tokens (JWT) for all protected operations.
+  Secure, HTTP-only, SameSite cookies protect session tokens against client-side script theft.
+- **Dual-Role Boundary Enforcement:**
+  The platform separates permissions into Learner and Administrator roles.
+  The database layer enforces PostgreSQL Row Level Security (RLS) on all user data.
+- **Horizontal Access Defense (Session Shield):**
+  The API validates session ownership before executing commands or reading output.
+  Cross-user query attempts return HTTP 404 Not Found to prevent user enumeration oracles.
+- **Instantaneous Account Revocation:**
+  Administrators can lock or terminate compromised student accounts immediately.
+  The authentication middleware revokes active sessions and rejects banned credentials with HTTP 403 Forbidden.
 
-### 2.4 Security Observability and Activity Audit Trail
-- **Real-Time Session Monitoring:**
-  The admin console displays active sandboxes, executing commands, and memory utilization.
-  Administrators can terminate runaway or suspicious student sessions with one click.
+### 2.4 Security Operations Center (SOC) Observability and Audit Trail
+- **Real-Time Session Telemetry:**
+  The administrative console monitors active sandboxes, executing commands, and memory utilization.
+  Administrators can terminate runaway or suspicious student sessions with an emergency killswitch.
 - **Immutable Security Audit Log:**
   The system logs all administrative operations, role modifications, and login events.
-  Audit logs record client IP, timestamp, user ID, target entity, and outcome.
-- **Telemetry Infrastructure:**
-  A Prometheus endpoint exposes operational metrics, error rates, and queue latency.
-  Pre-configured Grafana dashboards display execution volume, runner RAM, and HTTP status codes.
+  Audit records store client IP address, timestamp, user ID, target entity, and outcome.
+- **Prometheus and Grafana Security Monitoring:**
+  The Prometheus exporter collects execution rates, error classifications, and queue latency.
+  Pre-configured Grafana dashboards display command execution volume, runner RAM, and HTTP status distributions.
 
-### 2.5 Denial-of-Service (DoS) Mitigation and Admission Control
-- **Per-Client Rate Limiting:**
-  A sliding-window rate limiter blocks brute-force authentication and request flooding.
+### 2.5 Denial-of-Service (DoS) Defense and Worker Admission Control
+- **Sliding-Window Rate Limiting:**
+  A tiered rate limiter blocks brute-force authentication attacks and API flooding.
 - **Single-Command Session Mutex:**
   The engine enforces a concurrency lock per student session.
   Concurrent command submissions on the same session return HTTP 409 Conflict.
 - **Worker Admission Queue:**
-  The system restricts execution to four parallel worker slots.
-  The queue buffers up to 32 pending execution requests with a 5.0-second timeout.
-- **Active Backpressure:**
-  When the queue exceeds capacity, the server returns HTTP 503 Service Unavailable immediately.
+  The system limits execution to four parallel worker slots.
+  The admission queue buffers up to 32 pending execution requests with a 5.0-second timeout.
+- **Active Backpressure Defense:**
+  When the queue exceeds capacity, the API returns HTTP 503 Service Unavailable immediately.
   This defense preserves system stability and protects host resources during heavy traffic bursts.
 
 ---
 
-## 3. Advanced Security Functions & Engineering
+## 3. Advanced Cybersecurity Engineering & Verification
 
 ### 3.1 Defense-in-Depth Sandbox Architecture
 
@@ -145,7 +155,17 @@ The system defends against five primary attack classes:
 | **L5: Resource Boundary** | POSIX RLIMITs & Timers | 3.0s execution timeout (SIGKILL), 10 MiB `RLIMIT_FSIZE`, 64 KB output buffer | CPU starvation, infinite loops, disk exhaustion |
 | **L6: Container Boundary** | Docker (`bashlab-box`) | Unprivileged container user (`nobody`), memory limit (512 MiB) | Host breakout, kernel memory exhaustion |
 
-### 3.2 Performance Optimization under Security Constraints
+### 3.2 Capture-The-Flag (CTF) Challenge & Flag Verification Subsystem
+- **Deterministic Challenge Verification:**
+  Each cybersecurity lab contains a deterministic flag token format (`FLAG{...}`).
+  Students submit flags to the dedicated endpoint (`POST /api/labs/:lessonId/flag`).
+- **Timing-Attack Resistance:**
+  The backend verifies flag strings using constant-time comparison to prevent side-channel timing attacks.
+- **Injection-Free Task Inspection:**
+  The grading engine inspects file contents, directory permissions, and process exit codes without passing unsanitized student input to shell interpreters.
+  Grading scripts execute via in-memory file descriptors (`memfd_create`), preventing tampering with grading binaries.
+
+### 3.3 Cryptographic Performance Optimization
 - **In-Memory JWT Verification Cache:**
   The backend caches validated token public claims for 60 seconds.
   This cache reduces authentication latency from 350 ms to less than 0.5 ms.
@@ -155,7 +175,7 @@ The system defends against five primary attack classes:
   The API spawns ephemeral Bubblewrap sandboxes inside this container.
   This design reduces command initialization latency from 2.0 seconds to under 15 ms.
 
-### 3.3 Concurrency Stress Testing and Empirical Benchmarks
+### 3.4 Concurrency Stress Testing and Empirical Benchmarks
 The engineering team conducted stress testing using the automated benchmark harness (`tests/benchmark.js`).
 The benchmark evaluated four concurrency tiers (C = 10, 20, 30, and 50):
 
@@ -171,7 +191,7 @@ The benchmark evaluated four concurrency tiers (C = 10, 20, 30, and 50):
   The container memory remained below 20 MiB across all concurrency tiers.
   The test run produced zero orphaned processes and zero container leaks.
 
-### 3.4 Penetration Testing and Security Audit
+### 3.5 Penetration Testing and Security Audit
 The automated security suite (`backend/scripts/run-pentest-audit.mjs`) evaluated 24 attack vectors.
 The system achieved a **100.0 percent pass rate (24/24 passed)**:
 
@@ -201,7 +221,7 @@ The system achieved a **100.0 percent pass rate (24/24 passed)**:
 
 ---
 
-## 4. Test Verification Evidence
+## 4. Security Assurance and Verification Evidence
 
 The directory `docs/audit_benchmark_pentest/` contains complete audit logs and execution traces:
 
@@ -262,10 +282,12 @@ The database contains two pre-configured accounts for testing and verification:
 
 ---
 
-## 6. Zero-Trust Remote Demo (Cloudflare Quick Tunnel)
+## 6. Zero-Trust Remote Architecture (Cloudflare Quick Tunnel)
 
-BashLab includes a zero-trust remote demo orchestrator.
-The controller exposes the application through an outbound-only encrypted tunnel without opening inbound firewall ports.
+BashLab includes a zero-trust remote access orchestrator.
+The controller exposes the application through an outbound-only encrypted tunnel without opening inbound firewall ports or exposing host IP addresses.
+This design eliminates external network attack surfaces, prevents port scanning of host infrastructure, and enforces end-to-end TLS 1.3 encryption.
+The local Caddy reverse proxy bridge sanitizes HTTP request headers and enforces strict origin validation before forwarding requests to local loopback sockets.
 
 ### 6.1 Start Public Tunnel
 ```bash
