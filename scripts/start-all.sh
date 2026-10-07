@@ -156,11 +156,33 @@ preflight_checks() {
 
   # Kiểm tra .env
   if [[ ! -f "${REPO_ROOT}/backend/.env" ]]; then
-    log_warn "backend/.env chưa tồn tại! Hãy kiểm tra backend/.env.example."
+    if [[ -f "${REPO_ROOT}/backend/.env.example" ]]; then
+      log_warn "backend/.env chưa tồn tại! Đang tự động sao chép từ backend/.env.example..."
+      cp "${REPO_ROOT}/backend/.env.example" "${REPO_ROOT}/backend/.env"
+    else
+      touch "${REPO_ROOT}/backend/.env"
+    fi
   fi
   if [[ ! -f "${REPO_ROOT}/frontend/.env.local" ]]; then
-    log_warn "frontend/.env.local chưa tồn tại! Hãy cấu hình Supabase keys."
+    if [[ -f "${REPO_ROOT}/frontend/.env.local.example" ]]; then
+      log_warn "frontend/.env.local chưa tồn tại! Đang tự động sao chép từ frontend/.env.local.example..."
+      cp "${REPO_ROOT}/frontend/.env.local.example" "${REPO_ROOT}/frontend/.env.local"
+    fi
   fi
+
+  # Hiển thị cảnh báo giới hạn trên môi trường Localhost
+  printf "\n${C_YELLOW}${C_BOLD}"
+  cat <<'EOF'
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ ⚠ LƯU Ý QUAN TRỌNG KHI CHẠY LOCALHOST:                                      │
+  │ • Hiện tại bạn sẽ không chạy được FULL QUYỀN trên máy cá nhân khi:          │
+  │   - Chưa cài đặt/khởi động Grafana (Port 3002)                              │
+  │   - Chưa có cấu hình cơ sở dữ liệu Supabase (PostgreSQL RLS, Auth, Keys)    │
+  │ • Để có trải nghiệm tốt nhất với đầy đủ quyền Administrator và bài lab thật:│
+  │   👉 Vui lòng liên hệ: hieuhlz9000@gmail.com để mở server Cloudflare Tunnel!│
+  └─────────────────────────────────────────────────────────────────────────────┘
+EOF
+  printf "${C_RESET}\n"
 
   log_ok "Preflight checks hoàn tất!"
 }
@@ -197,18 +219,25 @@ start_monitoring() {
     return 0
   fi
 
+  local compose_started=false
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-    docker compose -f "$MONITORING_COMPOSE" up -d
+    if docker compose -f "$MONITORING_COMPOSE" up -d 2>/dev/null; then
+      compose_started=true
+    fi
   elif command -v docker-compose >/dev/null 2>&1; then
-    docker-compose -f "$MONITORING_COMPOSE" up -d
-  else
-    log_warn "Không tìm thấy Docker Compose. Bỏ qua khởi động Prometheus/Grafana."
-    return 0
+    if docker-compose -f "$MONITORING_COMPOSE" up -d 2>/dev/null; then
+      compose_started=true
+    fi
   fi
 
-  # Chờ Prometheus sẵn sàng
-  wait_for_url "http://127.0.0.1:9090/-/ready" "Prometheus (Port 9090)" "/dev/null" 15 || log_warn "Prometheus chưa phản hồi."
-  log_ok "Stack Monitoring đang chạy (Prometheus: 9090, Grafana: 3002)."
+  if [[ "$compose_started" == "true" ]]; then
+    # Chờ Prometheus sẵn sàng (không bắt buộc)
+    wait_for_url "http://127.0.0.1:9090/-/ready" "Prometheus (Port 9090)" "/dev/null" 10 || log_warn "Prometheus chưa phản hồi (có thể tiếp tục mà không có Grafana)."
+    log_ok "Stack Monitoring đang chạy (Prometheus: 9090, Grafana: 3002)."
+  else
+    log_warn "Không thể khởi động Prometheus/Grafana (Docker Compose không sẵn sàng hoặc thiếu quyền)."
+    log_info "Hệ thống vẫn tiếp tục khởi động Web App & API bình thường."
+  fi
 }
 
 start_backend() {
@@ -421,6 +450,10 @@ do_status() {
   printf "  • Backend API Health:     ${C_CYAN}http://127.0.0.1:3001/health${C_RESET}\n"
   printf "  • Prometheus Explorer:    ${C_CYAN}http://127.0.0.1:9090${C_RESET}\n"
   printf "  • Grafana Metrics:        ${C_CYAN}http://127.0.0.1:3002${C_RESET} (User: admin / Pass: admin)\n\n"
+
+  printf "  ${C_YELLOW}${C_BOLD}⚠ LƯU Ý KHI CHẠY LOCALHOST:${C_RESET}\n"
+  printf "    • Bạn sẽ ${C_RED}không có full quyền${C_RESET} nếu máy chưa cài Grafana và chưa cấu hình Supabase.\n"
+  printf "    • Để trải nghiệm tốt nhất (đầy đủ quyền & sandbox cloud): liên hệ ${C_CYAN}${C_BOLD}hieuhlz9000@gmail.com${C_RESET} để mở server Cloudflare Tunnel!\n\n"
 }
 
 stream_live_logs() {

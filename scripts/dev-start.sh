@@ -11,6 +11,18 @@ frontend_log="$state_dir/frontend.log"
 
 mkdir -p -- "$state_dir"
 
+# Ensure .env files exist so npm run start:api does not crash
+if [[ ! -f "$repo_root/backend/.env" && -f "$repo_root/backend/.env.example" ]]; then
+  cp "$repo_root/backend/.env.example" "$repo_root/backend/.env"
+fi
+if [[ ! -f "$repo_root/frontend/.env.local" && -f "$repo_root/frontend/.env.local.example" ]]; then
+  cp "$repo_root/frontend/.env.local.example" "$repo_root/frontend/.env.local"
+fi
+
+printf '\033[1;33m[!] LƯU Ý KHI CHẠY LOCALHOST:\033[0m\n'
+printf '    Bạn sẽ không chạy được full quyền trên máy nếu chưa cài Grafana và thiếu Supabase.\n'
+printf '    Để trải nghiệm tốt nhất (full quyền & sandbox), liên hệ \033[1;36mhieuhlz9000@gmail.com\033[0m để mở Cloudflare Tunnel!\n\n'
+
 port_is_open() {
   local port=$1
   ss -ltn "sport = :$port" 2>/dev/null | grep -q ":$port"

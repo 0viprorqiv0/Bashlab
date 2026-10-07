@@ -1,5 +1,16 @@
 # BashLab — Cybersecurity Lab & Learning Platform
 
+> [!WARNING]
+> ### ⚠ QUAN TRỌNG: GIỚI HẠN MÔI TRƯỜNG CỤC BỘ (LOCALHOST) / IMPORTANT NOTICE
+>
+> **Tiếng Việt:**
+> Hiện tại, bạn **sẽ không chạy được đầy đủ tính năng và toàn bộ quyền (full permissions)** trực tiếp trên máy cá nhân nếu máy chưa cài đặt Grafana và chưa có cấu hình Supabase (PostgreSQL RLS, Authentication, Storage secrets)...
+> 👉 **Nếu bạn cần trải nghiệm đầy đủ nhất** toàn bộ tính năng quản trị, phòng lab sandbox thực tế và bài tập thực hành, vui lòng liên hệ email: **[hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com)** để yêu cầu mở server **Cloudflare Tunnel** trực tiếp!
+>
+> **English (ASD-STE100):**
+> You cannot execute all features and full permissions locally without an active Grafana service and configured Supabase credentials.
+> 👉 **To access the complete live demonstration with full permissions**, contact: **[hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com)** to request activation of the live **Cloudflare Tunnel** server.
+
 This document describes the technical architecture, security model, and verification metrics for BashLab.
 The documentation complies with the ASD-STE100 (Simplified Technical English) specification.
 
@@ -218,6 +229,9 @@ To stop all services:
 ```bash
 ./start.sh stop
 ```
+
+> [!NOTE]
+> Local execution without configured Supabase credentials and Grafana service restricts full role permissions and persistence. Contact **`hieuhlz9000@gmail.com`** to request activating the live Cloudflare demo tunnel.
 
 ### 5.2 System Endpoints
 - Web Application: `http://localhost:3000`
