@@ -137,7 +137,8 @@ The platform defends against five primary threat categories:
   The system limits execution to four parallel worker slots.
   The admission queue buffers up to 32 pending execution requests with a 5.0-second timeout.
 - **Active Backpressure Defense:**
-  When the queue exceeds capacity, the API returns HTTP 503 Service Unavailable immediately.
+  When the admission queue reaches capacity (32 pending jobs), the API rejects requests immediately with HTTP 429 Too Many Requests (`QUEUE_FULL`).
+  If a queued request waits longer than the 5.0-second queue timeout deadline, the API terminates the wait with HTTP 503 Service Unavailable (`QUEUE_TIMEOUT`).
   This defense preserves system stability and protects host resources during heavy traffic bursts.
 
 ---
@@ -153,7 +154,7 @@ The platform defends against five primary threat categories:
 | **L3: Filesystem Boundary** | Read-Only Bind Mounts | Read-only `/`, `/usr`, `/etc`; masked `/etc/shadow`; private `tmpfs` | Rootkit installation, system file modification |
 | **L4: Network Boundary** | Network Namespace Unshare | `--unshare-net` (loopback only, no external routes) | Data exfiltration, lateral scanning, botnet C2 |
 | **L5: Resource Boundary** | POSIX RLIMITs & Timers | 3.0s execution timeout (SIGKILL), 10 MiB `RLIMIT_FSIZE`, 64 KB output buffer | CPU starvation, infinite loops, disk exhaustion |
-| **L6: Container Boundary** | Docker (`bashlab-box`) | Unprivileged container user (`nobody`), memory limit (512 MiB) | Host breakout, kernel memory exhaustion |
+| **L6: Container Boundary** | Docker (`bashlab-box`) | Unprivileged container user (`student`, UID/GID 10001), memory limit (512 MiB), read-only root, no network | Host breakout, kernel memory exhaustion |
 
 ### 3.2 Capture-The-Flag (CTF) Challenge & Flag Verification Subsystem
 - **Deterministic Challenge Verification:**
@@ -184,7 +185,7 @@ The benchmark evaluated four concurrency tiers (C = 10, 20, 30, and 50):
 | **C = 10** | 30 | **100.0%** | **9.57 req/s** | **679 ms** | 1,162 ms | 4.94 MiB | Normal operation; zero queue latency |
 | **C = 20** | 60 | **100.0%** | **11.81 req/s** | **1,017 ms** | 1,674 ms | 19.06 MiB | Full worker saturation across 4 execution slots |
 | **C = 30** | 90 | **100.0%** | **10.28 req/s** | **1,618 ms** | 2,932 ms | 11.45 MiB | Queue absorption; all requests served within 5.0s |
-| **C = 50** | 150 | **72.0%** | **13.54 req/s** | **1,367 ms** | 3,521 ms | 15.42 MiB | **Active backpressure:** 42 excess requests rejected with HTTP 503 |
+| **C = 50** | 150 | **72.0%** | **13.54 req/s** | **1,367 ms** | 3,521 ms | 15.42 MiB | **Active backpressure:** 42 excess requests rejected with HTTP 429 (`QUEUE_FULL`) |
 
 - **Resource Confinement Evidence:**
   The runner container memory peaked at 19.06 MiB out of 512 MiB total allocated capacity.

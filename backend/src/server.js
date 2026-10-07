@@ -219,14 +219,6 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
     if (lessonId !== undefined && lessonId !== null && !isUuid(lessonId)) {
       throw new HttpError(400, 'INVALID_INPUT', 'lessonId must be a valid id');
     }
-<<<<<<< HEAD
-    const session = await manager.create();
-    metrics.recordSessionCreated();
-    if (auth) owners.set(session.id, req.user.id);
-    if (auth && content) {
-      const recordId = await content.service.openPracticeRecord(req.user.id, lessonId, session.id);
-      if (recordId) records.set(session.id, recordId);
-=======
 
     if (auth) {
       const active = activeSessionOf(req.user.id);
@@ -252,7 +244,6 @@ export function createApp({ manager = new SessionManager(), runner = new Sandbox
           reused: true,
         });
       }
->>>>>>> feature/full-feature-revision
     }
 
     let lease = null;
