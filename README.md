@@ -10,6 +10,17 @@
 > **English (ASD-STE100):**
 > You cannot execute all features and full permissions locally without an active Grafana service and configured Supabase credentials.
 > 👉 **To access the complete live demonstration with full permissions**, contact: **[hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com)** to request activation of the live **Cloudflare Tunnel** server.
+>
+> ---
+>
+> ### 🔑 TÀI KHOẢN TRẢI NGHIỆM HỆ THỐNG / DEMO & TEST CREDENTIALS
+>
+> Hệ thống cung cấp sẵn **02 tài khoản thử nghiệm** đã phân quyền đầy đủ trong cơ sở dữ liệu:
+>
+> | Vai trò / Role | Email đăng nhập | Mật khẩu / Password | Phạm vi quyền hạn / Permissions |
+> |---|---|---|---|
+> | 🛡️ **Quản trị viên (Administrator)** | `admin@bashlab.local` | `BashLab2026!` | **Toàn quyền Quản trị:** Truy cập `/admin`, Studio soạn thảo bài học (`/admin/studio`), Quản lý tài khoản & phân quyền (`/admin/users`), Giám sát hoạt động & Audit Trail (`/admin/activity`), Dashboard số liệu (`/dashboard`). |
+> | 🎓 **Học viên (Learner)** | `learner@bashlab.local` | `BashLab2026!` | **Quyền Học tập & Phòng Lab:** Danh mục khoá học (`/courses`), Sandbox Linux Terminal tương tác độc lập, Thực hành lệnh bảo mật, Nộp cờ xác thực CTF Flag, Xem tiến độ cá nhân. |
 
 This document describes the technical architecture, security model, and verification metrics for BashLab.
 The documentation complies with the ASD-STE100 (Simplified Technical English) specification.
@@ -241,10 +252,15 @@ To stop all services:
 
 ### 5.3 Test Credentials
 
+The database contains two pre-configured accounts for testing and verification:
+
 | Role | Email Address | Password | Permitted Operations |
 |---|---|---|---|
-| **Administrator** | `admin@bashlab.local` | `BashLab2026!` | Full Admin: `/admin`, Content Studio, User Management, Security Audit Trail |
-| **Learner** | `learner@bashlab.local` | `BashLab2026!` | Student: `/courses`, Terminal Sandbox, Course Exercises, Flag Verification |
+| **Administrator** | `admin@bashlab.local` | `BashLab2026!` | Full Admin: `/admin`, Content Studio (`/admin/studio`), User Management (`/admin/users`), Security Audit Trail (`/admin/activity`), Live Metrics (`/dashboard`) |
+| **Learner** | `learner@bashlab.local` | `BashLab2026!` | Student: Course catalog (`/courses`), Isolated Sandbox Terminal, Practice Exercises, CTF Flag Submissions, Learning Progress |
+
+> [!TIP]
+> Use `admin@bashlab.local` to inspect administrative workflows and security management. Use `learner@bashlab.local` to experience standard learner workflows and sandboxed command execution.
 
 ---
 
