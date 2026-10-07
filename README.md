@@ -1,24 +1,13 @@
 # BashLab — Cybersecurity Lab & Learning Platform
 
 > [!WARNING]
-> ### LOCAL ENVIRONMENT LIMITATIONS AND TEST CREDENTIALS
+> ### LOCAL ENVIRONMENT LIMITATIONS
 >
 > **Vietnamese:**
 > Môi trường cục bộ (localhost) không hỗ trợ đầy đủ tính năng và toàn bộ quyền hạn nếu hệ thống chưa cài đặt dịch vụ Grafana và chưa cấu hình thông tin xác thực Supabase. Để trải nghiệm hệ thống với đầy đủ quyền quản trị và môi trường sandbox, liên hệ qua email [hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com) để yêu cầu kích hoạt máy chủ Cloudflare Tunnel.
 >
 > **English:**
 > You cannot operate all system features and administrative permissions in a local environment without an active Grafana service and configured Supabase credentials. To access the complete demonstration with full permissions, contact [hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com) to request activation of the live Cloudflare Tunnel server.
->
-> ---
->
-> ### PRE-CONFIGURED TEST CREDENTIALS
->
-> The database provides two verified test accounts:
->
-> | Role | Email Address | Password | Permitted Operations |
-> |---|---|---|---|
-> | **Administrator** | `admin@bashlab.local` | `BashLab2026!` | Administrative control: `/admin`, Content Studio (`/admin/studio`), User Management (`/admin/users`), Security Audit Trail (`/admin/activity`), Metrics Dashboard (`/dashboard`). |
-> | **Learner** | `learner@bashlab.local` | `BashLab2026!` | Learner operations: Course Catalog (`/courses`), Isolated Terminal Sandbox, Course Exercises, CTF Flag Submissions, Personal Progress Tracking. |
 
 This document describes the technical architecture, security model, and verification metrics for BashLab.
 
