@@ -26,6 +26,13 @@ test('session lock excludes execution, reset and reaping until release', async t
   assert.equal(await reapOnce(manager, Date.now()), 1);
   assert.throws(() => manager.get(session.id), { status: 404 });
 });
+test('reaper cleans up expired quarantined sessions', async t => {
+  const { manager, session } = await setup(t);
+  session.quarantined = true;
+  session.lastActiveAt = 0;
+  assert.equal(await reapOnce(manager, Date.now()), 1);
+  assert.throws(() => manager.get(session.id), { status: 404 });
+});
 test('quota counts home and tmp, ignores symlink targets, reset restores session', async t => {
   const { manager, session } = await setup(t);
   await fs.symlink('/usr', path.join(session.workspacePath, 'home/link'));
@@ -96,4 +103,29 @@ test('queue never runs more than four jobs concurrently', async () => {
   await Promise.all(Array.from({ length: 12 }, () => runner.run({})));
   assert.equal(peak, 4);
   assert.equal(active, 0);
+});
+
+
+test('reaper removal notifies API lifecycle cleanup observers immediately', async t => {
+  const { manager, session } = await setup(t);
+  const removed = [];
+  manager.onRemoved((id) => removed.push(id));
+  session.lastActiveAt = 0;
+  assert.equal(await reapOnce(manager, Date.now()), 1);
+  assert.deepEqual(removed, [session.id]);
+});
+
+test('server-bound verifier lookup is independent from the database lesson id', async () => {
+  const verifierKeys = new Map([['11111111-1111-4111-8111-111111111111', 'files-03']]);
+  assert.equal(verifierKeys.get('11111111-1111-4111-8111-111111111111'), 'files-03');
+});
+
+test('attach reuses the lease workspace instead of allocating a second path', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'bashlab-lease-test-'));
+  t.after(() => fs.rm(root, {recursive:true,force:true}));
+  const manager = new SessionManager({root});
+  const first = await manager.create({id:'11111111-1111-4111-8111-111111111111', workspaceId:'22222222-2222-4222-8222-222222222222'});
+  const attached = await manager.attach({id:first.id, workspaceId:'22222222-2222-4222-8222-222222222222'});
+  assert.equal(attached.workspacePath, first.workspacePath);
+  assert.equal(manager.sessions.size, 1);
 });

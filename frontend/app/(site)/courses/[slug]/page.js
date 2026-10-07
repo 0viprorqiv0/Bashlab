@@ -1,4 +1,4 @@
-import CourseDetail from '@/components/courses/CourseDetail';
+import CourseStartRedirect from '@/components/courses/CourseStartRedirect';
 
 export function generateMetadata({ params }) {
   const courseId = params?.slug || 'shell-101';
@@ -9,6 +9,6 @@ export function generateMetadata({ params }) {
   };
 }
 
-export default function CourseDetailPage({ params }) {
-  return <CourseDetail courseId={params?.slug || 'shell-101'} />;
+export default function CourseStartPage({ params }) {
+  return <CourseStartRedirect courseId={params?.slug || 'shell-101'} />;
 }

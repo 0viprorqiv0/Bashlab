@@ -1,0 +1,22 @@
+Hãy thực hiện web search nghiên cứu chuyên sâu (deep research) và phân tích các dashboard chuẩn mực dành riêng cho TÁC GIẢ KHÓA HỌC / GIẢNG VIÊN (Curriculum & Pedagogical Analytics Dashboard) trên các nền tảng edtech thực hành kỹ thuật (như Canvas Analytics, Coursera Instructor Insights, Pluralsight Skill IQ, OverTheWire/CTF analytics, edX Insights).
+
+Bối cảnh: Hệ thống BashLab là nền tảng học thực hành Linux & Bash Shell trực tiếp qua terminal trên trình duyệt. Người dạy/tác giả lab cần đo lường hiệu quả bài học, độ khó thực tế của từng lab và phát hiện điểm tắc nghẽn học tập của học viên.
+
+Nhiệm vụ nghiên cứu:
+1. Thực hiện Web Search tìm kiếm các best practices và case studies về:
+   - "learning analytics dashboard for instructors interactive labs"
+   - "coding challenge completion funnel drop-off analysis"
+   - "measuring lab difficulty friction in technical education"
+   - "common student error analytics in bash and programming education"
+2. Xác định các dashboard và widget cụ thể bắt buộc phải vẽ cho Giảng viên / Ban Nội dung:
+   - Phễu hoàn thành bài học & Phân tích rơi rụng (Lab Completion Funnel: Drop-off rate theo từng lab, từng bước checklist/task trong lab).
+   - Chỉ số ma sát & Độ khó thực tế (Friction & Difficulty Metrics: Thời gian thực tế vs Thời lượng dự kiến, số lần submit kiểm tra trước khi pass, tỷ lệ dùng Hint/Solution).
+   - Bản đồ nhiệt lỗi câu lệnh phổ biến (Common Command Error Heatmap: Top các lệnh gõ sai cú pháp, lỗi Permission Denied, lỗi đường dẫn sai, vòng lặp vô tận).
+   - Đánh giá chất lượng lab (Lab Quality & Satisfaction Score: Đánh giá sao, tỷ lệ bỏ cuộc giữa chừng, feedback phân loại theo độ khó).
+3. Đưa ra chi tiết:
+   - Cấu trúc bố cục (Layout Wireframe / UI Architecture: Vị trí các Card, Chart, Table).
+   - Định dạng trực quan hóa (Visualization Types: Funnel Chart, Scatter Plot tương quan thời gian/tỷ lệ pass, Error Distribution Bar, Heatmap).
+   - Danh sách chỉ số đo lường (KPIs & Metrics cụ thể kèm công thức).
+   - Cấu trúc dữ liệu yêu cầu từ backend/database (JSON schema mẫu).
+
+Yêu cầu thực hiện: Suy nghĩ và nghiên cứu sâu, phân tích kỹ lưỡng, đưa ra báo cáo chi tiết, chuyên nghiệp bằng tiếng Việt (kèm thuật ngữ chuẩn quốc tế).

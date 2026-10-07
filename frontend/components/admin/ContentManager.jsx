@@ -9,6 +9,8 @@ import styles from './Admin.module.css';
 import content from './ContentManager.module.css';
 import { isValidSlug, slugify } from './slug';
 import { emptyLessonContent } from './lessonContent';
+import ContentStudio from './ContentStudio';
+import AdminSelect from './AdminSelect';
 
 function Icon({ name }) { return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>; }
 
@@ -33,7 +35,7 @@ export default function ContentManager() {
   const router = useRouter();
   const [courses, setCourses] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [tab, setTab] = useState('curriculum');
+  const [tab, setTab] = useState('studio');
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [dialog, setDialog] = useState(null);
@@ -131,13 +133,26 @@ export default function ContentManager() {
 
   return (
     <div className={content.dashboard}>
-      <header className={styles.header}>
-        <div><h1>Content<span>.</span></h1><p>Courses, chapters and lessons. Drafts are only visible to admins.</p></div>
-        <button type="button" className={styles.primaryButton} onClick={() => openDialog('course')}><Icon name="add" /> New course</button>
-      </header>
-      {error && <p className={styles.errorText} role="alert">{error}</p>}
+      {tab === 'studio' ? (
+        <ContentStudio initialCourseSlug={course?.slug} />
+      ) : (
+        <>
+          <header className={styles.header}>
+            <div><h1>Content<span>.</span></h1><p>Courses, chapters and lessons. Drafts are only visible to admins.</p></div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={() => setTab('studio')}
+              >
+                <Icon name="edit_document" /> Content Studio
+              </button>
+              <button type="button" className={styles.primaryButton} onClick={() => openDialog('course')}><Icon name="add" /> New course</button>
+            </div>
+          </header>
+          {error && <p className={styles.errorText} role="alert">{error}</p>}
 
-      <div className={content.layout}>
+          <div className={content.layout}>
         <aside className={`${styles.panel} ${content.courseAside}`} aria-label="Courses">
           <label className={content.courseSearch}>
             <span className={styles.srOnly}>Search courses</span>
@@ -228,6 +243,8 @@ export default function ContentManager() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {dialog && <div className={styles.backdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(null); }}>
         <form className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="content-dialog-title" onSubmit={submitDialog}>
@@ -268,6 +285,10 @@ function CourseForm({ course, courses, onDirty, mutate }) {
     setMessage('');
     setForm((prev) => ({ ...prev, [key]: event.target.value }));
   };
+  const select = (key) => (value) => {
+    setMessage('');
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   async function save(event) {
     event.preventDefault();
@@ -296,15 +317,15 @@ function CourseForm({ course, courses, onDirty, mutate }) {
     <section className={`${styles.panel} ${styles.panelPad} ${content.settingsPanel}`} aria-labelledby="course-form-title">
       <div className={content.treeHeader}>
         <h3 id="course-form-title">Course details</h3>
-        <label className={`${styles.field} ${content.courseStatus}`}>
-          Status
-          <select value={form.status} onChange={set('status')}>
-            <option value="draft">Draft</option>
-            <option value="upcoming">Upcoming (public teaser)</option>
-            <option value="published">Published</option>
-            <option value="hidden">Hidden</option>
-          </select>
-        </label>
+        <div className={`${styles.field} ${content.courseStatus}`}>
+          <span>Status</span>
+          <AdminSelect value={form.status} label="Status" onChange={select('status')} options={[
+            { value: 'draft', label: 'Draft' },
+            { value: 'upcoming', label: 'Upcoming (public teaser)' },
+            { value: 'published', label: 'Published' },
+            { value: 'hidden', label: 'Hidden' },
+          ]} />
+        </div>
       </div>
       <form onSubmit={save} className={content.form}>
         <div className={styles.fieldRow}>
@@ -313,16 +334,16 @@ function CourseForm({ course, courses, onDirty, mutate }) {
         </div>
         <label className={styles.field}>Description<textarea rows={3} value={form.description} onChange={set('description')} /></label>
         <div className={styles.fieldRow}>
-          <label className={styles.field}>Level
-            <select value={form.level} onChange={set('level')}>
-              <option value="">—</option><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option>
-            </select>
-          </label>
-          <label className={styles.field}>Category
-            <select value={form.category} onChange={set('category')}>
-              <option value="">—</option><option value="Core Track">Core Track</option><option value="Security">Security</option>
-            </select>
-          </label>
+          <div className={styles.field}><span>Level</span>
+            <AdminSelect value={form.level} label="Level" onChange={select('level')} options={[
+              { value: '', label: '—' }, { value: 'beginner', label: 'Beginner' }, { value: 'intermediate', label: 'Intermediate' }, { value: 'advanced', label: 'Advanced' },
+            ]} />
+          </div>
+          <div className={styles.field}><span>Category</span>
+            <AdminSelect value={form.category} label="Category" onChange={select('category')} options={[
+              { value: '', label: '—' }, { value: 'Core Track', label: 'Core Track' }, { value: 'Security', label: 'Security' },
+            ]} />
+          </div>
           <label className={styles.field}>Duration (minutes)<input type="number" min="0" value={form.duration_minutes} onChange={set('duration_minutes')} /></label>
         </div>
         <div className={content.formActions}>

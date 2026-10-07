@@ -6,13 +6,61 @@
   position: relative;
 }
 
+.viewportContainer {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  padding-top: 64px;
+  overflow: hidden;
+}
+
+.viewportMain {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #33413a transparent;
+}
+
+.viewportContainer > footer {
+  flex: none;
+  margin-top: 0;
+  padding: clamp(8px, 1.5dvh, 18px) 0;
+}
+
+.adminChromeContainer {
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
 .authMain {
   padding-top: 64px;
   flex: 1 0 auto;
 }
 
 .workspaceMain {
-  padding-top: 64px;
+  padding-top: 0;
+  height: 100vh;
+  height: 100svh;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.adminMain {
+  padding-top: 0;
   height: 100vh;
   height: 100svh;
   box-sizing: border-box;

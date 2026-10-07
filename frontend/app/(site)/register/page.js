@@ -47,7 +47,7 @@ export default function RegisterPage() {
     router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
   }
 
-  return <AuthShell title="Create your account" description="Start learning Bash with short lessons and hands-on practice.">
+  return <AuthShell visual="binary" title="Create your account" description="Start learning Bash with short lessons and hands-on practice.">
     {status === 'error' && <p className={styles.errorBox} role="alert">{errorMessage || 'Could not create your account.'}</p>}
     <form className={styles.form} onSubmit={submit} noValidate>
       <AuthField id="email" label="Email address" type="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(value) => { setEmail(value); setErrors({ ...errors, email: '' }); }} error={errors.email} />

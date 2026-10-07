@@ -33,3 +33,33 @@ test('editing the profile name updates the navbar immediately, with no reload', 
     await deleteTestUserSafe(user);
   }
 });
+
+test('long user email is constrained and truncated in navbar and dropdown', async ({ page }) => {
+  const user = await createTestUser({ prefix: 'verylonglearneremailfortestingoverflowtruncation' });
+  try {
+    await page.goto('/login');
+    const main = page.locator('main');
+    await main.getByLabel('Email address').fill(user.email);
+    await main.getByLabel('Password', { exact: true }).fill(user.password);
+    await page.getByRole('button', { name: 'Log in' }).click();
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+
+    // Open User menu dropdown
+    const userBtn = page.getByRole('button', { name: 'User menu' });
+    await expect(userBtn).toBeVisible();
+
+    // Check that userBtn has bounded width
+    const box = await userBtn.boundingBox();
+    expect(box.width).toBeLessThanOrEqual(285);
+
+    await userBtn.click();
+    await expect(page.getByRole('banner').getByText('Learner', { exact: true })).toBeVisible();
+
+    // Take screenshot of navbar with dropdown open
+    await page.screenshot({ path: '/home/light/Documents/B3/web_app/Bashlab/screenshots/navbar-user-dropdown-fixed.png' });
+    await page.screenshot({ path: '/home/light/.gemini/antigravity-cli/brain/1452835d-ecd2-4990-8c8e-966c5ec35541/navbar-user-dropdown-fixed.png' });
+  } finally {
+    await deleteTestUserSafe(user);
+  }
+});
+

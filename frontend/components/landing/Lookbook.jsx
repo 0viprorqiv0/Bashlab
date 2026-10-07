@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/authClient';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -34,7 +35,7 @@ const PAGES = [
 const RESPONSES = {
   'cat about.txt': { out: 'BashLab provides short guided lessons, real browser practice, and requirement feedback.', desc: 'Displaying text file contents with cat.' },
   'cat getting-started.txt': { out: 'Browse courses -> open a course -> choose a lesson -> start practicing.', desc: 'Getting started guide loaded.' },
-  courses: { out: 'Shell 101 — Bash Basics [Available now at /courses/shell-101]', desc: 'Explore the full course syllabus in the course section below.' },
+  courses: { out: 'Shell 101 — Bash Basics [Available now at /courses]', desc: 'Explore courses in the catalog.' },
 };
 
 function preparePingPlan(cmd) {
@@ -473,11 +474,39 @@ export default function Lookbook() {
   const [toast, setToast] = useState(null);
   const [openAcc, setOpenAcc] = useState(null);
   const [inputValue, setInputValue] = useState('');
+  const [termCursorPos, setTermCursorPos] = useState(0);
+  const [isTermFocused, setIsTermFocused] = useState(true);
+  const [isTermTyping, setIsTermTyping] = useState(false);
+  const termTypingTimerRef = useRef(null);
+
+  const resetTermBlinkToSolid = useCallback(() => {
+    setIsTermTyping(true);
+    if (termTypingTimerRef.current) clearTimeout(termTypingTimerRef.current);
+    termTypingTimerRef.current = setTimeout(() => {
+      setIsTermTyping(false);
+    }, 600);
+  }, []);
+
   const [cmdHistory, setCmdHistory] = useState(['ls', 'whoami']);
   const [historyIdx, setHistoryIdx] = useState(-1);
   const autoRunTimersRef = useRef([]);
   const autoRunActiveRef = useRef(false);
   const hasAutoRunRef = useRef(false);
+  const updateTermCursorPos = useCallback(() => {
+    if (termInputRef.current) {
+      setTermCursorPos(termInputRef.current.selectionStart ?? inputValue.length);
+    }
+  }, [inputValue.length]);
+
+  useEffect(() => {
+    updateTermCursorPos();
+  }, [inputValue, updateTermCursorPos]);
+
+  useEffect(() => {
+    return () => {
+      if (termTypingTimerRef.current) clearTimeout(termTypingTimerRef.current);
+    };
+  }, []);
 
   const cancelAutoRun = useCallback(() => {
     if (!autoRunActiveRef.current) return;
@@ -2322,6 +2351,37 @@ export default function Lookbook() {
     termInputRef.current?.focus({ preventScroll: true });
   };
 
+  const handleTermLogMouseUp = async () => {
+    if (typeof window === 'undefined') return;
+    let selectedText = window.getSelection() ? window.getSelection().toString() : '';
+    if (!selectedText && termInputRef.current && typeof termInputRef.current.selectionStart === 'number') {
+      const el = termInputRef.current;
+      if (el.selectionEnd > el.selectionStart) {
+        selectedText = el.value.substring(el.selectionStart, el.selectionEnd);
+      }
+    }
+    if (selectedText && selectedText.trim().length > 0) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(selectedText);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = selectedText;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        setToast('Copied to clipboard');
+        setTimeout(() => setToast(null), 1800);
+      } catch (err) {
+        console.warn('Auto copy failed:', err);
+      }
+    }
+  };
+
   const setSection = (i) => (el) => {
     sectionRefs.current[i] = el;
   };
@@ -2404,13 +2464,12 @@ export default function Lookbook() {
               Learn Bash one small step at a time. Try a command, understand what it does, and build confidence through guided practice.
             </p>
             <div className={styles.heroCtas}>
-              <a
-                href={firstIncompleteLab ? `/courses/shell-101/labs/${firstIncompleteLab.id}` : '/courses/shell-101'}
+              <Link
+                href="/courses"
                 className={styles.btnPrimary}
-                onClick={startLearning}
               >
                 <span>Start learning</span>
-              </a>
+              </Link>
               <button type="button" className={styles.btnSecondary} onClick={() => goTo(1)}>
                 <span>Try your first command</span>
               </button>
@@ -2582,7 +2641,7 @@ export default function Lookbook() {
                       </span>
                     </div>
                   </div>
-                  <div className={styles.termBody} onClick={handleTermLogClick}>
+                  <div className={styles.termBody} onClick={handleTermLogClick} onMouseUp={handleTermLogMouseUp}>
                     <div className={styles.termBodyInner}>
                   <div ref={logRef} className={styles.termLog} role="log" aria-live="polite" aria-label="Terminal output">
                     {logEntries.map((e, i) => {
@@ -2664,14 +2723,39 @@ export default function Lookbook() {
                                   ? (currentDir ? `root@bashlab:~/${currentDir}# ` : 'root@bashlab:~# ')
                                   : (currentDir ? `guest@bashlab:~/${currentDir}$ ` : 'guest@bashlab:~$ '))}
                         </span>
-                        <div className={styles.realTermInputWrapper}>
+                        <div className={styles.realTermInputWrapper} onClick={() => termInputRef.current?.focus()}>
                           <input
                             ref={termInputRef}
                             type="text"
                             className={styles.realTermInput}
                             value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={handleTermKeyDown}
+                            onChange={(e) => {
+                              setInputValue(e.target.value);
+                              resetTermBlinkToSolid();
+                              setTimeout(updateTermCursorPos, 0);
+                            }}
+                            onKeyDown={(e) => {
+                              resetTermBlinkToSolid();
+                              handleTermKeyDown(e);
+                              setTimeout(updateTermCursorPos, 0);
+                            }}
+                            onSelect={() => {
+                              resetTermBlinkToSolid();
+                              updateTermCursorPos();
+                            }}
+                            onClick={() => {
+                              resetTermBlinkToSolid();
+                              updateTermCursorPos();
+                            }}
+                            onFocus={() => {
+                              setIsTermFocused(true);
+                              resetTermBlinkToSolid();
+                              updateTermCursorPos();
+                            }}
+                            onBlur={() => {
+                              setIsTermFocused(false);
+                              setIsTermTyping(false);
+                            }}
                             style={
                               isWaitingPassword
                                 ? { color: 'transparent', caretColor: 'transparent', userSelect: 'none' }
@@ -2687,6 +2771,23 @@ export default function Lookbook() {
                                   : 'Terminal command input'
                             }
                           />
+                          {!isWaitingPassword && (
+                            <div className={styles.realTermVisualLine} aria-hidden="true">
+                              <span>{inputValue.slice(0, termCursorPos)}</span>
+                              <span
+                                className={`${styles.termBlockCursor} ${
+                                  !isTermFocused
+                                    ? styles.termCursorInactive
+                                    : isTermTyping
+                                      ? styles.termCursorSolid
+                                      : styles.termCursorBlink
+                                }`}
+                              >
+                                {inputValue[termCursorPos] || '\u00A0'}
+                              </span>
+                              <span>{inputValue.slice(termCursorPos + 1)}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

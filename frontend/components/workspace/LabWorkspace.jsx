@@ -1,26 +1,35 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import { useRouter, notFound } from 'next/navigation';
 import { useCourseLabs } from '@/lib/courseLabs';
 import { PageError, PageLoading } from '@/components/shared/Loading';
-import { checkSolution, createSession, endSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
+import { createSession, endSession, resetSession, runCommand, sandboxEnabled } from '@/lib/sandbox';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { authClient } from '@/lib/authClient';
+import BrandLogo from '../shared/BrandLogo';
 import styles from './LabWorkspace.module.css';
 
 const HOME = '/home/student';
 const shortCwd = (path) => (!path ? '~' : path === HOME ? '~' : path.startsWith(`${HOME}/`) ? `~${path.slice(HOME.length)}` : path);
+
+function getInitials(nameOrEmail) {
+  if (!nameOrEmail) return 'U';
+  const parts = nameOrEmail.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 // Loads the course's labs from the database (see lib/courseLabs.js) and hands
 // them to the workspace below. /labs/<n> is the lab's position; a lab slug in
 // the URL is redirected to its number.
 export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, isAdmin, loading: authLoading } = useAuth();
   const nextParam = encodeURIComponent(`/courses/${courseId}/labs/${labId}`);
-  const { loading, missing, error, labs, markDone, retry } = useCourseLabs(courseId);
+  const { loading, missing, error, labs, submitFlag, retry } = useCourseLabs(courseId);
   const lab = labs.find((item) => String(item.id) === String(labId) || item.slug === labId);
 
   // Guests must log in before opening a lab — the instant local check avoids
@@ -43,18 +52,49 @@ export default function LabWorkspace({ courseId = 'shell-101', labId = '1' }) {
   if (error) return <PageError message={`Could not load this lab: ${error}`} onRetry={retry} />;
   if (missing || !lab) notFound();
   if (String(lab.id) !== String(labId)) return <PageLoading label="Loading lab…" />;
-  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} markDone={markDone} />;
+  return <Workspace key={lab.lessonId} courseId={courseId} labId={lab.id} labs={labs} submitFlag={submitFlag} user={user} profile={profile} isAdmin={isAdmin} />;
 }
 
-function Workspace({ courseId, labId, labs, markDone }) {
+function Workspace({ courseId, labId, labs, submitFlag, user, profile, isAdmin }) {
+  const router = useRouter();
   const initialLabs = labs;
   const currentLab = initialLabs.find((item) => item.id === labId);
   const totalLabs = initialLabs.length;
 
   // Active tab on left pane
   const [activeTab, setActiveTab] = useState('instructions');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(50);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const saved = localStorage.getItem('shell101.sidebar');
+      if (saved) return saved === 'collapsed';
+      return window.matchMedia('(max-width: 600px)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+
+  const displayName = profile?.name || user?.email || 'Learner';
+  const displayRole = profile?.role === 'admin' ? 'Administrator' : 'Learner';
+  const displayPlan = profile?.role === 'admin' ? 'Administrator' : 'Learner';
+  const initials = getInitials(displayName);
+  const avatarUrl = profile?.avatar_url || null;
+
+  const [panelWidth, setPanelWidth] = useState(() => {
+    if (typeof window === 'undefined') return 40;
+    try {
+      const saved = localStorage.getItem('shell101.panel');
+      if (saved !== null) {
+        const num = Number(saved);
+        if (num >= 25 && num <= 75 && num !== 50) return num;
+      }
+    } catch {}
+    return 40;
+  });
+
   const [mobileView, setMobileView] = useState('lesson');
   const splitRef = useRef(null);
   const contentRef = useRef(null);
@@ -62,13 +102,27 @@ function Workspace({ courseId, labId, labs, markDone }) {
   const [copyError, setCopyError] = useState('');
 
   useEffect(() => {
+    function handleClickOutside(e) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
+        setAccountMenuOpen(false);
+      }
+    }
+    if (accountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [accountMenuOpen]);
+
+  async function handleLogout() {
+    setAccountMenuOpen(false);
     try {
-      const savedSidebar = localStorage.getItem('shell101.sidebar');
-      setSidebarCollapsed(savedSidebar ? savedSidebar === 'collapsed' : window.matchMedia('(max-width: 600px)').matches);
-      const savedWidth = Number(localStorage.getItem('shell101.panel'));
-      if (savedWidth >= 36 && savedWidth <= 64) setPanelWidth(savedWidth);
-    } catch { /* The workspace also works without browser storage. */ }
-  }, []);
+      await authClient.logout();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      router.push('/login');
+    }
+  }
 
   useEffect(() => () => clearTimeout(copyTimerRef.current), []);
 
@@ -88,8 +142,23 @@ function Workspace({ courseId, labId, labs, markDone }) {
     try { localStorage.setItem('shell101.sidebar', collapsed ? 'collapsed' : 'expanded'); } catch {}
   }
 
+  useEffect(() => {
+    function handleShortcut(e) {
+      if ((e.metaKey || e.ctrlKey) && ((e.shiftKey && e.key.toLowerCase() === 's') || e.key.toLowerCase() === 'b')) {
+        e.preventDefault();
+        setSidebarCollapsed((prev) => {
+          const next = !prev;
+          try { localStorage.setItem('shell101.sidebar', next ? 'collapsed' : 'expanded'); } catch {}
+          return next;
+        });
+      }
+    }
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
+
   function resizePanel(value) {
-    const width = Math.min(64, Math.max(36, value));
+    const width = Math.min(75, Math.max(25, value));
     setPanelWidth(width);
     try { localStorage.setItem('shell101.panel', String(width)); } catch {}
   }
@@ -102,7 +171,6 @@ function Workspace({ courseId, labId, labs, markDone }) {
 
   // Completed steps checklist
   const [completedSteps, setCompletedSteps] = useState(() => {
-    // If lab was already marked solved, start with all steps checked
     if (currentLab.status === 'solved') {
       return (currentLab.steps || []).map((s) => s.id);
     }
@@ -112,11 +180,16 @@ function Workspace({ courseId, labId, labs, markDone }) {
   const [isLabSolved, setIsLabSolved] = useState(currentLab.status === 'solved');
   const [copiedCode, setCopiedCode] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [instanceStatus, setInstanceStatus] = useState(sandboxEnabled ? 'restarting' : 'stopped'); // 'running' | 'stopped' | 'restarting'
+  const [instanceStatus, setInstanceStatus] = useState(sandboxEnabled ? 'restarting' : 'stopped');
   const [isMaximized, setIsMaximized] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const [flagInput, setFlagInput] = useState('');
+  const [flagBusy, setFlagBusy] = useState(false);
+  const [flagNote, setFlagNote] = useState({ kind: '', text: '' });
+  const flagInputRef = useRef(null);
   const sessionIdRef = useRef(null);
+  // Bumped whenever the instance is stopped/unmounted so a create still in flight is discarded, not adopted.
+  const generationRef = useRef(0);
 
   useEffect(() => {
     setShowHint(false);
@@ -128,27 +201,40 @@ function Workspace({ courseId, labId, labs, markDone }) {
       setInstanceStatus('stopped');
       return;
     }
+    const generation = ++generationRef.current;
+    const isStale = () => generationRef.current !== generation;
     setInstanceStatus('restarting');
-    setTerminalLogs([{ type: 'output', text: 'Booting container instance...' }]);
+    setTerminalLogs([]);
     try {
       const session = await createSession(currentLab.lessonId);
+      // The API keeps one session per learner and hands the same one back to every open, so an
+      // open that was discarded (StrictMode remount, Stop pressed meanwhile) must not delete it.
+      if (isStale()) return;
       sessionIdRef.current = session.sessionId;
       setCwd(session.cwd);
       setInstanceStatus('running');
-      setTerminalLogs((prev) => [
-        ...prev,
-        { type: 'output', text: `BashLab Cloud Shell (Ready).\nWorkspace: ${session.cwd}\nFocus commands for this lab: ${currentLab.commands.join(', ')}` }
-      ]);
       inputRef.current?.focus();
     } catch (error) {
+      if (isStale()) return;
       setInstanceStatus('stopped');
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Could not start the sandbox: ${error.message}` }]);
     }
   }
 
+  // The API forgot this session (idle timeout, admin stop, API restart): drop it
+  // so the learner gets a clear way back instead of repeating the same error.
+  function sessionGone(error) {
+    if (error.code !== 'SESSION_NOT_FOUND' && error.code !== 'SESSION_QUARANTINED') return false;
+    sessionIdRef.current = null;
+    setInstanceStatus('stopped');
+    setTerminalLogs((prev) => [...prev, { type: 'output', text: '[error] This sandbox session ended (idle timeout or restart). Click the red dot or "Start Instance" for a new one.' }]);
+    return true;
+  }
+
   // Red button: Stop / Toggle instance
   function handleToggleStopInstance() {
     if (instanceStatus === 'running' || instanceStatus === 'restarting') {
+      generationRef.current++; // discards a create that has not answered yet
       if (sessionIdRef.current) endSession(sessionIdRef.current);
       sessionIdRef.current = null;
       setInstanceStatus('stopped');
@@ -156,7 +242,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
         ...prev,
         {
           type: 'output',
-          text: `\n[Broadcast] Signal SIGTERM received. Instance container halted.\nTo boot the environment again, click the red dot or "Start Instance".`
+          text: '\n[Broadcast] Signal SIGTERM received. Instance container halted.\nTo boot the environment again, click the red dot or "Start Instance".'
         }
       ]);
     } else {
@@ -164,28 +250,51 @@ function Workspace({ courseId, labId, labs, markDone }) {
     }
   }
 
-  // Yellow button: Restart instance (resets the sandbox's filesystem/cwd, same session).
+  // Yellow button: Restart instance
   async function handleRestartInstance() {
-    if (!sessionIdRef.current) return handleStartInstance();
+    if (!sessionIdRef.current) {
+      handleStartInstance();
+      return;
+    }
     setInstanceStatus('restarting');
-    setTerminalLogs((prev) => [...prev, { type: 'output', text: '\n[System] Restarting sandbox container instance...' }]);
+    setTerminalLogs((prev) => [...prev, { type: 'output', text: '\nRestarting instance...' }]);
     try {
-      const session = await resetSession(sessionIdRef.current);
+      const session = await resetSession(sessionIdRef.current, currentLab.lessonId);
+      sessionIdRef.current = session.sessionId;
       setCwd(session.cwd);
       setInstanceStatus('running');
-      setTerminalLogs((prev) => [...prev, { type: 'output', text: 'Instance restarted successfully.' }]);
+      setTerminalLogs((prev) => [
+        ...prev,
+        { type: 'output', text: `Environment reset.\nWorkspace: ${session.cwd}` }
+      ]);
       inputRef.current?.focus();
     } catch (error) {
+      if (sessionGone(error)) return;
       setInstanceStatus('stopped');
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Restart failed: ${error.message}` }]);
     }
   }
 
-  // Open a sandbox session as soon as the lab loads; close it on the way out
-  // (lab change or navigating away) so containers do not leak.
+  // Open a sandbox session as soon as the lab loads; closing the tab ends it
   useEffect(() => {
+    const closeSession = () => {
+      if (!sessionIdRef.current) return;
+      endSession(sessionIdRef.current);
+      sessionIdRef.current = null;
+    };
     handleStartInstance();
-    return () => { if (sessionIdRef.current) endSession(sessionIdRef.current); };
+    window.addEventListener('pagehide', closeSession); // tab closed / reloaded: unmount cleanup never runs
+    // Back/forward cache restores the page without re-running effects, after pagehide closed the session.
+    const reopen = (event) => { if (event.persisted && !sessionIdRef.current) handleStartInstance(); };
+    window.addEventListener('pageshow', reopen);
+    return () => {
+      generationRef.current++; // eslint-disable-line react-hooks/exhaustive-deps
+      window.removeEventListener('pagehide', closeSession);
+      window.removeEventListener('pageshow', reopen);
+      // Leaving the lab inside the app does not delete the session: the next open (same or
+      // another lab) is answered by the learner's single session, and the reaper frees it.
+      sessionIdRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -222,76 +331,117 @@ function Workspace({ courseId, labId, labs, markDone }) {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [cmdHistory, setCmdHistory] = useState([]);
   const [terminalLogs, setTerminalLogs] = useState([]);
+  const [cursorPos, setCursorPos] = useState(0);
+  const [isInputFocused, setIsInputFocused] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimerRef = useRef(null);
+  const [autoCopied, setAutoCopied] = useState(false);
+  const autoCopyTimerRef = useRef(null);
+
+  const resetBlinkToSolid = React.useCallback(() => {
+    setIsTyping(true);
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 600);
+  }, []);
+
+  const handleTerminalMouseUp = React.useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    let selectedText = window.getSelection() ? window.getSelection().toString() : '';
+    if (!selectedText && document.activeElement && typeof document.activeElement.selectionStart === 'number') {
+      const el = document.activeElement;
+      if (el.selectionEnd > el.selectionStart) {
+        selectedText = el.value.substring(el.selectionStart, el.selectionEnd);
+      }
+    }
+    if (selectedText && selectedText.trim().length > 0) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(selectedText);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = selectedText;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        setAutoCopied(true);
+        if (autoCopyTimerRef.current) clearTimeout(autoCopyTimerRef.current);
+        autoCopyTimerRef.current = setTimeout(() => {
+          setAutoCopied(false);
+        }, 1800);
+      } catch (err) {
+        console.warn('Auto copy failed:', err);
+      }
+    }
+  }, []);
 
   const terminalEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  const updateCursorPos = React.useCallback(() => {
+    if (inputRef.current) {
+      setCursorPos(inputRef.current.selectionStart ?? terminalInput.length);
+    }
+  }, [terminalInput.length]);
+
+  useEffect(() => {
+    updateCursorPos();
+  }, [terminalInput, updateCursorPos]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (autoCopyTimerRef.current) clearTimeout(autoCopyTimerRef.current);
+    };
+  }, []);
+
   // Auto-scroll terminal to bottom
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    terminalEndRef.current?.scrollIntoView({ block: 'end' }); // no smooth scrolling: it made the screen jump after every command
   }, [terminalLogs]);
 
   // Focus input on click anywhere in terminal
   function focusTerminal() {
+    if (typeof window !== 'undefined') {
+      const sel = window.getSelection();
+      if (sel && sel.toString().trim().length > 0) return;
+    }
     inputRef.current?.focus();
+    setIsInputFocused(true);
+    updateCursorPos();
   }
 
-  // Toggle step completion manually
+  // Flag submission: the server checks the flag and, when it is right, saves the lab as done.
+  async function handleSubmitFlag(event) {
+    event.preventDefault();
+    const value = flagInput.trim();
+    if (!value || flagBusy || isLabSolved) return;
+    setFlagBusy(true);
+    setFlagNote({ kind: '', text: '' });
+    const result = await submitFlag(currentLab, value);
+    setFlagBusy(false);
+    if (result.error) {
+      setFlagNote({ kind: 'error', text: result.error.code === 'NO_FLAG' ? 'This lab has no flag yet.' : result.error.message || 'Could not check the flag. Try again.' });
+    } else if (result.correct) {
+      setIsLabSolved(true);
+      setCompletedSteps((currentLab.steps || []).map((step) => step.id));
+      setFlagInput('');
+      setFlagNote({ kind: 'ok', text: 'Correct flag. Lab completed!' });
+    } else {
+      setFlagNote({ kind: 'error', text: 'Wrong flag. Check it and try again.' });
+    }
+  }
+
+  // Toggle step completion manually (a visual checklist only: ticking steps never completes the lab)
   function toggleStep(stepId) {
-    setCompletedSteps((prev) => {
-      const next = prev.includes(stepId)
-        ? prev.filter((id) => id !== stepId)
-        : [...prev, stepId];
-
-      if (currentLab.steps && next.length === currentLab.steps.length) {
-        setIsLabSolved(true);
-      }
-      return next;
-    });
-  }
-
-  // Confirms the lab as done in progress, celebrating in the terminal log.
-  function celebrate(allIds) {
-    if (allIds) setCompletedSteps(allIds);
-    setIsLabSolved(true);
-    markDone(currentLab).then(({ error }) => {
-      if (error) setTerminalLogs((prev) => [...prev, { type: 'output', text: `[warning] Your progress could not be saved: ${error.message}` }]);
-    });
-  }
-
-  // Check solution button: runs the server-owned verifier against the real
-  // sandbox when this lab has one; otherwise falls back to the learner's own
-  // checklist (manual completion — there is nothing server-side to verify).
-  async function handleCheckSolution() {
-    if (currentLab.verifier && sessionIdRef.current) {
-      setChecking(true);
-      try {
-        const result = await checkSolution(sessionIdRef.current, currentLab.verifier);
-        if (result.passed) {
-          celebrate(currentLab.steps?.map((s) => s.id));
-          setTerminalLogs((prev) => [
-            ...prev,
-            { type: 'output', text: `\n[VERIFICATION PASSED] All ${result.checks.length} validation checks succeeded!\n✓ Sandbox state matches expected solution.\n🎉 Lab #${currentLab.id} completed.` }
-          ]);
-        } else {
-          const failed = result.checks.filter((c) => !c.passed).map((c) => `✗ ${c.name}`).join('\n');
-          setTerminalLogs((prev) => [...prev, { type: 'output', text: `\n[VERIFICATION FAILED] Not solved yet:\n${failed}` }]);
-        }
-      } catch (error) {
-        setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] Check failed: ${error.message}` }]);
-      } finally {
-        setChecking(false);
-      }
-      return;
-    }
-    if (currentLab.steps) {
-      const allIds = currentLab.steps.map((s) => s.id);
-      celebrate(allIds);
-      setTerminalLogs((prev) => [
-        ...prev,
-        { type: 'output', text: `\n[VERIFICATION PASSED] All ${allIds.length} checklist items marked complete.\n🎉 Lab #${currentLab.id} completed.` }
-      ]);
-    }
+    setCompletedSteps((prev) => (prev.includes(stepId)
+      ? prev.filter((id) => id !== stepId)
+      : [...prev, stepId]));
   }
 
   // Copy code snippet helper
@@ -307,9 +457,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
     }
   }
 
-  // Command execution engine — every line goes to the real sandbox (Docker +
-  // Bubblewrap on the backend); nothing is interpreted client-side except the
-  // terminal-local `clear` shortcut.
+  // Command execution engine
   async function handleCommandSubmit(e) {
     e.preventDefault();
     const rawCmd = terminalInput.trim();
@@ -327,9 +475,9 @@ function Workspace({ courseId, labId, labs, markDone }) {
     const promptText = `student@bashlab:${shortCwd(cwd)}$`;
     setTerminalLogs((prev) => [...prev, { type: 'cmd', prompt: promptText, text: rawCmd }]);
 
-    // Lets the checklist track along with real commands when this lab has no
-    // server verifier (manual-grading labs still deserve live feedback).
-    if (currentLab.steps) {
+    // The checklist ticks along with the commands typed, as a progress hint only:
+    // it never completes the lab (completion is reserved for the flag submission).
+    if (currentLab.steps?.length) {
       currentLab.steps.forEach((step) => {
         if (step.targetCmd && rawCmd.toLowerCase().includes(step.targetCmd.toLowerCase()) && !completedSteps.includes(step.id)) {
           setCompletedSteps((prev) => [...prev, step.id]);
@@ -350,6 +498,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
       const warning = result.quotaExceeded ? `\n[warning] ${result.quotaError}` : '';
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `${text}${warning}` }]);
     } catch (error) {
+      if (sessionGone(error)) return;
       setTerminalLogs((prev) => [...prev, { type: 'output', text: `[error] ${error.message}` }]);
     } finally {
       setBusy(false);
@@ -382,49 +531,209 @@ function Workspace({ courseId, labId, labs, markDone }) {
     }
   }
 
-  // Fill terminal input with quick chip command
-  function handleQuickCommand(cmdText) {
-    setTerminalInput(cmdText);
-    inputRef.current?.focus();
-  }
-
   const prevLabId = currentLab.id > 1 ? currentLab.id - 1 : null;
   const nextLabId = currentLab.id < totalLabs ? currentLab.id + 1 : null;
 
   return (
-    <div className={`${styles.workspacePage} ${styles.unified} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`} data-lenis-prevent="true">
-        <aside className={styles.workspaceSidebar} aria-label="Course workspace">
-          <Link href="/" className={styles.sidebarItem} aria-label="Home" data-tooltip="Home">
-            <span className="material-symbols-outlined" aria-hidden="true">home</span>
-            <span className={styles.sidebarLabel}>Home</span>
-          </Link>
-          <div className={styles.sidebarRule} />
-          <nav aria-label="Learning panels">
-            {[
-              ['lessons', 'format_list_bulleted', 'Lessons'],
-              ['instructions', 'menu_book', 'Instructions'],
-              ['solution', 'lightbulb', 'Solution'],
-            ].map(([id, icon, label]) => (
-              <button key={id} type="button" className={`${styles.sidebarItem} ${activeTab === id ? styles.sidebarItemActive : ''}`}
-                aria-label={label} aria-pressed={activeTab === id} aria-controls="learning-panel" data-tooltip={label}
-                onClick={() => selectPanel(id)}>
-                <span className="material-symbols-outlined" aria-hidden="true">{icon}</span>
-                <span className={styles.sidebarLabel}>{label}</span>
+    <div
+      className={`${styles.workspacePage} ${styles.unified} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}
+      data-lenis-prevent="true"
+      suppressHydrationWarning
+    >
+      <aside className={styles.workspaceSidebar} aria-label="Course workspace">
+        {/* Top Brand Logo: Fades smoothly between expanded brand & collapsed logo toggle */}
+        <div className={styles.sidebarBrandContainer}>
+          <div className={styles.sidebarBrandExpanded}>
+            <Link
+              href="/"
+              className={styles.sidebarBrandLink}
+              aria-label="BashLab home"
+              title="BashLab Home"
+              tabIndex={sidebarCollapsed ? -1 : 0}
+            >
+              <BrandLogo iconOnly={false} />
+            </Link>
+
+            <button
+              type="button"
+              className={styles.chatgptSidebarToggleBtn}
+              onClick={toggleSidebar}
+              aria-label="Close sidebar"
+              data-tooltip="Close sidebar"
+              title="Close sidebar (⌘+Shift+S)"
+              tabIndex={sidebarCollapsed ? -1 : 0}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                <path d="M9 3v18" />
+              </svg>
+            </button>
+          </div>
+
+          <div className={styles.sidebarBrandCollapsed}>
+            <button
+              type="button"
+              className={styles.collapsedBrandToggleBtn}
+              onClick={toggleSidebar}
+              aria-label="Expand sidebar"
+              data-tooltip="Expand sidebar"
+              title="Expand sidebar (⌘+Shift+S)"
+              tabIndex={sidebarCollapsed ? 0 : -1}
+            >
+              <span className={styles.logoDefault}>
+                <BrandLogo iconOnly={true} />
+              </span>
+              <span className={styles.logoHoverIcon}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                  <path d="M9 3v18" />
+                </svg>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.sidebarRule} />
+
+        <nav aria-label="Learning panels">
+          {[
+            ['lessons', 'format_list_bulleted', 'Lessons'],
+            ['instructions', 'menu_book', 'Instructions'],
+            ['solution', 'lightbulb', 'Solution'],
+          ].map(([id, icon, label]) => (
+            <button key={id} type="button" className={`${styles.sidebarItem} ${activeTab === id ? styles.sidebarItemActive : ''}`}
+              aria-label={label} aria-pressed={activeTab === id} aria-controls="learning-panel" data-tooltip={label}
+              onClick={() => selectPanel(id)}>
+              <span className="material-symbols-outlined" aria-hidden="true">{icon}</span>
+              <span className={styles.sidebarLabel}>{label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Bottom Account Area (ChatGPT Style) */}
+        <div ref={accountMenuRef} className={`${styles.sidebarAccountWrap} ${sidebarCollapsed ? styles.accountCollapsed : ''}`}>
+          {user ? (
+            <>
+              <button
+                type="button"
+                className={`${styles.chatgptAccountBtn} ${sidebarCollapsed ? styles.chatgptAccountCollapsed : ''}`}
+                onClick={() => setAccountMenuOpen((prev) => !prev)}
+                aria-expanded={accountMenuOpen}
+                aria-haspopup="true"
+                aria-label="User account menu"
+                title={sidebarCollapsed ? `${displayName} (${displayRole})` : undefined}
+              >
+                <div className={styles.chatgptAvatarWrap}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={displayName} className={styles.chatgptAvatarImg} />
+                  ) : (
+                    <span className={styles.chatgptAvatar}>{initials}</span>
+                  )}
+                </div>
+
+                <div className={styles.chatgptAccountMeta}>
+                  <span className={styles.chatgptAccountName}>{displayName}</span>
+                  <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
+                </div>
               </button>
-            ))}
-          </nav>
-          <a href="https://github.com/0viprorqiv0/Bashlab/issues/new" target="_blank" rel="noopener noreferrer"
-            className={`${styles.sidebarItem} ${styles.sidebarReport}`} aria-label="Report a bug (opens in a new tab)" data-tooltip="Report a bug">
-            <span className="material-symbols-outlined" aria-hidden="true">bug_report</span>
-            <span className={styles.sidebarLabel}>Report a bug</span>
-          </a>
-          <button type="button" className={`${styles.sidebarItem} ${styles.sidebarToggle}`} onClick={toggleSidebar}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!sidebarCollapsed}
-            data-tooltip={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            <span className="material-symbols-outlined" aria-hidden="true">{sidebarCollapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}</span>
-            <span className={styles.sidebarLabel}>Collapse sidebar</span>
-          </button>
-        </aside>
+
+              {accountMenuOpen && (
+                <div
+                  className={`${styles.chatgptPopover} ${
+                    sidebarCollapsed ? styles.popoverCollapsed : styles.popoverExpanded
+                  }`}
+                  role="menu"
+                >
+                  <div className={styles.popoverUserRow}>
+                    <div className={styles.chatgptAvatarWrap}>
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={displayName} className={styles.chatgptAvatarImg} />
+                      ) : (
+                        <span className={styles.chatgptAvatar}>{initials}</span>
+                      )}
+                    </div>
+                    <div className={styles.chatgptAccountMeta}>
+                      <span className={styles.chatgptAccountName}>{displayName}</span>
+                      <span className={styles.chatgptAccountPlan}>{displayPlan}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.popoverDivider} />
+
+                  <Link
+                    href="/account"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className={styles.popoverItem}
+                    role="menuitem"
+                  >
+                    <span className="material-symbols-outlined">settings</span>
+                    Settings
+                  </Link>
+
+                  <Link
+                    href="/my-learning"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className={styles.popoverItem}
+                    role="menuitem"
+                  >
+                    <span className="material-symbols-outlined">school</span>
+                    My Learning
+                  </Link>
+
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className={styles.popoverItem}
+                      role="menuitem"
+                    >
+                      <span className="material-symbols-outlined">admin_panel_settings</span>
+                      Admin Studio
+                    </Link>
+                  )}
+
+                  <div className={styles.popoverDivider} />
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className={`${styles.popoverItem} ${styles.popoverLogout}`}
+                    role="menuitem"
+                  >
+                    <span className="material-symbols-outlined">logout</span>
+                    Log out
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            sidebarCollapsed ? (
+              <Link
+                href="/login"
+                className={styles.chatgptAccountBtn}
+                style={{ width: '40px', height: '40px', padding: 0, justifyContent: 'center' }}
+                title="Log in to BashLab"
+                aria-label="Log in to BashLab"
+              >
+                <div className={styles.chatgptAvatar}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>person</span>
+                </div>
+              </Link>
+            ) : (
+              <div className={styles.guestExpanded}>
+                <Link href="/login" className={styles.workspaceLoginBtn}>
+                  <span className="material-symbols-outlined text-sm">login</span>
+                  Log in
+                </Link>
+                <Link href="/register" className={styles.workspaceSignupBtn}>
+                  Sign up
+                </Link>
+              </div>
+            )
+          )}
+        </div>
+      </aside>
+
       {/* Top Workspace Header Bar */}
       <header className={styles.topBar}>
         <div className={styles.topLeft}>
@@ -486,22 +795,10 @@ function Workspace({ courseId, labId, labs, markDone }) {
               Completed
             </span>
           )}
-
-          <button
-            type="button"
-            className={styles.checkSolutionBtn}
-            onClick={handleCheckSolution}
-            disabled={checking}
-            aria-label="Check solution"
-            title="Validate completed tasks and check solution"
-          >
-            <span className="material-symbols-outlined">verified</span>
-            <span>{checking ? 'Checking…' : 'Check Solution'}</span>
-          </button>
         </div>
       </header>
 
-      {/* 50 / 50 Split Layout */}
+      {/* Split Layout */}
       <div className={styles.mobileSwitcher} aria-label="Workspace view">
         <button type="button" aria-pressed={mobileView === 'lesson'} onClick={() => setMobileView('lesson')}>Lesson</button>
         <button type="button" aria-pressed={mobileView === 'terminal'} onClick={() => setMobileView('terminal')}>Terminal</button>
@@ -553,6 +850,8 @@ function Workspace({ courseId, labId, labs, markDone }) {
                   </div>
                 </div>
 
+                {currentLab.structured ? (
+                  <>
                 {/* Scenario / Story */}
                 <div className={styles.scenarioCard}>
                   <div className={styles.scenarioTitle}>Mission Scenario</div>
@@ -694,6 +993,14 @@ function Workspace({ courseId, labId, labs, markDone }) {
                     )}
                   </div>
                 )}
+                  </>
+                ) : (
+                  <div className={styles.legacyContent} aria-label="Lesson content">
+                    {currentLab.contentMd
+                      ? <ReactMarkdown>{currentLab.contentMd}</ReactMarkdown>
+                      : <p>No lesson instructions are available.</p>}
+                  </div>
+                )}
               </>
             ) : (
               /* Solution Walkthrough Tab */
@@ -728,15 +1035,15 @@ function Workspace({ courseId, labId, labs, markDone }) {
         </section>
 
         <div className={styles.splitHandle} role="separator" aria-label="Resize learning panel" aria-orientation="vertical"
-          aria-valuemin={36} aria-valuemax={64} aria-valuenow={Math.round(panelWidth)} aria-valuetext={`${Math.round(panelWidth)} percent`} tabIndex={0}
+          aria-valuemin={25} aria-valuemax={75} aria-valuenow={Math.round(panelWidth)} aria-valuetext={`${Math.round(panelWidth)} percent`} tabIndex={0}
           onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId); } }}
           onPointerMove={handleDividerMove}
           onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
-          onDoubleClick={() => resizePanel(50)}
+          onDoubleClick={() => resizePanel(40)}
           onKeyDown={(event) => {
             if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(event.key)) {
               event.preventDefault();
-              resizePanel(event.key === 'Home' ? 36 : event.key === 'End' ? 64 : event.key === 'Enter' ? 50 : panelWidth + (event.key === 'ArrowRight' ? 2 : -2));
+              resizePanel(event.key === 'Home' ? 25 : event.key === 'End' ? 75 : event.key === 'Enter' ? 40 : panelWidth + (event.key === 'ArrowRight' ? 2 : -2));
             }
           }} />
 
@@ -744,6 +1051,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
         <section
           className={`${styles.rightPane} ${isMaximized ? styles.rightPaneMaximized : ''}`}
           data-lenis-prevent="true"
+          onMouseUp={handleTerminalMouseUp}
           onClick={focusTerminal}
           aria-label="Interactive terminal shell"
         >
@@ -801,20 +1109,13 @@ function Workspace({ courseId, labId, labs, markDone }) {
             </div>
 
             <div className={styles.termCenter}>
-              <span className={styles.termHost}>
-                {isMaximized ? 'bashlab-sandbox: bash (full screen)' : 'bashlab-sandbox: bash (80x24)'}
-              </span>
-              {instanceStatus === 'running' ? (
-                <span className={styles.termStatusPill}>
-                  <span className={styles.termStatusDot} />
-                  Preview
-                </span>
-              ) : instanceStatus === 'restarting' ? (
+              {instanceStatus === 'restarting' && (
                 <span className={styles.termStatusPillRestarting}>
                   <span className={styles.termStatusDotRestarting} />
                   Restarting...
                 </span>
-              ) : (
+              )}
+              {instanceStatus === 'stopped' && (
                 <span className={styles.termStatusPillStopped}>
                   <span className={styles.termStatusDotStopped} />
                   Stopped
@@ -834,28 +1135,18 @@ function Workspace({ courseId, labId, labs, markDone }) {
                   <span>Restore</span>
                 </button>
               )}
-
-              <button
-                type="button"
-                className={styles.termActionBtn}
-                onClick={handleRestartInstance}
-                title="Restart Sandbox environment"
-              >
-                <span className="material-symbols-outlined">restart_alt</span>
-                <span>Reset</span>
-              </button>
-
-              <button
-                type="button"
-                className={styles.termActionBtn}
-                onClick={() => setTerminalLogs([])}
-                title="Clear screen (Ctrl+L)"
-              >
-                <span className="material-symbols-outlined">mop</span>
-                <span>Clear</span>
-              </button>
             </div>
           </div>
+
+          {/* Floating Auto-Copied Badge */}
+          {autoCopied && (
+            <div className={styles.termCopyToast} role="status" aria-live="polite">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Copied to clipboard</span>
+            </div>
+          )}
 
           {/* Terminal Screen Output Area */}
           <div className={styles.termScreen} data-lenis-prevent="true">
@@ -877,7 +1168,7 @@ function Workspace({ courseId, labId, labs, markDone }) {
               <div className={styles.stoppedBanner}>
                 <div className={styles.stoppedInfo}>
                   <span className="material-symbols-outlined text-base">power_off</span>
-                  <span>{sandboxEnabled ? 'Instance is stopped. Start instance to run commands.' : 'Sandbox not configured on this environment — mark steps complete manually below.'}</span>
+                  <span>{sandboxEnabled ? 'Instance is stopped. Start instance to run commands.' : 'Sandbox not configured on this environment: the terminal needs the API running with the sandbox enabled.'}</span>
                 </div>
                 {sandboxEnabled && (
                   <button
@@ -895,19 +1186,61 @@ function Workspace({ courseId, labId, labs, markDone }) {
                 <span className={styles.termPrompt}>
                   student@bashlab:{shortCwd(cwd)}$
                 </span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  className={styles.termRealInput}
-                  value={terminalInput}
-                  onChange={(e) => setTerminalInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={instanceStatus === 'restarting' ? 'Instance booting...' : busy ? 'running…' : 'type a bash command...'}
-                  disabled={instanceStatus === 'restarting' || busy}
-                  aria-label="Terminal command"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
+                <div className={styles.termInputWrapper} onClick={focusTerminal}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className={styles.termRealInput}
+                    value={terminalInput}
+                    onChange={(e) => {
+                      setTerminalInput(e.target.value);
+                      resetBlinkToSolid();
+                      setTimeout(updateCursorPos, 0);
+                    }}
+                    onKeyDown={(e) => {
+                      resetBlinkToSolid();
+                      handleKeyDown(e);
+                      setTimeout(updateCursorPos, 0);
+                    }}
+                    onSelect={() => {
+                      resetBlinkToSolid();
+                      updateCursorPos();
+                    }}
+                    onClick={() => {
+                      resetBlinkToSolid();
+                      updateCursorPos();
+                    }}
+                    onFocus={() => {
+                      setIsInputFocused(true);
+                      resetBlinkToSolid();
+                      updateCursorPos();
+                    }}
+                    onBlur={() => {
+                      setIsInputFocused(false);
+                      setIsTyping(false);
+                    }}
+                    readOnly={busy}
+                    disabled={instanceStatus === 'restarting'}
+                    aria-label="Terminal command"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <div className={styles.termVisualLine} aria-hidden="true">
+                    <span>{terminalInput.slice(0, cursorPos)}</span>
+                    <span
+                      className={`${styles.termBlockCursor} ${
+                        !isInputFocused || busy
+                          ? styles.termCursorInactive
+                          : isTyping
+                            ? styles.termCursorSolid
+                            : styles.termCursorBlink
+                      }`}
+                    >
+                      {terminalInput[cursorPos] || '\u00A0'}
+                    </span>
+                    <span>{terminalInput.slice(cursorPos + 1)}</span>
+                  </div>
+                </div>
               </form>
             )}
 
@@ -916,27 +1249,69 @@ function Workspace({ courseId, labId, labs, markDone }) {
 
           {/* Terminal Bottom Toolbar */}
           <div className={styles.termFooter}>
-            <div className={styles.quickChips}>
-              <span className={styles.quickLabel}>Quick Run:</span>
-              {currentLab.commands.map((cmd) => (
-                <button
-                  key={cmd}
-                  type="button"
-                  className={styles.chipBtn}
-                  onClick={() => handleQuickCommand(cmd)}
-                  title={`Run command: ${cmd}`}
-                >
-                  {cmd}
-                </button>
-              ))}
-            </div>
-
             <div className={styles.termShortcuts}>
               <span><kbd className={styles.shortcutTag}>Enter</kbd> execute</span>
               <span><kbd className={styles.shortcutTag}>Ctrl+L</kbd> clear</span>
               <span><kbd className={styles.shortcutTag}>↑ / ↓</kbd> history</span>
+              <span className={styles.autoCopyHint}>Highlight to copy</span>
             </div>
+
+            <a
+              href="https://github.com/0viprorqiv0/Bashlab/issues/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.termReportBugBtn}
+              title="Report an issue or bug (opens in a new tab)"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">bug_report</span>
+              <span>Found a bug?</span>
+            </a>
           </div>
+
+          <form className={styles.flagBar} onSubmit={handleSubmitFlag} onClick={(event) => event.stopPropagation()}> {/* the pane focuses the terminal on click; the flag box must keep its own focus */}
+            <span className={`material-symbols-outlined ${styles.flagIcon}`} aria-hidden="true">flag</span>
+            <div
+              className={`${styles.flagInputWrap} ${flagNote.kind === 'error' ? styles.flagInputWrapError : flagNote.kind === 'ok' ? styles.flagInputWrapOk : ''}`}
+              onClick={() => flagInputRef.current?.focus()}
+            >
+              <input
+                ref={flagInputRef}
+                type="text"
+                className={styles.flagInput}
+                value={isLabSolved ? 'Lab solved' : flagInput}
+                onChange={(event) => {
+                  setFlagInput(event.target.value);
+                  if (flagNote.text) setFlagNote({ kind: '', text: '' });
+                }}
+                disabled={isLabSolved || flagBusy}
+                maxLength={256}
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Flag"
+                placeholder={isLabSolved ? 'Lab solved' : 'Enter flag (e.g. BASHLAB{...})'}
+              />
+              {flagNote.text && (
+                <span
+                  className={`${styles.flagNoteInside} ${flagNote.kind === 'ok' ? styles.flagNoteOk : styles.flagNoteError}`}
+                  role="status"
+                  title={flagNote.text}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '13px', lineHeight: 1 }} aria-hidden="true">
+                    {flagNote.kind === 'ok' ? 'check_circle' : 'error'}
+                  </span>
+                  <span>{flagNote.text}</span>
+                </span>
+              )}
+            </div>
+            <button
+              type="submit"
+              className={styles.flagSubmit}
+              disabled={isLabSolved || flagBusy || !flagInput.trim()}
+              title={isLabSolved ? 'Lab completed' : 'Submit flag'}
+            >
+              {flagBusy ? 'Checking…' : 'Submit flag'}
+            </button>
+          </form>
         </section>
       </div>
     </div>

@@ -15,6 +15,11 @@ async function send(path, method, body) {
   }
 }
 
+// A lab is completed by submitting its flag; the server checks it and writes the progress.
+export const labApi = {
+  submitFlag: (lessonId, flag) => send(`/api/labs/${lessonId}/flag`, 'POST', { flag }),
+};
+
 export const progressApi = {
   done: (lessonId) => send(`/api/progress/${lessonId}`, 'PUT', { status: 'done' }),
   started: (lessonId) => send(`/api/progress/${lessonId}`, 'PUT', { status: 'in_progress' }),
@@ -26,8 +31,10 @@ export const adminApi = {
   updateCourse: (id, values) => send(`/api/admin/courses/${id}`, 'PATCH', values),
   createChapter: (courseId, values) => send(`/api/admin/courses/${courseId}/chapters`, 'POST', values),
   updateChapter: (id, values) => send(`/api/admin/chapters/${id}`, 'PATCH', values),
+  deleteChapter: (id) => send(`/api/admin/chapters/${id}`, 'DELETE'),
   createLesson: (chapterId, values) => send(`/api/admin/chapters/${chapterId}/lessons`, 'POST', values),
   updateLesson: (id, values) => send(`/api/admin/lessons/${id}`, 'PATCH', values),
+  deleteLesson: (id) => send(`/api/admin/lessons/${id}`, 'DELETE'),
   swap: (kind, a, b) => send(`/api/admin/${kind}/swap`, 'POST', { items: [a, b].map(({ id, sort_order }) => ({ id, sort_order })) }),
   setUserRole: (id, role, reason) => send(`/api/admin/users/${id}/role`, 'POST', { role, reason }),
   setUserLock: (id, locked, reason) => send(`/api/admin/users/${id}/lock`, 'POST', { locked, reason }),

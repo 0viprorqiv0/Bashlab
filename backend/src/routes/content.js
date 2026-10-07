@@ -1,6 +1,8 @@
 import express from 'express';
 import { HttpError } from '../errors.js';
 import { rateLimiter } from '../middleware/rateLimit.js';
+import { metrics } from '../services/metrics.js';
+import { checkFlag, hasFlag } from '../labs/catalog.js';
 
 // Write API for everything that used to be a direct browser -> Supabase write.
 //   PUT/DELETE /api/progress/:lessonId        learner, own rows only
@@ -16,7 +18,7 @@ export function createContentRouter({ service, dashboard, authenticate, isAdmin,
   // sandbox routes, which keep their own (smaller) body limit.
   // Per-IP first (cheap, stops token-guessing floods before they cost a
   // Supabase lookup), then per-user (one noisy account can't starve the rest).
-  router.use(['/progress', '/admin'],
+  router.use(['/progress', '/admin', '/labs'],
     rateLimiter(perIp),
     authenticate,
     rateLimiter(perUser, 60000, { key: (req) => req.user.id, message: 'Too many requests, slow down' }),
@@ -32,8 +34,41 @@ export function createContentRouter({ service, dashboard, authenticate, isAdmin,
   // ---- learner progress ----------------------------------------------------
   router.put('/progress/:lessonId', wrap(async (req, res) => {
     const user = { id: req.user.id, isAdmin: await isAdmin(req.user.id) };
+    // A lab with a flag is completed by submitting the flag, never by asking for "done".
+    if (req.body?.status === 'done' && hasFlag(await service.getLessonSlug(req.params.lessonId, user.isAdmin))) {
+      throw new HttpError(403, 'FLAG_REQUIRED', 'Submit the lab flag to complete this lab.');
+    }
     await service.markProgress(user, req.params.lessonId, req.body?.status);
     res.sendStatus(204);
+  }));
+
+  // ---- lab flags -------------------------------------------------------------
+  // A correct flag completes the lab (the server writes the progress itself).
+  // Only WRONG flags count (10 per minute per learner): guessing is throttled, while a
+  // learner who solves several labs in a row is never slowed down.
+  const wrongFlags = new Map(); // userId -> { count, reset }
+  const wrongFlagBucket = (userId, now = Date.now()) => {
+    if (wrongFlags.size > 10000) for (const [id, b] of wrongFlags) if (b.reset <= now) wrongFlags.delete(id);
+    let bucket = wrongFlags.get(userId);
+    if (!bucket || bucket.reset <= now) wrongFlags.set(userId, bucket = { count: 0, reset: now + 60000 });
+    return bucket;
+  };
+  router.post('/labs/:lessonId/flag', wrap(async (req, res) => {
+    const bucket = wrongFlagBucket(req.user.id);
+    if (bucket.count >= 10) {
+      metrics.recordRateLimit();
+      res.set('Retry-After', String(Math.ceil((bucket.reset - Date.now()) / 1000)));
+      throw new HttpError(429, 'FLAG_RATE_LIMIT', 'Too many wrong flags, wait a minute');
+    }
+    const user = { id: req.user.id, isAdmin: await isAdmin(req.user.id) };
+    const slug = await service.getLessonSlug(req.params.lessonId, user.isAdmin);
+    if (!hasFlag(slug)) throw new HttpError(404, 'NO_FLAG', 'This lab has no flag');
+    if (!checkFlag(slug, req.body?.flag)) {
+      bucket.count++;
+      return res.json({ correct: false });
+    }
+    await service.markProgress(user, req.params.lessonId, 'done');
+    res.json({ correct: true });
   }));
   router.delete('/progress/:lessonId', wrap(async (req, res) => {
     await service.clearProgress(req.user, req.params.lessonId);

@@ -1,0 +1,2448 @@
+/* ================================================================
+   BASHLAB ADMIN CONTENT STUDIO STYLESHEET
+   Matches Content panel.png layout and interaction design
+   ================================================================ */
+
+.studioWrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  background: #0A0D14;
+  color: #cccccc;
+  font-family: var(--font-body);
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: none;
+  margin: 0;
+  position: relative;
+}
+
+/* Toast notifications */
+.toastNotification {
+  position: absolute;
+  top: 48px;
+  right: 20px;
+  background: #141923;
+  border: 1px solid #68DFA0;
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  animation: slideInToast 0.2s ease-out;
+}
+
+@keyframes slideInToast {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================================================================
+   1. VSCODE TITLE BAR & NAVIGATION
+   Matches modern VSCode topmost titlebar layout:
+   [Logo]  Content  User  Activity  |  [Command Center]  |  [Actions]
+   ================================================================ */
+.vscodeTitleBar {
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
+  background: #0A0D14;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  flex-shrink: 0;
+  z-index: 50;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.titleBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.vscBrandLogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+  opacity: 0.95;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  text-decoration: none;
+}
+
+.vscBrandLogo:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.vscMenuBar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.vscMenuItem {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 400;
+  color: #cccccc;
+  padding: 5px 10px;
+  border-radius: 4px;
+  text-decoration: none;
+  line-height: 1;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.vscMenuItem:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.vscMenuItemActive {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* VSCode Central Command Center */
+.vscCommandCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  height: 36px;
+  padding: 0 16px;
+  max-width: 680px;
+  width: max-content;
+  min-width: 320px;
+  font-size: 13px;
+  color: #cccccc;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.vscCommandCenter:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.commandCenterIcon {
+  display: flex;
+  align-items: center;
+  color: #858585;
+  flex-shrink: 0;
+}
+
+.commandCenterCourseDropdownWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 260px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.commandCenterCourseTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #e6edf3;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.commandCenterCourseTrigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.commandCenterCourseTrigger:focus-visible {
+  outline: 2px solid #68DFA0;
+  outline-offset: 1px;
+}
+
+.commandCenterCourseTriggerText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.commandCenterChevron {
+  font-size: 16px;
+  color: #8b949e;
+  transition: transform 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.commandCenterChevronOpen {
+  transform: rotate(180deg);
+  color: #ffffff;
+}
+
+.commandCenterCourseMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 280px;
+  max-width: 360px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 6px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: commandDropdownIn 0.14s ease-out;
+}
+
+@keyframes commandDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.commandCenterMenuHeader {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+}
+
+.commandCenterMenuList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.commandCenterMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  box-sizing: border-box;
+}
+
+.commandCenterMenuItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.commandCenterMenuItemActive {
+  background: rgba(104, 223, 160, 0.12) !important;
+  color: #68dfa0 !important;
+  font-weight: 600;
+}
+
+.commandCenterItemTitle {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commandCenterItemCheck {
+  font-size: 16px;
+  color: #68dfa0;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.visuallyHiddenSelect {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.commandCenterSep {
+  color: #555555;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.commandCenterChapter {
+  color: #aaaaaa;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  flex-shrink: 1;
+}
+
+.commandCenterLesson {
+  color: #ffffff;
+  font-weight: 500;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  flex-shrink: 1;
+}
+
+.titleBarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.saveStatus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  transition: all 0.18s ease;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.saveStatus.saved {
+  background: rgba(104, 223, 160, 0.08);
+  border-color: rgba(104, 223, 160, 0.25);
+  color: #68DFA0;
+}
+
+.saveStatus.saving {
+  background: rgba(96, 165, 250, 0.08);
+  border-color: rgba(96, 165, 250, 0.25);
+  color: #60a5fa;
+}
+
+.saveStatus.dirty {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+.previewToggleBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cccccc;
+  border-radius: 6px;
+  height: 34px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.previewToggleBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.btnSave {
+  background: #238636;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  height: 34px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+}
+
+.btnSave:hover:not(:disabled) {
+  background: #2ea043;
+}
+
+.btnSave:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   2. THREE-COLUMN WORKSPACE LAYOUT
+   ================================================================ */
+.workspaceLayout {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  height: 100%;
+  max-height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ================================================================
+   COLUMN 1: CHATGPT-STYLE ACTIVITY RAIL (FIXED, NOT RESIZABLE)
+   ================================================================ */
+.activityBar {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  height: 100%;
+  min-height: 0;
+  background: #090C12;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 12px;
+  flex-shrink: 0;
+  user-select: none;
+  z-index: 15;
+}
+
+.activityGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.activityGroupBottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.activityDivider {
+  width: 24px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 2px 0 4px;
+}
+
+.activityBtn {
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #9ba3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 140ms ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.activityBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.activityBtn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Active State: Clean translucent pill background only, no green bar */
+.activityBtn.activityActive {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.activityBtn.activityActive:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+/* ChatGPT Web Style Tooltip */
+.activityBtn[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ececec;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  animation: chatgptTooltipIn 120ms ease;
+}
+
+@keyframes chatgptTooltipIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+
+.activityBadge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: #176B49;
+  color: #68DFA0;
+  border: 1px solid rgba(104, 223, 160, 0.4);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4.5px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.activityBadgeAmber {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: #d97706;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4.5px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.activityLabel {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+  opacity: 0.9;
+}
+
+/* Sidetab Collapsed State (Hides Folder Tree completely) */
+.sidetabColumn.sidetabCollapsed {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden !important;
+  border-right: none !important;
+}
+
+/* Dedicated Splitter Bars between panels (Explorer <-> Editor, Editor <-> Preview) */
+.columnSplitter {
+  width: 6px;
+  min-width: 6px;
+  max-width: 6px;
+  flex: 0 0 6px;
+  height: 100%;
+  cursor: col-resize;
+  background: #0A0D14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 35;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.columnSplitter:hover,
+.columnSplitter.splitterActive {
+  background: rgba(104, 223, 160, 0.2);
+  border-left-color: #68DFA0;
+}
+
+.splitterHandle {
+  width: 2px;
+  height: 36px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.15s ease;
+  pointer-events: none;
+}
+
+.columnSplitter:hover .splitterHandle,
+.columnSplitter.splitterActive .splitterHandle {
+  height: 100%;
+  border-radius: 0;
+  background: #68DFA0;
+  box-shadow: 0 0 8px rgba(104, 223, 160, 0.8);
+}
+
+/* Drag overlay preventing iframe/input pointer capture during drag */
+.dragOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  cursor: col-resize;
+  background: transparent;
+  user-select: none;
+}
+
+/* ================================================================
+   COLUMN 2: THANH FOLDER (EXPLORER - CHAPTERS & LESSONS)
+   ================================================================ */
+.sidetabColumn {
+  background: #0D111A;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidetabHeader {
+  height: 48px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0D111A;
+  flex-shrink: 0;
+}
+
+.sidetabTitle {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.sidetabHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iconBtnSmall {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.iconBtnSmall:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.sidetabSearch {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0D111A;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  width: 100%;
+  background: #141923;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: #68DFA0;
+}
+
+.sidetabTree {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 10px 8px;
+}
+
+/* Chapter group */
+.chapterBlock {
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.chapterBlock.chapterDropTarget {
+  border: 1px dashed #68DFA0 !important;
+  background: rgba(104, 223, 160, 0.08) !important;
+}
+
+.chapterHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.chapterHeader:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.chapterHeader.chapterSelected {
+  background: rgba(104, 223, 160, 0.12);
+  border-color: rgba(104, 223, 160, 0.35);
+  box-shadow: 0 0 0 1px rgba(104, 223, 160, 0.25);
+}
+
+.dragHandle {
+  color: #475569;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.chapterHeader:hover .dragHandle {
+  opacity: 1;
+  color: #94a3b8;
+}
+
+.chapterToggleBtn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+}
+
+.chapterFolderIcon {
+  color: #68DFA0;
+  display: flex;
+  align-items: center;
+}
+
+.chapterTitleText {
+  font-size: 12.5px;
+  color: #e2e8f0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chapterActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.chapterActionBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.12s;
+}
+
+.chapterHeader:hover .chapterActionBtn {
+  opacity: 1;
+}
+
+.chapterActionBtn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.chapterAddLessonBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.12s;
+}
+
+.chapterAddLessonBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.renameInput {
+  background: #141923;
+  border: 1px solid #68DFA0;
+  border-radius: 4px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  width: 100%;
+  outline: none;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 2px rgba(104, 223, 160, 0.25);
+}
+
+/* Lesson list */
+.lessonList {
+  padding-left: 14px;
+  margin-top: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+}
+
+.lessonList::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lessonItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  transition: all 0.12s ease;
+  user-select: none;
+  position: relative;
+}
+
+.lessonItem:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f1f5f9;
+}
+
+.lessonItem.lessonActive {
+  background: rgba(104, 223, 160, 0.12);
+  border: 1px solid rgba(104, 223, 160, 0.35);
+  color: #ffffff;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.lessonItem.dragging {
+  opacity: 0.35;
+  background: #141923;
+}
+
+.lessonItem.dragOverTop {
+  border-top: 2px solid #68DFA0 !important;
+}
+
+.lessonItem.dragOverBottom {
+  border-bottom: 2px solid #68DFA0 !important;
+}
+
+.lessonDragHandle {
+  color: #475569;
+  cursor: grab;
+  opacity: 0.4;
+  display: flex;
+  align-items: center;
+}
+
+.lessonItem:hover .lessonDragHandle {
+  opacity: 1;
+}
+
+.lessonItemIcon {
+  color: #64748b;
+  display: flex;
+  align-items: center;
+}
+
+.lessonItem.lessonActive .lessonItemIcon {
+  color: #68DFA0;
+}
+
+.lessonItemTitle {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lessonItemActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.itemRenameBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.12s;
+}
+
+.lessonItem:hover .itemRenameBtn {
+  opacity: 1;
+}
+
+.itemRenameBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.itemDeleteBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  border-radius: 4px;
+  padding: 0;
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.lessonItem:hover .itemDeleteBtn {
+  opacity: 1;
+  width: 20px;
+  padding: 2px 3px;
+}
+
+.itemDeleteBtn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.lessonItem.lessonSelected {
+  box-shadow: 0 0 0 1px rgba(104, 223, 160, 0.35);
+}
+
+.lessonItemBadge {
+  font-family: var(--font-code);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.badgePublished {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.badgeDraft {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.emptyChapterPrompt {
+  padding: 8px 10px;
+  font-size: 11.5px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.linkButtonSmall {
+  background: transparent;
+  border: none;
+  color: #68DFA0;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.linkButtonSmall:hover {
+  text-decoration: underline;
+}
+
+.sidetabFooter {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0d1117;
+  flex-shrink: 0;
+}
+
+.fullWidthAddBtn {
+  width: 100%;
+  background: #111622;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fullWidthAddBtn:hover {
+  background: #1a2333;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* ================================================================
+   VSCODE-STYLE EDITOR TAB BAR (Matches Example/VscodeMau.jpg)
+   ================================================================ */
+.editorTabBar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  background: #080B11;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  padding: 0 14px 0 6px;
+  box-sizing: border-box;
+  user-select: none;
+  overflow: hidden;
+  flex-shrink: 0;
+  gap: 8px;
+  position: relative;
+  z-index: 10;
+}
+
+.editorTabList {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-width: 0;
+  height: 100%;
+}
+
+.editorTabList::-webkit-scrollbar {
+  display: none;
+}
+
+.editorTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  height: 33px;
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+  /* Chỉ bo góc ở phía trên */
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  /* Tab không bật: có vạch ngăn cách phía dưới và bên phải */
+  border: 1px solid transparent;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+.editorTab:last-child {
+  border-right: none;
+}
+
+.editorTab:hover:not(.editorTabActive) {
+  background: rgba(255, 255, 255, 0.06);
+  color: #E8E9F0;
+}
+
+.editorTabActive {
+  background: #0A0D14; /* Trùng màu nền với khung làm việc */
+  color: #ffffff;
+  font-weight: 600;
+  /* Nối liền với khung làm việc: overlap vạch đáy, che vạch đáy */
+  height: 34px;
+  margin-bottom: -1px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid #0A0D14; /* Nối liền hoàn toàn với khung làm việc bên dưới */
+  border-top: 2px solid #68DFA0; /* Vạch chỉ báo tab đang hoạt động phong cách VSCode */
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  z-index: 5;
+  box-shadow: none;
+}
+
+.editorTabActive .editorTabIcon {
+  color: #68DFA0;
+}
+
+.editorTabIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.editorTabTitle {
+  white-space: nowrap;
+}
+
+.editorTabBadge {
+  background: rgba(104, 223, 160, 0.2);
+  color: #68DFA0;
+  border-radius: 10px;
+  font-size: 10px;
+  padding: 1px 5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.editorTabBadgeAmber {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border-radius: 10px;
+  font-size: 10px;
+  padding: 1px 5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.editorTabActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 10px;
+  margin-bottom: 3px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: #080B11;
+  position: relative;
+  z-index: 20;
+}
+
+.editorTabActionBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9BA3B5;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.editorTabActionBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #68DFA0;
+  border-color: rgba(104, 223, 160, 0.3);
+}
+
+/* ================================================================
+   COLUMN 3: LESSON EDITOR (MARKDOWN, OBJECTIVES, HINTS)
+   ================================================================ */
+.editorColumn {
+  background: #0A0D14;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-width: 320px;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.difficultySelect,
+.statusSelect {
+  background: #141923;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #E8E9F0;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 4px 10px;
+  height: 28px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.difficultySelect:focus,
+.statusSelect:focus {
+  border-color: #68DFA0;
+  box-shadow: 0 0 0 2px rgba(104, 223, 160, 0.2);
+}
+
+.difficultySelect:hover,
+.statusSelect:hover {
+  background: #1b2230;
+  border-color: rgba(104, 223, 160, 0.4);
+}
+
+.difficultyPicker {
+  width: 128px;
+}
+
+/* Microsoft Word Style Toolbar */
+.wordToolbar {
+  background: #090c10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbarSelect {
+  background: #111622;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 11.5px;
+  border-radius: 4px;
+  padding: 3px 6px;
+  outline: none;
+  cursor: pointer;
+  height: 26px;
+}
+
+.toolbarSelect:focus {
+  border-color: #68DFA0;
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+}
+
+.toolbarBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.toolbarBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Editor Scroll Area */
+.editorScrollArea {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Markdown textarea with line numbers gutter */
+.editorTextareaWrapper {
+  background: #06080b;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.lineNumbersGutter {
+  width: 44px;
+  padding: 12px 0;
+  text-align: right;
+  color: #475569;
+  user-select: none;
+  background: #05070a;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-code);
+  font-size: 12px;
+  line-height: 20px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.lineNumberItem {
+  padding-right: 10px;
+  height: 20px;
+}
+
+.editorTextarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 12px 16px;
+  outline: none;
+  resize: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-y: auto;
+}
+
+/* Section cards (Objectives & Hints) */
+.sectionCard {
+  background: #090c10;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+}
+
+.sectionHeaderTitle h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.sectionCountBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.sectionDescription {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Objectives checklist */
+.objectiveList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.objectiveRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #141923;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 6px 10px;
+  transition: border-color 0.15s;
+}
+
+.objectiveRow:focus-within {
+  border-color: #68DFA0;
+}
+
+.objectiveCheckbox {
+  accent-color: #68DFA0;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.objectiveTextInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.objectiveTextInput.objectiveCompleted {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
+.objectiveDeleteBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.12s;
+}
+
+.objectiveDeleteBtn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.emptySectionText {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+  padding: 6px 0;
+}
+
+/* Hints cards list */
+.hintsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hintCard {
+  background: #141923;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hintCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hintIndexBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.hintTextarea {
+  background: #0A0D14;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 8px;
+  outline: none;
+  resize: vertical;
+}
+
+.hintTextarea:focus {
+  border-color: #fbbf24;
+}
+
+/* Add Item Form (shared by Objectives & Hints) */
+.addItemForm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.addItemInput {
+  flex: 1;
+  background: #0A0D14;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 8px 12px;
+  outline: none;
+}
+
+.addItemInput:focus {
+  border-color: #68DFA0;
+  border-style: solid;
+}
+
+.addItemSubmitBtn {
+  background: #141923;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.addItemSubmitBtn:hover:not(:disabled) {
+  background: #176B49;
+  border-color: #68DFA0;
+  color: #68DFA0;
+}
+
+.addItemSubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   DEDICATED FULL VIEWS (OBJECTIVES & HINTS & TIPS)
+   ================================================================ */
+.objectivesFullView,
+.hintsFullView {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.objectivesFullView::-webkit-scrollbar,
+.hintsFullView::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.objectivesFullView::-webkit-scrollbar-track,
+.hintsFullView::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.objectivesFullView::-webkit-scrollbar-thumb,
+.hintsFullView::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+
+.panelHeroHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panelHeroTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.panelHeroTitle h2 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.panelHeroDesc {
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.progressBarTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: #68DFA0;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.orderControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.orderBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+}
+
+.orderBtn:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.orderBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.hintCardDedicated {
+  background: #0A0D14;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s ease;
+}
+
+.hintCardDedicated:focus-within {
+  border-color: #f59e0b;
+}
+
+.hintCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hintBadgeAmber {
+  font-family: var(--font-code);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.proTipBanner {
+  background: rgba(104, 223, 160, 0.08);
+  border: 1px dashed rgba(104, 223, 160, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #68DFA0;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.inputStatusBar {
+  height: 30px;
+  padding: 0 16px;
+  background: #06080b;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8592a6;
+  flex-shrink: 0;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.statusBarMetrics {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ================================================================
+   COLUMN 4: STUDENT PREVIEW (REAL-TIME UPDATE & TOGGLE)
+   ================================================================ */
+.previewColumn {
+  background: #0D111A;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.previewHeader {
+  height: 48px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0D111A;
+  flex-shrink: 0;
+}
+
+.previewTitleBlock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewLiveDot {
+  width: 8px;
+  height: 8px;
+  background: #68DFA0;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #68DFA0;
+}
+
+.previewHeadingText {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.viewportSwitcher {
+  display: flex;
+  align-items: center;
+  background: #0A0D14;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.viewportBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.viewportBtn.activeViewport {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.previewSubTabs {
+  height: 36px;
+  background: #0A0D14;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.previewSubTabBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.previewSubTabBtn.activeSubTab {
+  background: rgba(104, 223, 160, 0.15);
+  color: #68DFA0;
+  font-weight: 600;
+}
+
+.previewFrameScrollArea {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.device_desktop {
+  width: 100%;
+}
+
+.device_tablet {
+  max-width: 768px;
+}
+
+.device_mobile {
+  max-width: 375px;
+}
+
+/* Student workspace simulated view */
+.studentWorkspaceMock {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mockLessonHero {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 14px;
+}
+
+.mockTrackBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #68DFA0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mockLessonTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.mockMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.mockDifficultyBadge {
+  background: rgba(104, 223, 160, 0.15);
+  color: #68DFA0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.mockContentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.markdownLiveContainer {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #cbd5e1;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdownLiveContainer pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.mockObjectivesBox {
+  background: #0A0D14;
+  border: 1px solid rgba(104, 223, 160, 0.25);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.mockObjectivesHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.mockObjectivesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mockObjectiveItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.mockObjectiveItem input {
+  accent-color: #68DFA0;
+}
+
+.mockCheckedText {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
+.mockHintsBox {
+  background: #0A0D14;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.mockHintsHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-bottom: 10px;
+}
+
+.mockHintsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mockHintDetails {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mockHintSummary {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mockHintBody {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.2);
+  line-height: 1.5;
+}
+
+/* Terminal simulator mock */
+.mockTerminalWrapper {
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.terminalChrome {
+  background: #161b22;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.terminalDots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dotRed { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+.dotYellow { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; }
+.dotGreen { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; }
+
+.terminalTitle {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-family: var(--font-code);
+  color: #64748b;
+}
+
+.terminalBody {
+  padding: 14px;
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  color: #4ade80;
+  line-height: 1.6;
+}
+
+.termLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.termPrompt {
+  color: #68DFA0;
+  font-weight: 600;
+}
+
+.termCmd {
+  color: #ffffff;
+}
+
+.termOutput {
+  color: #94a3b8;
+  margin: 4px 0 10px 0;
+  font-size: 12px;
+}
+
+.termCursor {
+  animation: blink 1s infinite;
+  color: #4ade80;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ================================================================
+   MODALS (ADD LESSON & ADD CHAPTER)
+   ================================================================ */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modalContent {
+  width: 440px;
+  max-width: 90vw;
+  background: #0D111A;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+}
+
+.modalHeader {
+  height: 48px;
+  padding: 0 18px;
+  background: #141923;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalHeader h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modalCloseBtn:hover {
+  color: #ffffff;
+}
+
+.modalBody {
+  padding: 20px 18px;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.modalInput {
+  background: #0A0D14;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+}
+
+.modalInput:focus {
+  border-color: #68DFA0;
+}
+
+.modalFooter {
+  padding: 12px 18px;
+  background: #0D111A;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modalCancelBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.modalCancelBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.modalSubmitBtn {
+  background: #68DFA0;
+  border: none;
+  color: #0A0D14;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.modalSubmitBtn:hover:not(:disabled) {
+  background: #4ecb89;
+}
+
+.modalSubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modalDangerBtn {
+  background: #ef4444;
+  border: none;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.modalDangerBtn:hover {
+  background: #dc2626;
+}
+
+.dangerIconBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.deleteModalHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deleteConfirmMessage {
+  color: #cbd5e1;
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.deleteConfirmMessage strong {
+  color: #ffffff;
+}
+
+.deleteWarningText {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #f87171;
+}
+
+/* ================================================================
+   SLEEK INDEPENDENT PANEL SCROLLBARS
+   ================================================================ */
+.sidetabTree::-webkit-scrollbar,
+.editorScrollArea::-webkit-scrollbar,
+.previewFrameScrollArea::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sidetabTree::-webkit-scrollbar-track,
+.editorScrollArea::-webkit-scrollbar-track,
+.previewFrameScrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidetabTree::-webkit-scrollbar-thumb,
+.editorScrollArea::-webkit-scrollbar-thumb,
+.previewFrameScrollArea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+
+.sidetabTree::-webkit-scrollbar-thumb:hover,
+.editorScrollArea::-webkit-scrollbar-thumb:hover,
+.previewFrameScrollArea::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.sidetabTree,
+.editorScrollArea,
+.previewFrameScrollArea {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}

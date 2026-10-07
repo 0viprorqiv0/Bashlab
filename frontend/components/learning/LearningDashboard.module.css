@@ -1,7 +1,7 @@
 .page {
   --ink: #edf2f0;
-  --muted: #a6b1b0;
-  --line: #303a3b;
+  --muted: #9ba3b5;
+  --line: #26313d;
   --accent: #68dfa0;
   width: min(1280px, calc(100% - 64px));
   margin: auto;
@@ -18,23 +18,23 @@
 .browseLink { display: inline-flex; gap: 9px; align-items: center; font-weight: 500; font-size: 13px; }
 .browseLink:hover { color: var(--accent); }
 .browseLink > span { font-size: 18px; }
-.journey { display: flex; align-items: center; gap: 22px; padding: 22px 26px; border: 1px solid #354440; border-radius: 6px; background: #191f22; }
-.courseMark { flex: 0 0 68px; height: 70px; border: 1px solid #3e5d4f; color: var(--accent); display: flex; flex-direction: column; justify-content: center; padding: 8px 12px; font-family: var(--font-code); }
+.journey { display: flex; align-items: center; gap: 22px; padding: 22px 26px; border: 1px solid #26313d; border-radius: 10px; background: #111720; }
+.courseMark { flex: 0 0 68px; height: 70px; border: 1px solid rgba(104, 223, 160, 0.2); color: var(--accent); display: flex; flex-direction: column; justify-content: center; padding: 8px 12px; font-family: var(--font-code); background: #0c1815; border-radius: 6px; }
 .courseMark > span { font-size: 27px; line-height: 1.1; }
 .courseMark small { text-align: right; font-size: 11px; }
 .courseCopy { flex: 1; min-width: 0; }
-.courseMeta { display: flex; gap: 14px; font-size: 11px; color: #b6c5bf; }
+.courseMeta { display: flex; gap: 14px; font-size: 11px; color: #9ba3b5; }
 .courseMeta > span:first-child { display: flex; align-items: center; gap: 6px; color: var(--accent); }
 .courseMeta > span:first-child::before { content: ''; width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
 .courseCopy h2 { font-weight: 600; font-size: 24px; letter-spacing: -.025em; margin: 3px 0; line-height: 1.3; }
-.courseCopy p { color: #b6c5bf; font-size: 12px; }
+.courseCopy p { color: #9ba3b5; font-size: 12px; }
 .courseCopy p > span { padding: 0 5px; }
 .courseAction { width: 208px; flex-shrink: 0; }
-.courseAction a { display: flex; justify-content: center; align-items: center; gap: 14px; background: #176b49; color: #f1faf5; padding: 12px 16px; border-radius: 3px; font-size: 13px; font-weight: 600; transition: background 160ms; }
+.courseAction a { display: flex; justify-content: center; align-items: center; gap: 14px; background: #176b49; color: #f1faf5; padding: 12px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; transition: background 160ms; }
 .courseAction a:hover { background: #1c8058; }
 .courseAction a > span { font-size: 19px; }
-.courseProgress { height: 3px; margin-top: 12px; background: #34483e; }
-.courseProgress > span { display: block; height: 100%; width: 33.333%; background: var(--accent); }
+.courseProgress { height: 4px; margin-top: 12px; background: #1f2937; border-radius: 2px; overflow: hidden; }
+.courseProgress > span { display: block; height: 100%; width: 33.333%; background: var(--accent); border-radius: 2px; }
 .overview { padding: 23px 0; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); }
 .stats > div { padding: 0 26px; border-right: 1px solid var(--line); }
@@ -45,29 +45,29 @@
 .stats dd { margin-top: 2px; font-size: 29px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.3; }
 .stats dd small { font-size: 16px; color: var(--muted); font-weight: 400; }
 .streakStat dd, .streakStat dd small { color: var(--accent); }
-.activity { background: #181e22; border: 1px solid #354144; border-radius: 6px; overflow: hidden; }
+.activity { background: #111720; border: 1px solid #26313d; border-radius: 10px; overflow: hidden; }
 .activityHeader { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 18px; gap: 18px; }
 .activityHeader h2 { font-size: 21px; font-weight: 500; letter-spacing: -.02em; line-height: 1.3; }
 .activityHeader p { font-size: 12px; color: var(--muted); margin-top: 5px; }
 .activityHeader p > span { padding: 0 6px; }
 .activityHeader strong { color: var(--ink); font-weight: 500; }
 .activityControls { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
-.sampleLabel { font-size: 10px; color: #b3c3bd; }
+.sampleLabel { font-size: 10px; color: #9ba3b5; }
 .rangeControl { position: relative; }
-.rangeControl select { appearance: none; background: #242e30; border: 1px solid #44514e; border-radius: 4px; padding: 9px 30px 9px 12px; color: var(--ink); font-size: 12px; font-family: inherit; cursor: pointer; color-scheme: dark; }
+.rangeControl select { appearance: none; background: #161c24; border: 1px solid #2a3745; border-radius: 6px; padding: 9px 30px 9px 12px; color: var(--ink); font-size: 12px; font-family: inherit; cursor: pointer; color-scheme: dark; }
 .rangeControl > span:last-child { position: absolute; pointer-events: none; right: 8px; top: 10px; font-size: 17px; color: var(--muted); }
-.calendarArea { background: #101619; padding: 16px 24px 12px; }
-.calendarScroll { overflow-x: auto; scrollbar-color: #50685d #101619; scrollbar-width: thin; padding: 4px; }
+.calendarArea { background: #0a0d14; padding: 16px 24px 12px; }
+.calendarScroll { overflow-x: auto; scrollbar-color: #26313d #0a0d14; scrollbar-width: thin; padding: 4px; }
 .calendar { display: grid; grid-template-columns: 30px 1fr; grid-template-rows: 22px auto; gap: 4px 10px; min-width: 760px; }
 .months { grid-column: 2; display: grid; grid-template-columns: repeat(var(--weeks), minmax(0, 1fr)); font-size: 10px; color: var(--muted); gap: 4px; }
 .weekdays { display: grid; grid-template-rows: repeat(7, 1fr); gap: 4px; font-size: 10px; color: var(--muted); }
 .weekdays > span { display: flex; align-items: center; }
 .cells { display: grid; grid-template-columns: repeat(var(--weeks), minmax(0, 1fr)); grid-template-rows: repeat(7, 1fr); grid-auto-flow: column; gap: 4px; }
 .day { display: block; width: 100%; aspect-ratio: 1; border-radius: 2px; position: relative; transition: filter 120ms, outline-color 120ms; }
-.page [data-level='0'] { background: #283332; }
-.page [data-level='1'] { background: #244e3c; }
-.page [data-level='2'] { background: #28764e; }
-.page [data-level='3'] { background: #33ad70; }
+.page [data-level='0'] { background: #1c242e; }
+.page [data-level='1'] { background: #143828; }
+.page [data-level='2'] { background: #1c593b; }
+.page [data-level='3'] { background: #278854; }
 .page [data-level='4'] { background: #68dfa0; }
 .day:hover { filter: brightness(1.3); outline: 1px solid #d8f5e5; outline-offset: 2px; z-index: 1; }
 .day[aria-pressed='true'] { outline: 2px solid #ebf8f1; outline-offset: 2px; z-index: 2; }

@@ -65,6 +65,7 @@ def run(command, cwd, workspace):
             '--symlink', 'usr/sbin', '/sbin', '--symlink', 'usr/lib', '/lib',
             '--symlink', 'usr/lib64', '/lib64',
             '--ro-bind', '/etc/passwd', '/etc/passwd', '--ro-bind', '/etc/group', '/etc/group',
+            '--ro-bind', '/var/log', '/var/log',
             '--proc', '/proc', '--dev', '/dev',
             '--ro-bind', '/opt/bashlab/empty', '/dev/shm',
             '--bind', workspace + '/home', HOME, '--bind', workspace + '/tmp', '/tmp',

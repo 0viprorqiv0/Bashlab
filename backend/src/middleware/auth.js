@@ -27,6 +27,9 @@ export function requireAuth(supabase, { ttlMs = 60_000, maxEntries = 5_000, now 
     cache.delete(token);
 
     const { data, error } = await supabase.auth.getUser(token);
+    if (error?.code === 'user_banned') {
+      return next(new HttpError(403, 'ACCOUNT_LOCKED', 'Account is locked'));
+    }
     if (error || !data?.user) {
       return next(new HttpError(401, 'UNAUTHENTICATED', 'Invalid or expired token'));
     }

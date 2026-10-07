@@ -10,11 +10,20 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 // to whatever loopback name the page itself was opened with.
 function resolveBase() {
   let base = configured || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001');
-  if (typeof window !== 'undefined' && LOOPBACK.has(window.location.hostname)) {
-    try {
-      const url = new URL(base);
-      if (LOOPBACK.has(url.hostname)) { url.hostname = window.location.hostname; base = url.origin; }
-    } catch { /* relative or empty base: nothing to rewrite */ }
+  if (typeof window !== 'undefined') {
+    if (LOOPBACK.has(window.location.hostname)) {
+      try {
+        const url = new URL(base);
+        if (LOOPBACK.has(url.hostname)) { url.hostname = window.location.hostname; base = url.origin; }
+      } catch { /* relative or empty base: nothing to rewrite */ }
+    } else {
+      // Accessed via a domain/tunnel (e.g. trycloudflare.com): a loopback base is unusable from
+      // client devices, so fall back to relative path served through Caddy reverse proxy.
+      try {
+        const url = new URL(base);
+        if (LOOPBACK.has(url.hostname)) base = '';
+      } catch { /* already relative */ }
+    }
   }
   return base.replace(/\/$/, '');
 }

@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import styles from './checkout.module.css';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const COURSE_DETAILS = {
   'shell-101': {
@@ -25,6 +25,7 @@ const COURSE_DETAILS = {
 };
 
 function CheckoutContent() {
+  const { user, profile } = useAuth();
   const searchParams = useSearchParams();
   const courseParam = searchParams.get('course');
   const planParam = searchParams.get('plan') || 'individual';
@@ -66,27 +67,11 @@ function CheckoutContent() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState('');
 
-  // Prefill user details if logged in
+  // Prefill user details from the backend-backed auth context.
   useEffect(() => {
-    async function loadUser() {
-      if (!supabase) return;
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          if (user.email) setEmail(user.email);
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', user.id)
-            .maybeSingle();
-          if (profile?.name) setFullName(profile.name);
-        }
-      } catch {
-        // Fallback silently
-      }
-    }
-    loadUser();
-  }, []);
+    if (user?.email) setEmail(user.email);
+    if (profile?.name) setFullName(profile.name);
+  }, [profile?.name, user?.email]);
 
   // Pricing calculations
   const isTeam = planType === 'team';

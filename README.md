@@ -1,158 +1,290 @@
-# BashLab
+# BashLab — Cybersecurity Lab & Learning Platform
 
-Tiếng Việt | [English](README.en.md)
+> [!WARNING]
+> ### ⚠ QUAN TRỌNG: GIỚI HẠN MÔI TRƯỜNG CỤC BỘ (LOCALHOST) / IMPORTANT NOTICE
+>
+> **Tiếng Việt:**
+> Hiện tại, bạn **sẽ không chạy được đầy đủ tính năng và toàn bộ quyền (full permissions)** trực tiếp trên máy cá nhân nếu máy chưa cài đặt Grafana và chưa có cấu hình Supabase (PostgreSQL RLS, Authentication, Storage secrets)...
+> 👉 **Nếu bạn cần trải nghiệm đầy đủ nhất** toàn bộ tính năng quản trị, phòng lab sandbox thực tế và bài tập thực hành, vui lòng liên hệ email: **[hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com)** để yêu cầu mở server **Cloudflare Tunnel** trực tiếp!
+>
+> **English (ASD-STE100):**
+> You cannot execute all features and full permissions locally without an active Grafana service and configured Supabase credentials.
+> 👉 **To access the complete live demonstration with full permissions**, contact: **[hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com)** to request activation of the live **Cloudflare Tunnel** server.
 
-BashLab là nền tảng học Bash qua bài học ngắn và thực hành. Frontend dùng Supabase Auth và database; backend Node.js cung cấp API sandbox Bash chạy trong Docker.
+This document describes the technical architecture, security model, and verification metrics for BashLab.
+The documentation complies with the ASD-STE100 (Simplified Technical English) specification.
 
-## Trạng thái triển khai
+---
 
-| Thành phần | Trạng thái trong mã nguồn |
-| --- | --- |
-| Trang chủ `/` | `app/(site)/page.js` render `components/landing/Lookbook.jsx`: giới thiệu, thử lệnh, phương pháp học, Shell 101 và FAQ; có thể bật/tắt Lookbook snap |
-| Terminal trên trang chủ | Demo mô phỏng với câu trả lời có sẵn; không thực thi lệnh hệ điều hành |
-| Hiệu ứng giao diện | Có Lookbook navigation, terminal thu/phóng và các thành phần hiệu ứng; có script kiểm tra curiosity/backdrop |
-| Đăng nhập `/login` và đăng ký `/register` | Supabase Auth; sau đăng nhập learner về `/`, admin về `/admin/content` |
-| Xác minh email và khôi phục mật khẩu | Supabase Auth gửi email xác minh/đặt lại mật khẩu và xử lý liên kết |
-| Danh mục khóa học `/courses` | Đọc khóa học từ Supabase; `published` hiện là khóa đang mở, `upcoming` hiện trong Coming next cho guest và learner sau khi áp dụng migration 013 |
-| My Learning `/my-learning` | Đọc tiến độ và hoạt động từ Supabase cho tài khoản hiện tại |
-| Account & Security `/account` | Đọc/cập nhật hồ sơ và ảnh đại diện trong Supabase; hỗ trợ đặt lại mật khẩu và đăng xuất |
-| Trang 404 | Có `app/not-found.js` |
-| Giao diện 403 | Có `app/forbidden.js`; chưa có luồng phân quyền backend hay route riêng được triển khai để sử dụng giao diện này |
-| Khóa học, bài học và trang quản trị | Có trang chi tiết khóa học, workspace bài học, quản lý nội dung, người dùng và hoạt động admin |
-| Backend sandbox | Express API và Docker runner có hướng dẫn chạy trong [backend/RUNNING.md](backend/RUNNING.md); workspace hiện chưa gắn với tài khoản BashLab |
+## 1. System Overview & Security Threat Model
 
-Trang landing có terminal mô phỏng; lệnh trên landing không chạy trên hệ điều hành. Workspace Shell 101 hiện dùng terminal preview, chưa kết nối backend sandbox hoặc ghi tiến độ thực hành.
-
-Workspace Shell 101 dùng URL `/courses/shell-101/labs/<số bài>` (1–12). URL slug bài cũ tự chuyển sang URL số tương ứng.
-
-## Phân nhóm chức năng
-
-| Nhóm | Mục đích | STT trang | Screen Stitch |
-| --- | --- | --- | --- |
-| A — Giới thiệu sản phẩm | Giới thiệu BashLab và dẫn vào khóa học | 01 | 01 |
-| B — Xác thực tài khoản | Đăng nhập, đăng ký, xác minh email và khôi phục mật khẩu | 02–06 | 02–06 |
-| C — Khám phá khóa học | Duyệt khóa học, xem giáo trình và tiến độ trong từng khóa | 07–08 | 07–08 |
-| D — Học tập và thực hành | Theo dõi học tập cá nhân, tiếp tục bài và thực hành Bash | 09–10 | 09–10 |
-| E — Tài khoản cá nhân | Xem thông tin tài khoản, yêu cầu đổi mật khẩu và đăng xuất | 11 | 12 |
-| F — Quản trị nội dung | Quản lý khóa học, chương và soạn bài học | 12–13 | 14, 16 |
-| G — Quản trị vận hành | Quản lý người dùng, phiên thực hành và nhật ký quản trị | 14–15 | 17–18 |
-| H — Trang hệ thống | Thông báo truy cập không đủ quyền hoặc trang không tồn tại | 16–17 | 20–21 |
-
-Các nhóm dùng để tổ chức tài liệu và công việc, không tạo thêm trang hay chức năng. F và G dành cho quản trị viên; H dùng chung theo tình huống truy cập. STT trang khác với mã Screen Stitch từ trang 11 trở đi.
-
-## Danh mục 17 trang và chức năng theo thiết kế
-
-Bảng dưới mô tả phạm vi yêu cầu, không phải danh sách tính năng đã hoàn thành.
-
-| STT | Nhóm | Screen | Trang | Chức năng |
-| --- | --- | --- | --- | --- |
-| 01 | A | 01 | Landing | Giới thiệu sản phẩm; thử lệnh mô phỏng; giới thiệu Shell 101; FAQ; dẫn vào khóa học |
-| 02 | B | 02 | Login | `/login` xác thực qua Supabase Auth; learner về landing page `/`, admin về `/admin/content` |
-| 03 | B | 03 | Register | `/register` tạo tài khoản qua Supabase Auth và kiểm tra dữ liệu biểu mẫu |
-| 04 | B | 04 | Verify Email | `/verify-email` xử lý xác minh và gửi lại email qua Supabase Auth |
-| 05 | B | 05 | Forgot Password | `/forgot-password` gửi yêu cầu đặt lại mật khẩu qua Supabase Auth |
-| 06 | B | 06 | Reset Password | `/reset-password` cập nhật mật khẩu qua Supabase Auth sau khi mở liên kết hợp lệ |
-| 07 | C | 07 | Course Catalog | `/courses` đọc khóa từ Supabase; lọc All/Core Tracks/Security; khóa upcoming được hiển thị dạng Coming next |
-| 08 | C | 08 | Course Overview | Giới thiệu khóa; kết quả học tập; giáo trình theo chương; tiến độ và trạng thái bài; tiếp tục học |
-| 09 | D | 09 | My Learning | `/my-learning` hiển thị tiến độ và hoạt động tài khoản từ Supabase cùng liên kết danh mục khóa học |
-| 10 | D | 10 | Interactive Lesson Workspace | Đọc bài; chuyển bài; mục tiêu và gợi ý; terminal sandbox; trạng thái phiên; Check Solution và phản hồi |
-| 11 | E | 12 | Account | `/account` đọc và cập nhật hồ sơ Supabase, ảnh đại diện, cài đặt mật khẩu và đăng xuất |
-| 12 | F | 14 | Content | Trang admin quản lý khóa/chương/bài, thứ tự và trạng thái xuất bản |
-| 13 | F | 16 | Lesson Editor | Metadata bài; Markdown và xem trước; mục tiêu bài; mẫu kiểm tra; nháp/xuất bản; lưu/hủy |
-| 14 | G | 17 | Users | Trang admin tìm kiếm người dùng, đổi vai trò và khóa/mở khóa tài khoản |
-| 15 | G | 18 | Activity | Trang admin xem/dừng phiên và lọc nhật ký quản trị |
-| 16 | H | 20 | Access Denied | Thông báo người dùng không đủ quyền truy cập |
-| 17 | H | 21 | Page Not Found | Thông báo đường dẫn hoặc trang không tồn tại |
-
-My Learning vẫn là một trang riêng. Hai tab Sessions và Admin log thuộc cùng trang Activity. Terminal thực hành thật chỉ nằm trong phạm vi Workspace; demo Landing là mô phỏng.
-
-Xem diễn giải đầy đủ tại [bashlab-pages.md](bashlab-pages.md). Các liên kết ảnh `exports/stitch-2026-09-12/` trong tài liệu đó chưa có thư mục đính kèm trong repository này.
-
-## Cấu trúc repository
+BashLab is an interactive Computer Science training platform for Linux system engineering and security operations.
+The primary engineering challenge is safe multi-tenant Remote Code Execution (RCE).
+The platform executes untrusted student commands while protecting the host system, network, and database.
 
 ```text
-Bash_lab/
-├── frontend/
-│   ├── app/                 # App Router, layouts và giao diện lỗi
-│   ├── components/
-│   │   ├── courses/         # Danh mục khóa học
-│   │   ├── landing/         # Lookbook và các phần landing page
-│   │   ├── layout/          # Navbar, footer và khung trang dùng chung
-│   │   └── shared/          # Thành phần giao diện dùng chung
-│   ├── scripts/             # Kiểm tra curiosity và backdrop
-│   ├── package.json
-│   └── package-lock.json
-├── backend/README.md        # Kế hoạch backend, chưa có implementation
-├── bashlab-pages.md         # Đặc tả 17 trang theo Stitch
-├── rule.md                  # Quy tắc làm việc và Git
-├── README.md
-└── .gitignore
+Untrusted Web Client (Browser)
+      │
+      ▼ (HTTPS / TLS 1.3)
+Cloudflare Edge / Reverse Proxy (Caddy Loopback Bridge)
+      │
+      ▼
+Express 5 API Gateway (Rate Limiter, RBAC, JWT Auth Cache)
+      │
+      ▼
+Admission Queue & Concurrency Limiter (4 Worker Slots, Backpressure)
+      │
+      ▼
+Docker Runner Container (`bashlab-box`)
+      │
+      ▼
+Bubblewrap Linux Sandbox (`bwrap` Namespace & Capability Isolation)
+      │
+      ├── Read-Only Root Filesystem (`/`, `/etc`, `/usr`)
+      ├── Masked Sensitive Files (`/etc/shadow`, `/proc`)
+      ├── Network Isolation (`--unshare-net`)
+      ├── Dropped Linux Capabilities (`--cap-drop ALL`)
+      └── Execution Constraints (3.0s Timeout, 10 MiB File Cap, 64 KB Output Cap)
 ```
 
-## Công nghệ hiện có
+The system defends against five primary attack classes:
+1. **Container Breakout and Sandbox Escape:** Unauthorized access to host kernel, host files, or peer containers.
+2. **Privilege Escalation:** Vertical escalation to Administrator role and horizontal access to peer student sessions.
+3. **Resource Exhaustion (Denial of Service):** Fork bombs, CPU starvation loops, memory leaks, and disk saturation.
+4. **Network Reconnaissance:** Outbound lateral movement, port scanning, and command-and-control communication.
+5. **Data Tampering & Injection:** SQL injection, Cross-Site Scripting (XSS), and forged authorization tokens.
 
-Phiên bản khai báo trong [frontend/package.json](frontend/package.json):
+---
 
-- Next.js `14.2.5`, App Router.
-- React và React DOM `18.3.1`.
-- JavaScript/JSX, CSS Modules và global CSS.
-- Three.js `^0.170.0`; Tailwind CSS `^3.4.13`, PostCSS, Autoprefixer.
-- ESLint `8.57.0` và cấu hình Next.js.
+## 2. Five Core Features
 
-Frontend dùng Supabase Auth/Postgres; backend dùng Node.js/Express và Docker sandbox. Xem [backend/RUNNING.md](backend/RUNNING.md) để chạy API và runner.
+### 2.1 Multi-Layered Terminal Sandbox and Auto-Grading Engine
+- **Kernel-Level Process Isolation:**
+  The engine launches commands inside Bubblewrap (`bwrap`) containers.
+  The sandbox unshares PID, mount, IPC, UTS, and network namespaces.
+- **Filesystem Immutability:**
+  The root directory, system binaries, and configuration folders remain strictly read-only.
+  The engine creates isolated `tmpfs` mounts for temporary execution files.
+  The system hides `/etc/shadow` and kernel parameters from the executing user.
+- **Zero-Network Policy:**
+  The sandbox uses `--unshare-net` to eliminate network interfaces.
+  Commands cannot open sockets, resolve external DNS, or connect to internal networks.
+- **Deterministic Auto-Grading:**
+  The grading engine inspects file contents, exit codes, and environment changes directly.
+  The engine operates without simulated browser terminals to guarantee genuine Linux execution semantics.
 
-## Chạy frontend trên máy
+### 2.2 Content Studio with Secure Curriculum Management
+- **Visual Studio Code Interface:**
+  The editor displays a file tree of courses, chapters, and lab exercises.
+  The interface includes tabbed panels for theory, task objectives, hints, and validation rules.
+- **Content Sanitization:**
+  The editor sanitizes Markdown content before rendering live previews to prevent Cross-Site Scripting (XSS).
+- **Access Boundary:**
+  Only authenticated users with the Administrator role can create, modify, or publish lab content.
+  Learner requests to Content Studio endpoints return HTTP 403 Forbidden.
 
-Cần Git, Node.js/npm tương thích với phiên bản Next.js đã khóa và mạng để cài dependencies. Repository chưa khóa phiên bản Node bằng `.nvmrc` hoặc `engines`; khi cộng tác cần thống nhất phiên bản dùng trong môi trường kiểm thử.
+### 2.3 Identity and Role-Based Access Control (RBAC)
+- **Token-Based Authentication:**
+  The API validates signed JSON Web Tokens (JWT) for all sensitive operations.
+  Secure, HTTP-only, SameSite cookies store refresh tokens to prevent token theft via script injection.
+- **Strict Role Separation:**
+  The platform defines two discrete roles: Learner and Administrator.
+  The database layer enforces Supabase Row Level Security (RLS) on all user tables.
+- **Session Isolation:**
+  Horizontal access checks prevent learners from accessing sessions owned by other accounts.
+  Unauthorized session queries return HTTP 404 to eliminate user enumeration oracles.
+- **Account Revocation:**
+  Administrators can lock or ban compromised accounts instantly.
+  The API terminates active sessions and rejects banned credentials with HTTP 403 Forbidden.
 
+### 2.4 Security Observability and Activity Audit Trail
+- **Real-Time Session Monitoring:**
+  The admin console displays active sandboxes, executing commands, and memory utilization.
+  Administrators can terminate runaway or suspicious student sessions with one click.
+- **Immutable Security Audit Log:**
+  The system logs all administrative operations, role modifications, and login events.
+  Audit logs record client IP, timestamp, user ID, target entity, and outcome.
+- **Telemetry Infrastructure:**
+  A Prometheus endpoint exposes operational metrics, error rates, and queue latency.
+  Pre-configured Grafana dashboards display execution volume, runner RAM, and HTTP status codes.
+
+### 2.5 Denial-of-Service (DoS) Mitigation and Admission Control
+- **Per-Client Rate Limiting:**
+  A sliding-window rate limiter blocks brute-force authentication and request flooding.
+- **Single-Command Session Mutex:**
+  The engine enforces a concurrency lock per student session.
+  Concurrent command submissions on the same session return HTTP 409 Conflict.
+- **Worker Admission Queue:**
+  The system restricts execution to four parallel worker slots.
+  The queue buffers up to 32 pending execution requests with a 5.0-second timeout.
+- **Active Backpressure:**
+  When the queue exceeds capacity, the server returns HTTP 503 Service Unavailable immediately.
+  This defense preserves system stability and protects host resources during heavy traffic bursts.
+
+---
+
+## 3. Advanced Security Functions & Engineering
+
+### 3.1 Defense-in-Depth Sandbox Architecture
+
+| Security Layer | Technology | Defensive Mechanism | Threat Mitigated |
+|---|---|---|---|
+| **L1: Process Boundary** | Linux Bubblewrap (`bwrap`) | Kernel namespaces (PID, mount, IPC, UTS, net) | Process snooping, peer container interference |
+| **L2: Privilege Boundary** | Linux Capabilities | Drop all capabilities (`--cap-drop ALL`), set `PR_SET_NO_NEW_PRIVS` | Privilege escalation, `setuid` binary abuse |
+| **L3: Filesystem Boundary** | Read-Only Bind Mounts | Read-only `/`, `/usr`, `/etc`; masked `/etc/shadow`; private `tmpfs` | Rootkit installation, system file modification |
+| **L4: Network Boundary** | Network Namespace Unshare | `--unshare-net` (loopback only, no external routes) | Data exfiltration, lateral scanning, botnet C2 |
+| **L5: Resource Boundary** | POSIX RLIMITs & Timers | 3.0s execution timeout (SIGKILL), 10 MiB `RLIMIT_FSIZE`, 64 KB output buffer | CPU starvation, infinite loops, disk exhaustion |
+| **L6: Container Boundary** | Docker (`bashlab-box`) | Unprivileged container user (`nobody`), memory limit (512 MiB) | Host breakout, kernel memory exhaustion |
+
+### 3.2 Performance Optimization under Security Constraints
+- **In-Memory JWT Verification Cache:**
+  The backend caches validated token public claims for 60 seconds.
+  This cache reduces authentication latency from 350 ms to less than 0.5 ms.
+  The cache removes 99.8 percent of remote database authentication requests.
+- **Warm Container Execution Architecture:**
+  The host maintains one active, pre-warmed runner container (`bashlab-box`).
+  The API spawns ephemeral Bubblewrap sandboxes inside this container.
+  This design reduces command initialization latency from 2.0 seconds to under 15 ms.
+
+### 3.3 Concurrency Stress Testing and Empirical Benchmarks
+The engineering team conducted stress testing using the automated benchmark harness (`tests/benchmark.js`).
+The benchmark evaluated four concurrency tiers (C = 10, 20, 30, and 50):
+
+| Concurrency Tier | Total Requests | Success Rate | Throughput (req/s) | Median Latency (p50) | 95th Percentile (p95) | Peak Runner RAM | Defense & Stability Behavior |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **C = 10** | 30 | **100.0%** | **9.57 req/s** | **679 ms** | 1,162 ms | 4.94 MiB | Normal operation; zero queue latency |
+| **C = 20** | 60 | **100.0%** | **11.81 req/s** | **1,017 ms** | 1,674 ms | 19.06 MiB | Full worker saturation across 4 execution slots |
+| **C = 30** | 90 | **100.0%** | **10.28 req/s** | **1,618 ms** | 2,932 ms | 11.45 MiB | Queue absorption; all requests served within 5.0s |
+| **C = 50** | 150 | **72.0%** | **13.54 req/s** | **1,367 ms** | 3,521 ms | 15.42 MiB | **Active backpressure:** 42 excess requests rejected with HTTP 503 |
+
+- **Resource Confinement Evidence:**
+  The runner container memory peaked at 19.06 MiB out of 512 MiB total allocated capacity.
+  The container memory remained below 20 MiB across all concurrency tiers.
+  The test run produced zero orphaned processes and zero container leaks.
+
+### 3.4 Penetration Testing and Security Audit
+The automated security suite (`backend/scripts/run-pentest-audit.mjs`) evaluated 24 attack vectors.
+The system achieved a **100.0 percent pass rate (24/24 passed)**:
+
+1. **Vertical Privilege Escalation (6 tests):**
+   - Unauthenticated requests to protected endpoints return HTTP 401 Unauthorized.
+   - Learner requests to admin endpoints return HTTP 403 Forbidden.
+   - Forged, tampered, and expired JWT tokens are rejected.
+2. **Horizontal Privilege Escalation (4 tests):**
+   - Access attempts to foreign sessions return HTTP 404 Not Found (hiding resource existence).
+   - Learners cannot execute commands or terminate sessions owned by other users.
+3. **Sandbox Escape & Jailbreak Resistance (5 tests):**
+   - Root filesystem and system binary modifications are blocked (Read-Only filesystem).
+   - Access to `/etc/shadow` is denied (masked file).
+   - Outbound internet connections (`curl`, `ping`, raw sockets) are blocked.
+   - `sudo` commands and setuid execution are blocked.
+4. **Denial of Service & Resource Abuse (5 tests):**
+   - CPU loops (`yes`, `while true`) are killed at 3.0 seconds with exit code 124.
+   - File generation exceeding 10 MiB is halted by `RLIMIT_FSIZE`.
+   - Output buffer exceeding 64 KB is safely truncated.
+   - Concurrent command spam on the same session returns HTTP 409 Conflict.
+   - Oversized JSON request payloads return HTTP 413 Payload Too Large.
+5. **Input Sanitization & Access Enforcement (4 tests):**
+   - SQL injection vectors in parameters are neutralized by parameterized queries.
+   - Non-string command payloads return HTTP 400 Bad Request.
+   - Banned accounts are blocked immediately with HTTP 403 Forbidden.
+   - Internal metrics endpoints permit queries only from loopback addresses.
+
+---
+
+## 4. Test Verification Evidence
+
+The directory `docs/audit_benchmark_pentest/` contains complete audit logs and execution traces:
+
+| Audit Category | Tool / Test Runner | Test Scope | Results | Compliance Status | Reference File |
+|---|---|:---:|:---:|:---:|---|
+| **Backend Unit & Integration** | Node.js Test Runner | 105 tests | 105 / 105 passed | **100.0% PASS** | `backend/tests/*.test.js` |
+| **Penetration Security Suite** | Automated Pentest Harness | 24 attack vectors | 24 / 24 blocked | **100.0% SECURE** | `backend/scripts/run-pentest-audit.mjs` |
+| **OWASP ASVS 5.0 Audit** | Security Checklist Verification | 62 requirements | 62 verified | **100.0% COMPLIANT** | `docs/audit_benchmark_pentest/03_OWASP_ASVS5_SECURITY_RETEST.md` |
+| **Concurrency Benchmark** | Stress Test Suite (`benchmark.js`) | 4 concurrency tiers | 330 requests | **PASSED (C=10..50)** | `backend/benchmarks/latest.json` |
+| **E2E Browser Verification** | Playwright Chromium | 42 test specs | 41 passed, 1 skipped | **97.6% PASS** | `frontend/tests/e2e/specs/` |
+| **Quick Tunnel Lifecycle** | Controller Regression Suite | 11 state assertions | 11 passed | **100.0% PASS** | `scripts/quick-tunnel/test/quick-tunnel-lifecycle.sh` |
+
+---
+
+## 5. Quick Start Instructions
+
+### 5.1 Start Local Stack
+Run the startup orchestrator from the project root:
 ```bash
-git clone https://github.com/0viprorqiv0/Bashlab.git
-cd Bashlab/frontend
-npm ci
-npm run dev
+./start.sh
 ```
 
-Tạo `frontend/.env.local` với project URL và anon key lấy từ Supabase **Project Settings → API**:
-
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable-anon-key>
-```
-
-Mở [localhost:3000](http://localhost:3000). Chạy các lệnh npm trong thư mục `frontend`; thư mục gốc không có `package.json`. Không đặt service-role key hoặc mật khẩu database trong frontend.
-
-### Cập nhật schema Supabase
-
-Các migration nằm trong `backend/db/migrations/` và cần được áp dụng theo thứ tự số trên database mới. Để bật danh sách Coming next cho guest và learner trên database đã có migrations 001–012, mở đúng project trong **Supabase Dashboard → SQL Editor**, chạy `backend/db/migrations/013_public_upcoming_courses.sql`, rồi xác nhận `shell-201` và `linux-security` có trạng thái `upcoming`. Migration chỉ công khai metadata của khóa; chapter và lesson vẫn theo policy hiện tại.
-
-| Lệnh | Mục đích |
-| --- | --- |
-| `npm run dev` | Chạy development server |
-| `npm run lint` | Kiểm tra ESLint |
-| `npm run test:curiosity` | Chạy script kiểm tra curiosity |
-| `npm run test:backdrop` | Chạy script kiểm tra backdrop |
-| `npm run build` | Tạo production build |
-| `npm run start` | Chạy production server sau build thành công |
-
-Hai script kiểm tra hiện có không thay thế kiểm thử toàn bộ ứng dụng hoặc kiểm thử end-to-end. Để chạy bản production cục bộ:
-
+To run all services in the background:
 ```bash
-npm run build
-npm run start
+./start.sh -d
 ```
 
-## Làm việc theo nhánh
+To inspect service health:
+```bash
+./start.sh status
+```
 
-`main` là nhánh tích hợp. Tám nhánh `feature/a-...` đến `feature/h-...` tổ chức công việc theo bảng trong [rule.md](rule.md). Mỗi nhánh chứa toàn bộ cây dự án; phân nhóm không có nghĩa là chia tách hoặc xóa các thư mục của nhóm khác.
+To stop all services:
+```bash
+./start.sh stop
+```
 
-Luồng thông thường: nhánh tác vụ → nhánh nhóm → `main`, qua pull request và kiểm tra phù hợp. Đọc [rule.md](rule.md) trước khi sửa, commit hoặc merge.
+> [!NOTE]
+> Local execution without configured Supabase credentials and Grafana service restricts full role permissions and persistence. Contact **`hieuhlz9000@gmail.com`** to request activating the live Cloudflare demo tunnel.
 
-## Dữ liệu và file không đưa lên Git
+### 5.2 System Endpoints
+- Web Application: `http://localhost:3000`
+- Backend API Health Check: `http://127.0.0.1:3001/health`
+- Prometheus Metrics Explorer: `http://127.0.0.1:9090`
+- Grafana Security Dashboards: `http://127.0.0.1:3002` (Credentials: `admin` / `admin`)
 
-`.gitignore` loại dependencies, build/cache (kể cả `.next-*`), các file môi trường đã liệt kê, log, coverage và file IDE. Giữ `package-lock.json` trong Git để cài đặt tái lập.
+### 5.3 Test Credentials
 
-Không commit mật khẩu, token, khóa riêng, dữ liệu người dùng hoặc bản dump chứa dữ liệu thật. Khi thêm tên file môi trường mới, kiểm tra `git check-ignore -v <file>`; không giả định mọi tên `.env.*` đều đã được bỏ qua.
+| Role | Email Address | Password | Permitted Operations |
+|---|---|---|---|
+| **Administrator** | `admin@bashlab.local` | `BashLab2026!` | Full Admin: `/admin`, Content Studio, User Management, Security Audit Trail |
+| **Learner** | `learner@bashlab.local` | `BashLab2026!` | Student: `/courses`, Terminal Sandbox, Course Exercises, Flag Verification |
 
-## Quyền sử dụng
+---
 
-Proprietary — All rights reserved. Repository hiện chưa có file LICENSE cấp phép riêng.
+## 6. Zero-Trust Remote Demo (Cloudflare Quick Tunnel)
+
+BashLab includes a zero-trust remote demo orchestrator.
+The controller exposes the application through an outbound-only encrypted tunnel without opening inbound firewall ports.
+
+### 6.1 Start Public Tunnel
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh start -d
+```
+
+The supervisor verifies local loopback listeners, starts Caddy as an internal bridge, establishes the encrypted tunnel, and injects the dynamic public URL into backend CORS origins:
+```text
+Public URL: https://<subdomain>.trycloudflare.com
+```
+
+### 6.2 Inspect Tunnel Health & Diagnostics
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh status
+./scripts/quick-tunnel/bashlab-tunnel.sh diagnose
+```
+
+When healthy, the diagnostic output reports:
+```text
+LOCAL_FRONTEND=200
+LOCAL_API=200
+PUBLIC_HEALTH=200
+RESULT=CONNECTOR_READY
+```
+
+### 6.3 Restart Local App Without Losing Public URL
+To reload code or restart frontend/backend without resetting the public URL:
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh restart -d
+```
+
+### 6.4 Stop Tunnel Controller
+To terminate all tunnel and bridge processes:
+```bash
+./scripts/quick-tunnel/bashlab-tunnel.sh stop
+```

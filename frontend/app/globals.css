@@ -30,8 +30,7 @@
 }
 
 html {
-  /* Tự động scale theo độ phân giải & tỉ lệ màn hình, phóng to tổng thể ~12-15% */
-  font-size: clamp(16.5px, calc(0.98rem + 0.22vw + 0.1vh), 20.5px);
+  font-size: 16px;
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
   overflow-y: scroll;
@@ -49,6 +48,19 @@ html.lenis-stopped,
 :root:has(.termMax) {
   overflow-y: scroll !important;
   overflow-x: hidden !important;
+}
+
+/* Admin full-screen 100vh lock: eliminates window scrolling completely */
+html.admin-locked,
+body.admin-locked {
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  height: 100vh !important;
+  height: 100svh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100svh !important;
+  max-height: 100dvh !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

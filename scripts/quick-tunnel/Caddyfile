@@ -1,0 +1,11 @@
+{
+  auto_https off
+}
+
+:{$CADDY_PORT:8080} {
+  respond /quick-tunnel-ping "caddy-tunnel-ok" 200
+  @api path /api/* /health
+  reverse_proxy @api 127.0.0.1:3001
+  reverse_proxy 127.0.0.1:3000
+}
+

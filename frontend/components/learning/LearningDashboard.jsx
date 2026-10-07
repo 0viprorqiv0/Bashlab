@@ -120,7 +120,7 @@ function Dashboard({ current, completedCourses, totalCourses, lessonsDone, days 
   const courseState = !current || current.done === 0 ? 'Not started' : current.done === current.total ? 'Completed' : 'In progress';
   const startHref = current?.next
     ? lessonHref(current.course.slug, current.next.slug)
-    : current ? `/courses/${current.course.slug}` : '/courses';
+    : current ? `/courses/${current.course.slug}/labs/1` : '/courses';
 
   useEffect(() => {
     if (calendarRef.current) calendarRef.current.scrollLeft = calendarRef.current.scrollWidth;

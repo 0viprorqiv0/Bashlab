@@ -69,7 +69,8 @@ Trình duyệt (anon/authenticated key) **không còn INSERT/UPDATE/DELETE** tr�
 | `POST /api/admin/users/:id/role` `{role, reason}` · `POST /api/admin/users/:id/lock` `{locked, reason}` | admin | Gọi RPC `admin_set_user_role/lock` **bằng token của chính admin** → `admin_logs` ghi đúng actor. |
 | `GET /api/admin/dashboard?range=15m\|1h\|6h\|24h` | admin | Trang Activity → Overview: `{stats:{users,admins,locked,activeSessions,sessions24h,completed24h}, available, reason, metrics:{<series>:[{name,points:[[ms,value]]}]}}`. Số liệu `stats` lấy từ DB; `metrics` lấy từ Prometheus qua danh sách truy vấn cố định ở server (client không gửi PromQL). Prometheus tắt → `available:false`, vẫn trả `stats`. |
 | `POST /api/admin/sessions/:id/stop` `{reason}` | admin | RPC `admin_stop_session` + tắt luôn sandbox session phía sau. |
-| `POST /api/sessions` `{lessonId}` | learner | Backend tự ghi `practice_sessions` (active → cập nhật `last_active_at` mỗi lệnh → `stopped` khi xoá/hết hạn). FE không ghi bảng này nữa. |
+| `GET /api/sessions/active` | learner | Trả về thông tin session đang chạy của learner: `{ active, session: { sessionId, cwd, lessonId, commandCount, lastActiveAt } }`. |
+| `POST /api/sessions` `{lessonId}` | learner | Tạo hoặc kết nối sandbox session: Nếu cùng lessonId → tái sử dụng session hiện có (status 200, giữ nguyên file); nếu đổi bài khác → tự động kết thúc session cũ, dọn sạch workspace cũ về 0 và tạo session mới cho bài này (status 201). |
 
 Lỗi: `400 INVALID_INPUT` (validate / trigger DB), `403 FORBIDDEN` (không phải admin), `404` (bài không thấy được), `409 CONFLICT` (trùng slug). Header bảo mật: backend dùng Helmet (CSP `default-src 'none'`, HSTS, nosniff, no-referrer…); frontend đặt CSP/X-Frame-Options/HSTS/Permissions-Policy trong `frontend/next.config.js`.
 
@@ -199,3 +200,13 @@ Backend cần chạy cùng lúc: `cd backend && npm run start:api` (Windows/khô
 Docker: đặt `SANDBOX_ENABLED=false` trong `backend/.env` — chỉ phục vụ
 `/api/auth/*`, các endpoint sandbox trả 503 và bài lab chuyển sang hoàn thành thủ
 công). Backend cần `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`.
+
+
+## Sandbox lease contract
+
+`POST /api/sessions` is lease-backed. A learner has one active sandbox lease at a time.
+
+- Same learner and lesson: existing session/workspace is reused.
+- Different lesson: existing lease identity is reused while the sandbox lifecycle is rebound.
+- Capacity exhaustion returns `503` (`LEASE_CAPACITY`).
+- The server, not the client lesson identifier, owns workspace allocation and verifier binding.

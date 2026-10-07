@@ -232,3 +232,33 @@ và báo lỗi. Sửa namespace policy hoặc mapping trên máy đích, không 
 Kết quả đã đo trong workspace này: [bảng để copy vào slide](benchmarks/RESULTS.md)
 và [raw JSON](benchmarks/latest.json). 10 unit/API tests và 8 integration tests
 với runner thật đã được chạy; npm audit báo 0 vulnerabilities tại thời điểm kiểm tra.
+
+
+## Lifecycle API contract (authenticated mode)
+
+Session lifecycle rules:
+
+- A learner has at most one active sandbox session.
+- `POST /api/sessions` with the same logical `lessonId` returns the existing session (`reused: true`) and preserves workspace state.
+- A different `lessonId` request removes the previous sandbox workspace before creating the replacement session.
+- Omitting `lessonId` is treated as a legacy unbound lesson and can only reuse another unbound session.
+- Session removal (manual delete, replacement, admin stop, or reaper expiry) immediately clears API ownership, lesson binding, and practice-record bookkeeping.
+
+Verification contract:
+
+- Client sends the lesson UUID only.
+- Server loads visible lesson metadata and resolves `lessons.test_template.verifier`.
+- The resolved verifier key is passed to the server-owned verifier registry.
+- Missing, hidden, or unavailable verifiers are rejected; clients cannot select verifier rules directly.
+
+
+## Strict sandbox lease lifecycle
+
+The sandbox uses a durable lease model:
+
+- A learner owns at most one active sandbox lease.
+- The lease owns the workspace identity; clients cannot allocate workspaces directly.
+- Reopening the same lesson reuses the existing lease and workspace.
+- Switching lessons rebinds the lease lifecycle instead of creating parallel learner sandboxes.
+- Capacity is controlled by `SANDBOX_MAX_ACTIVE_LEASES` (default `100`). When capacity is exhausted, new allocations fail with HTTP `503`.
+- After restart, recorded leases/workspaces are reconciled rather than allocating duplicate workspaces.

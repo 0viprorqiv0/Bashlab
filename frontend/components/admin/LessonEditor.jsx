@@ -11,6 +11,7 @@ import editor from './LessonEditor.module.css';
 import LessonPreview from './LessonPreview';
 import { isValidSlug } from './slug';
 import { emptyLessonContent, newItemId, validateLessonContent } from './lessonContent';
+import AdminSelect from './AdminSelect';
 
 function Icon({ name }) { return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>; }
 
@@ -102,6 +103,7 @@ function EditorForm({ lesson, course, chapters }) {
   }, [widePreview]);
 
   const set = (key) => (event) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
+  const select = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
   const setContent = (patch) => setForm((prev) => ({ ...prev, content: { ...prev.content, ...patch } }));
 
   const previewLesson = useMemo(() => ({ title: form.title, lesson_content: form.content }), [form.title, form.content]);
@@ -224,23 +226,16 @@ function EditorForm({ lesson, course, chapters }) {
           <section className={editor.settingsCard} aria-label="Lesson settings">
             <div className={editor.settingsGrid}>
               <label className={styles.field}>Slug<input value={form.slug} onChange={set('slug')} /></label>
-              <label className={styles.field}>Chapter
-                <select value={form.chapter_id} onChange={set('chapter_id')}>
-                  {chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}
-                </select>
-              </label>
+              <div className={styles.field}><span>Chapter</span>
+                <AdminSelect value={form.chapter_id} label="Chapter" onChange={select('chapter_id')} options={chapters.map((chapter) => ({ value: chapter.id, label: chapter.title }))} />
+              </div>
               <label className={styles.field}>Order<input type="number" value={form.sort_order} onChange={set('sort_order')} /></label>
-              <label className={styles.field}>Status
-                <select value={form.status} onChange={set('status')}>
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                </select>
-              </label>
-              <label className={styles.field}>Solution check
-                <select value={form.verifier} onChange={set('verifier')}>
-                  {CHECK_TEMPLATES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                </select>
-              </label>
+              <div className={styles.field}><span>Status</span>
+                <AdminSelect value={form.status} label="Status" onChange={select('status')} options={[{ value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }]} />
+              </div>
+              <div className={styles.field}><span>Solution check</span>
+                <AdminSelect value={form.verifier} label="Solution check" onChange={select('verifier')} options={CHECK_TEMPLATES} />
+              </div>
             </div>
           </section>
         </div>
@@ -328,11 +323,11 @@ function StructuredForm({ form, set, content, setContent }) {
         <div className={styles.fieldRow}>
           <label className={styles.field}>Track<input value={content.track} onChange={text('track')} placeholder="e.g. Core Commands" /></label>
           <label className={styles.field}>Tag<input value={content.tag} onChange={text('tag')} placeholder="e.g. Navigation" /></label>
-          <label className={styles.field}>Difficulty
-            <select value={content.difficulty} onChange={text('difficulty')}>
-              <option value="">—</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
-            </select>
-          </label>
+          <div className={styles.field}><span>Difficulty</span>
+            <AdminSelect value={content.difficulty} label="Difficulty" onChange={(value) => setContent({ difficulty: value })} options={[
+              { value: '', label: '—' }, { value: 'easy', label: 'Easy' }, { value: 'medium', label: 'Medium' }, { value: 'hard', label: 'Hard' },
+            ]} />
+          </div>
         </div>
         <label className={styles.field}>Focus commands (comma-separated)
           <input

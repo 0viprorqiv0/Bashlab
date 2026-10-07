@@ -38,7 +38,10 @@ pnpm-debug.log*
 coverage/
 frontend/tests/e2e/.auth/
 frontend/tests/e2e/report/
+test-results/
 frontend/test-results/
+screenshots/
+artifacts/
 
 # Python bytecode
 __pycache__/
@@ -60,3 +63,17 @@ _backups/
 
 .claude/
 /Background/
+
+# Local environment override
+/env.local
+
+# Runtime state & logs
+.run/
+.impeccable/
+.obsidian/
+
+# Cloudflare Tunnel runtime credentials. Only *.example templates are committed.
+/infra/cloudflare/tunnel/config.yml
+/infra/cloudflare/tunnel/*.json
+/infra/cloudflare/tunnel/*.pem
+/infra/cloudflare/tunnel/*.token

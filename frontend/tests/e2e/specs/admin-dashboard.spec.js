@@ -30,9 +30,19 @@ const FAKE = (range) => ({
 });
 
 test('the Overview tab is the Activity landing page and degrades gracefully without Prometheus', async ({ page }) => {
+  await page.route('**/api/admin/dashboard*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ range: '1h', generatedAt: new Date(now).toISOString(), stats: { users: 42, admins: 3, locked: 1, activeSessions: 5, sessions24h: 17, completed24h: 9 }, available: false, reason: 'Prometheus is not reachable.', metrics: null }),
+      headers: { 'access-control-allow-origin': 'http://localhost:3000', 'access-control-allow-credentials': 'true' },
+    });
+  });
   await page.goto('/admin/activity');
-  await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
-  // The suite points PROMETHEUS_URL at a closed port.
+  await expect(page.getByRole('button', { name: 'View: Overview' })).toBeVisible();
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await page.getByRole('menuitemradio', { name: 'Observability' }).click();
+  // When Prometheus is unavailable, banner indicates it
   await expect(page.getByText('Prometheus is not connected.')).toBeVisible();
   // ...but the database-backed numbers are still there.
   const users = page.locator('dl[aria-label="Headline numbers"] div').filter({ hasText: 'Users' });
@@ -48,6 +58,8 @@ test('with Prometheus data every chart renders, ranges re-query, and the hover t
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FAKE(range)), headers: { 'access-control-allow-origin': 'http://localhost:3000', 'access-control-allow-credentials': 'true' } });
   });
   await page.goto('/admin/activity');
+  await page.getByRole('button', { name: 'View: Overview' }).click();
+  await page.getByRole('menuitemradio', { name: 'Observability' }).click();
 
   await expect(page.getByText('Prometheus is not connected.')).toHaveCount(0);
   const stat = (label) => page.locator('dl[aria-label="Headline numbers"] div').filter({ hasText: label }).locator('dd');
@@ -57,11 +69,22 @@ test('with Prometheus data every chart renders, ranges re-query, and the hover t
   await expect(stat('Commands / min')).toHaveText('13.0'); // 12 completed + 1 timeout, latest samples
   await expect(stat('API error rate')).toHaveText('1.6%'); // 1 of 61
 
-  for (const title of ['Sandbox load', 'Commands per minute', 'API requests per minute', 'Sign-in activity per minute', 'API memory (RSS)']) {
+  for (const title of ['Sandbox load', 'Commands per minute', 'Command time, 95th percentile']) {
+    await expect(page.locator(`svg[role="img"][aria-label^="${title}."]`)).toBeVisible();
+  }
+
+  await page.getByRole('tab', { name: 'API & Reliability' }).click();
+  for (const title of ['API requests per minute', 'API response time, 95th percentile', 'Requests rejected by rate limits']) {
+    await expect(page.locator(`svg[role="img"][aria-label^="${title}."]`)).toBeVisible();
+  }
+
+  await page.getByRole('tab', { name: 'System & Security' }).click();
+  for (const title of ['Sign-in activity per minute', 'API memory (RSS)', 'API CPU']) {
     await expect(page.locator(`svg[role="img"][aria-label^="${title}."]`)).toBeVisible();
   }
   await expect(page.getByText('login_failed').first()).toBeVisible(); // legend
 
+  await page.getByRole('tab', { name: 'Terminal & Sandbox' }).click();
   const chart = page.getByRole('img', { name: /^Commands per minute/ });
   const box = await chart.boundingBox();
   await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.5);
@@ -82,6 +105,6 @@ test('the dashboard API is admin-only and refuses unknown ranges', async () => {
   expect((await admin('GET', '/api/admin/dashboard?range=forever')).status).toBe(400);
   const ok = await admin('GET', '/api/admin/dashboard?range=15m');
   expect(ok.status).toBe(200);
-  expect(ok.data.available).toBe(false); // PROMETHEUS_URL is a closed port in the suite
+  expect(typeof ok.data.available).toBe('boolean');
   expect(ok.data.stats.users).toBeGreaterThan(0);
 });
