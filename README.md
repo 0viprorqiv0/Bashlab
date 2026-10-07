@@ -1,26 +1,24 @@
 # BashLab — Cybersecurity Lab & Learning Platform
 
 > [!WARNING]
-> ### ⚠ QUAN TRỌNG: GIỚI HẠN MÔI TRƯỜNG CỤC BỘ (LOCALHOST) / IMPORTANT NOTICE
+> ### LOCAL ENVIRONMENT LIMITATIONS AND TEST CREDENTIALS
 >
-> **Tiếng Việt:**
-> Hiện tại, bạn **sẽ không chạy được đầy đủ tính năng và toàn bộ quyền (full permissions)** trực tiếp trên máy cá nhân nếu máy chưa cài đặt Grafana và chưa có cấu hình Supabase (PostgreSQL RLS, Authentication, Storage secrets)...
-> 👉 **Nếu bạn cần trải nghiệm đầy đủ nhất** toàn bộ tính năng quản trị, phòng lab sandbox thực tế và bài tập thực hành, vui lòng liên hệ email: **[hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com)** để yêu cầu mở server **Cloudflare Tunnel** trực tiếp!
+> **Vietnamese:**
+> Môi trường cục bộ (localhost) không hỗ trợ đầy đủ tính năng và toàn bộ quyền hạn nếu hệ thống chưa cài đặt dịch vụ Grafana và chưa cấu hình thông tin xác thực Supabase. Để trải nghiệm hệ thống với đầy đủ quyền quản trị và môi trường sandbox, liên hệ qua email [hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com) để yêu cầu kích hoạt máy chủ Cloudflare Tunnel.
 >
 > **English (ASD-STE100):**
-> You cannot execute all features and full permissions locally without an active Grafana service and configured Supabase credentials.
-> 👉 **To access the complete live demonstration with full permissions**, contact: **[hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com)** to request activation of the live **Cloudflare Tunnel** server.
+> You cannot operate all system features and administrative permissions in a local environment without an active Grafana service and configured Supabase credentials. To access the complete demonstration with full permissions, contact [hieuhlz9000@gmail.com](mailto:hieuhlz9000@gmail.com) to request activation of the live Cloudflare Tunnel server.
 >
 > ---
 >
-> ### 🔑 TÀI KHOẢN TRẢI NGHIỆM HỆ THỐNG / DEMO & TEST CREDENTIALS
+> ### PRE-CONFIGURED TEST CREDENTIALS
 >
-> Hệ thống cung cấp sẵn **02 tài khoản thử nghiệm** đã phân quyền đầy đủ trong cơ sở dữ liệu:
+> The database provides two verified test accounts:
 >
-> | Vai trò / Role | Email đăng nhập | Mật khẩu / Password | Phạm vi quyền hạn / Permissions |
+> | Role | Email Address | Password | Permitted Operations |
 > |---|---|---|---|
-> | 🛡️ **Quản trị viên (Administrator)** | `admin@bashlab.local` | `BashLab2026!` | **Toàn quyền Quản trị:** Truy cập `/admin`, Studio soạn thảo bài học (`/admin/studio`), Quản lý tài khoản & phân quyền (`/admin/users`), Giám sát hoạt động & Audit Trail (`/admin/activity`), Dashboard số liệu (`/dashboard`). |
-> | 🎓 **Học viên (Learner)** | `learner@bashlab.local` | `BashLab2026!` | **Quyền Học tập & Phòng Lab:** Danh mục khoá học (`/courses`), Sandbox Linux Terminal tương tác độc lập, Thực hành lệnh bảo mật, Nộp cờ xác thực CTF Flag, Xem tiến độ cá nhân. |
+> | **Administrator** | `admin@bashlab.local` | `BashLab2026!` | Administrative control: `/admin`, Content Studio (`/admin/studio`), User Management (`/admin/users`), Security Audit Trail (`/admin/activity`), Metrics Dashboard (`/dashboard`). |
+> | **Learner** | `learner@bashlab.local` | `BashLab2026!` | Learner operations: Course Catalog (`/courses`), Isolated Terminal Sandbox, Course Exercises, CTF Flag Submissions, Personal Progress Tracking. |
 
 This document describes the technical architecture, security model, and verification metrics for BashLab.
 The documentation complies with the ASD-STE100 (Simplified Technical English) specification.
